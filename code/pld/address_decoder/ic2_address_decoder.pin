@@ -1,0 +1,29 @@
+
+
+ Pin # | Name     | Pin Type
+-----------------------------
+   1   | A15      | Clock/Input
+   2   | A14      | Input
+   3   | A13      | Input
+   4   | A12      | Input
+   5   | A11      | Input
+   6   | A10      | Input
+   7   | A9       | Input
+   8   | A8       | Input
+   9   | A7       | Input
+  10   | A6       | Input
+  11   | A5       | Input
+  12   | GND      | GND
+  13   | A4       | Input
+  14   | A3       | Input
+  15   | A2       | Input
+  16   | A1       | Input
+  17   | A0       | Input
+  18   | LOWRAM   | Output
+  19   | BANKRAM  | Output
+  20   | IO       | Output
+  21   | ROM      | Output
+  22   | BANKSEL  | Output
+  23   | DUASEL   | Output
+  24   | VCC      | VCC
+

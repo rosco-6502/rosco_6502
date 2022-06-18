@@ -1,0 +1,29 @@
+
+
+                                GAL22V10
+
+                          -------\___/-------
+                      CLK |  1           24 | VCC
+                          |                 |
+                    DUADT |  2           23 | RDY
+                          |                 |
+                   DUASEL |  3           22 | ORnW
+                          |                 |
+                      RnW |  4           21 | WnR
+                          |                 |
+                    HWRST |  5           20 | RESET
+                          |                 |
+                       NC |  6           19 | NC
+                          |                 |
+                       NC |  7           18 | NC
+                          |                 |
+                       NC |  8           17 | NC
+                          |                 |
+                       NC |  9           16 | NC
+                          |                 |
+                       NC | 10           15 | NC
+                          |                 |
+                       NC | 11           14 | NC
+                          |                 |
+                      GND | 12           13 | NC
+                          -------------------

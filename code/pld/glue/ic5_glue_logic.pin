@@ -1,0 +1,29 @@
+
+
+ Pin # | Name     | Pin Type
+-----------------------------
+   1   | CLK      | Clock/Input
+   2   | DUADT    | Input
+   3   | DUASEL   | Input
+   4   | RnW      | Input
+   5   | HWRST    | Input
+   6   | NC       | Input
+   7   | NC       | Input
+   8   | NC       | Input
+   9   | NC       | Input
+  10   | NC       | Input
+  11   | NC       | Input
+  12   | GND      | GND
+  13   | NC       | Input
+  14   | NC       | NC
+  15   | NC       | NC
+  16   | NC       | NC
+  17   | NC       | NC
+  18   | NC       | NC
+  19   | NC       | NC
+  20   | RESET    | Output
+  21   | WnR      | Output
+  22   | ORnW     | Output
+  23   | RDY      | Output
+  24   | VCC      | VCC
+

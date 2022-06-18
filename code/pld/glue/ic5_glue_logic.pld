@@ -1,0 +1,21 @@
+GAL22V10
+GLUE
+
+CLK   DUADT    DUASEL    RnW       HWRST    NC       NC      NC      NC      NC       NC    GND
+NC    NC       NC        NC        NC       NC       NC      RESET   WnR     ORnW     RDY   VCC
+
+ORnW        =  RnW
+WnR         = /RnW
+
+RESET.T     =  GND
+RESET.E     =  HWRST
+
+RDY.T       =  GND
+RDY.E       =  DUASEL * DUADT
+
+DESCRIPTION
+
+IC5 (Glue logic) for rosco_6502 r1
+
+Copyright (c)2022 Ross Bamford. See LICENSE.
+
