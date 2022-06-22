@@ -2,10 +2,10 @@ GAL22V10
 GLUE
 
 CLK   DUADT    DUASEL    RnW       HWRST    NC       NC      NC      NC      NC       NC    GND
-NC    NC       NC        NC        NC       NC       NC      RESET   WnR     ORnW     RDY   VCC
+NC    NC       NC        NC        NC       NC       NC      RESET   RD      WR       RDY   VCC
 
-ORnW        =  RnW
-WnR         = /RnW
+/WR         = /RnW * CLK
+/RD         =  RnW * CLK
 
 RESET.T     =  GND
 RESET.E     =  HWRST
