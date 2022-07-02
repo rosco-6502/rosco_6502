@@ -5,7 +5,7 @@ AR
 
 Pin 23 = DUASEL       S0 = 0   S1 = 0
   1  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
-  2  -x-- -x-- -x-- -x-x -x-- -x-- -x-- -x-- -x-- -x-- -x-x
+  2  ---- ---- ---- -x-x -x-- -x-- -x-- -x-- -x-- -x-- -x-x
   3  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
   4  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
   5  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
