@@ -13,7 +13,7 @@
                           |                 |
                     HWRST |  5           20 | RESET
                           |                 |
-                       NC |  6           19 | NC
+                  BANKSEL |  6           19 | NC
                           |                 |
                        NC |  7           18 | NC
                           |                 |
@@ -21,9 +21,9 @@
                           |                 |
                        NC |  9           16 | NC
                           |                 |
-                       NC | 10           15 | NC
+                       NC | 10           15 | BANKO1
                           |                 |
-                       NC | 11           14 | NC
+                       NC | 11           14 | BANKO2
                           |                 |
                       GND | 12           13 | NC
                           -------------------
