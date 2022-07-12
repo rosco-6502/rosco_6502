@@ -40,6 +40,9 @@ start:
         ; Do the banner
         jsr printbanner
 
+        ; Basic banking check
+        jsr checkmem
+
         ; Go to flash lop
 .flash:
         lda #$08
@@ -86,6 +89,50 @@ putc:
         beq putc
         stx DUA_TBA       ; Send character
         rts
+        
+checkmem:
+        ldx #$00
+        stx $DFFF
+        ldx #$a0
+        stx $4000
+
+        ldx #$01
+        stx $DFFF
+        ldx #$c0
+        stx $4000
+
+        ldx #$00
+        stx $DFFF
+        lda $4000
+        cmp #$a0
+        bne .failed
+
+        ldx #$01
+        stx $DFFF
+        lda $4000
+        cmp #$c0
+        bne .failed
+
+        ldy #$00
+
+.passed
+        ldx PASSED,Y
+        beq .done
+        jsr putc
+        iny
+        bra .passed
+
+.failed
+        ldy #$00
+.failloop
+        ldx FAILED,Y
+        beq .done
+        jsr putc
+        iny
+        bra .failloop
+
+.done
+        rts
       
 SZ_BANNER0      db      $D, $A, $1B, "[1;33m"
 SZ_BANNER1      db      "                           ___ ___ ___ ___ ", $D, $A
@@ -93,6 +140,8 @@ SZ_BANNER2      db      " ___ ___ ___ ___ ___      |  _| __|   |__ |", $D, $A
 SZ_BANNER3      db      "|  _| . |_ -|  _| . |     | . |__ | | | __|", $D, $A
 SZ_BANNER4      db      "|_| |___|___|___|___|_____|___|___|___|___|", $D, $A
 SZ_BANNER5      db      "                    |_____|", $1B, "[1;37mBringup ", $1B, "[1;30m0.01.DEV", $1B, "[0m", $D, $A, 0
+FAILED          db      "Memcheck failed", $D, $A, 0
+PASSED          db      "Memcheck passed", $D, $A, 0
 
         ORG $fffc
 
