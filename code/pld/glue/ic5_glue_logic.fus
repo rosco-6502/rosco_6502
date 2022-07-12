@@ -4,7 +4,7 @@ AR
   0  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 
 Pin 23 = RDY          S0 = 1   S1 = 0
-  1  ---- x--- x--- ---- ---- ---- ---- ---- ---- ---- ----
+  1  ---- -x-- -x-- ---- ---- ---- ---- ---- ---- ---- ----
   2  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
   3  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
   4  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
