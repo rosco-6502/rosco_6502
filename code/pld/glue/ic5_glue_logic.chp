@@ -7,9 +7,9 @@
                           |                 |
                     DUADT |  2           23 | RDY
                           |                 |
-                   DUASEL |  3           22 | ORnW
+                   DUASEL |  3           22 | WR
                           |                 |
-                      RnW |  4           21 | WnR
+                      RnW |  4           21 | RD
                           |                 |
                     HWRST |  5           20 | RESET
                           |                 |

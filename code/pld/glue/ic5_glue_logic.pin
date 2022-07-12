@@ -22,8 +22,8 @@
   18   | NC       | NC
   19   | NC       | NC
   20   | RESET    | Output
-  21   | WnR      | Output
-  22   | ORnW     | Output
+  21   | RD       | Output
+  22   | WR       | Output
   23   | RDY      | Output
   24   | VCC      | VCC
 
