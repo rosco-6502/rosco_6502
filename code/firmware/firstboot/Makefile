@@ -4,7 +4,7 @@ ASFLAGS=-c02 -Fbin
 all: rom.bin
 
 boot64k.bin: boot.asm
-	$(VASM) $(ASFLAGS) -o $@ $^
+	$(VASM) $(ASFLAGS) -L boot64k.lst -o $@ $^
 
 rom.bin: boot64k.bin
 	tail -c 8192 $< > $@

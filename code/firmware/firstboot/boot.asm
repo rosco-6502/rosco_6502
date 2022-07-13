@@ -1,4 +1,15 @@
-
+;------------------------------------------------------------
+;                            ___ ___ ___ ___ 
+;  ___ ___ ___ ___ ___      |  _| __|   |__ |
+; |  _| . |_ -|  _| . |     | . |__ | | | __|
+; |_| |___|___|___|___|_____|___|___|___|___|
+;                     |_____|    Bringup Code
+;------------------------------------------------------------
+; Copyright (c)2022 Ross Bamford and contributors
+; See top-level LICENSE.md for licence information.
+;
+; Initial bringup and basic testing code for the board.
+;------------------------------------------------------------
         section .data
         ORG 0
 
@@ -12,11 +23,16 @@ DUA_CSRA    = $c001
 DUA_CRA     = $c002 
 DUA_TBA     = $c003
 DUA_ACR     = $c004
+DUA_IMR     = $c005
+DUA_CTUR    = $c006
+DUA_CTLR    = $c007
 DUA_OPR_S   = $c00e
+DUA_STARTC  = $c00e
 DUA_OPR_C   = $c00f
+DUA_STOPC   = $c00f
 
 start:
-        sei
+        cli
         cld
         lda #$ff
         txs
@@ -41,12 +57,12 @@ start:
         jsr printbanner
 
         ; Basic banking check
-        jsr checkmem
+        jsr bankcheck
 
-        ; Go to flash lop
+        ; Go to flash loop
 .flash:
-        lda #$08
-        sta DUA_OPR_S
+        lda #$08          ; LED on
+        sta DUA_OPR_S     
     
         ldy #$FF          ; (2 cycles)
         ldx #$FF          ; (2 cycles)
@@ -56,7 +72,7 @@ start:
         dey               ; (2 cycles)
         bne .delay        ; (3 cycles in loop, 2 cycles at end)
 
-        lda #$08
+        lda #$08          ; LED off
         sta DUA_OPR_C
 
         ldy #$FF          ; (2 cycles)
@@ -69,80 +85,103 @@ start:
 
         bra .flash
 
+
+; *******************************************************
+; * Banner print
+; *******************************************************
 printbanner:
-        ldy #$00
+        ldy #$00          ; Start at first character
 
 .loop
-        ldx SZ_BANNER0,Y
-        beq .done
-        jsr putc
-        iny
-        bra .loop
+        ldx SZ_BANNER0,Y  ; Get character into x
+        beq .done         ; If it's zero, we're done..
+        jsr putc          ; otherwise, print it
+        iny               ; next character
+        bra .loop         ; and continue
 
 .done
         rts
+
         
-; blocking putc to DUART. Character in X.
+; *******************************************************
+; * Blocking putc to DUART. Character in X
+; *******************************************************
 putc:
-        lda DUA_SRA
+        lda DUA_SRA       ; Check TXRDY bit
         and #4
-        beq putc
-        stx DUA_TBA       ; Send character
+        beq putc          ; Loop if not ready (bit clear)
+        stx DUA_TBA       ; else, send character
         rts
         
-checkmem:
-        ldx #$00
-        stx $DFFF
-        ldx #$a0
-        stx $4000
 
-        ldx #$01
-        stx $DFFF
-        ldx #$c0
-        stx $4000
+; *******************************************************
+; * Basic test of the memory bank hardware
+; *******************************************************
+bankcheck:
+        ldx #$00          ; Start at bank 0
+.writeloop
+        stx $DFFF         ; Set bank register
+        stx $4000         ; Store bank num to start of bank...
+        stx $BFFF         ; ... and to end also
+        inx               ; Next bank...
+        cpx #$10          ; ... unless we're out of banks
+        beq .read         ; (go to read if so)
+        bra .writeloop    ; else loop for next bank.
 
-        ldx #$00
-        stx $DFFF
-        lda $4000
-        cmp #$a0
-        bne .failed
+.read
+        ldx #$00          ; Start back at bank 0
+.readloop
+        stx $DFFF         ; Set bank register
+        cpx $4000         ; Is first byte of bank the bank num?
+        bne .failed       ; ... failed if not :-(
+        cpx $BFFF         ; Is last byte of bank the bank num?
+        bne .failed       ; ... also failed if not :-(
+        inx               ; Next bank...
+        cpx #$10          ; ... unless we're out of banks
+        beq .passed       ; (if so, we passed :-) )
+        bra .readloop     ; else loop for next bank.
 
-        ldx #$01
-        stx $DFFF
-        lda $4000
-        cmp #$c0
-        bne .failed
-
-        ldy #$00
-
+; If we reach this, the check passed!
 .passed
-        ldx PASSED,Y
-        beq .done
-        jsr putc
-        iny
-        bra .passed
+        ldy #$00          ; Start at first character of message
 
+.passloop
+        ldx PASSED,Y      ; Get character at Y into X
+        beq .done         ; If it's zero, we're done
+        jsr putc          ; otherwise, print it
+        iny               ; next character
+        bra .passloop     ; and continue...
+
+; If we get here, the check failed :-(
 .failed
-        ldy #$00
+        ldy #$00          ; Start at first character of message
 .failloop
-        ldx FAILED,Y
-        beq .done
-        jsr putc
-        iny
-        bra .failloop
+        ldx FAILED,Y      ; Get character at Y into X
+        beq .done         ; If it's zero, we're done
+        jsr putc          ; otherwise, print it
+        iny               ; next character
+        bra .failloop     ; and continue...
 
+; We're done.
 .done
         rts
       
+  
+; *******************************************************
+; * Data
+; *******************************************************
 SZ_BANNER0      db      $D, $A, $1B, "[1;33m"
 SZ_BANNER1      db      "                           ___ ___ ___ ___ ", $D, $A
 SZ_BANNER2      db      " ___ ___ ___ ___ ___      |  _| __|   |__ |", $D, $A
 SZ_BANNER3      db      "|  _| . |_ -|  _| . |     | . |__ | | | __|", $D, $A
 SZ_BANNER4      db      "|_| |___|___|___|___|_____|___|___|___|___|", $D, $A
 SZ_BANNER5      db      "                    |_____|", $1B, "[1;37mBringup ", $1B, "[1;30m0.01.DEV", $1B, "[0m", $D, $A, 0
-FAILED          db      "Memcheck failed", $D, $A, 0
-PASSED          db      "Memcheck passed", $D, $A, 0
+FAILED          db      "Bankcheck failed", $D, $A, 0
+PASSED          db      "Bankcheck passed", $D, $A, 0
 
+; *******************************************************
+; * Vectors
+; *******************************************************
         ORG $fffc
 
 RESET           dw      start
