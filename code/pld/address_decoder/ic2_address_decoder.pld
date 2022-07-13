@@ -6,6 +6,7 @@ A4    A3       A2        A1        A0        LOWRAM  BANKRAM   IO    ROM     BAN
 
 /LOWRAM     = /A15 * /A14
 /BANKRAM    = /A15 *  A14
+            +  A15 * /A14
 /IO         =  A15 *  A14 * /A13
 /ROM        =  A15 *  A14 *  A13
    
