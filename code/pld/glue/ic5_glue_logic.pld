@@ -1,8 +1,8 @@
 GAL22V10
 GLUE
 
-CLK    DUADT    DUASEL    RnW     HWRST    BANKSEL  NC      NC      NC      NC       NC    GND
-NC     BANKO2   BANKO1    NC      NC       NC       NC      RESET   RD      WR       RDY   VCC
+CLK    DUADT    DUASEL    RnW     HWRST    BANKSEL  NC      NC      NC      ROM      NC    GND
+NC     BANKO2   BANKO1    NC      NC       ROMOE    NC      RESET   RD      WR       RDY   VCC
 
 /WR         = /RnW * CLK
 /RD         =  RnW * CLK
@@ -15,6 +15,8 @@ RDY.E       =  /DUASEL * /DUADT
 
 BANKO1.R    = BANKSEL
 BANKO2.R    = BANKO1
+
+/ROMOE      = /ROM * RnW
 
 DESCRIPTION
 

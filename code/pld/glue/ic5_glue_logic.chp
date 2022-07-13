@@ -15,13 +15,13 @@
                           |                 |
                   BANKSEL |  6           19 | NC
                           |                 |
-                       NC |  7           18 | NC
+                       NC |  7           18 | ROMOE
                           |                 |
                        NC |  8           17 | NC
                           |                 |
                        NC |  9           16 | NC
                           |                 |
-                       NC | 10           15 | BANKO1
+                      ROM | 10           15 | BANKO1
                           |                 |
                        NC | 11           14 | BANKO2
                           |                 |
