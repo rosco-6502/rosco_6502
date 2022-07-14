@@ -13,17 +13,17 @@
                           |                 |
                     HWRST |  5           20 | RESET
                           |                 |
-                  BANKSEL |  6           19 | NC
+                  BANKSEL |  6           19 | NMI
                           |                 |
-                       NC |  7           18 | ROMOE
+                       VP |  7           18 | ROMOE2
                           |                 |
-                       NC |  8           17 | NC
+                       ML |  8           17 | ROMOE1
                           |                 |
-                       NC |  9           16 | NC
+                      IRQ |  9           16 | NC
                           |                 |
                       ROM | 10           15 | BANKO1
                           |                 |
-                       NC | 11           14 | BANKO2
+                       IO | 11           14 | BANKO2
                           |                 |
                       GND | 12           13 | NC
                           -------------------
