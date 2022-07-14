@@ -22,10 +22,10 @@ This project contains all the design files and source code for the project.
 
 The hardware specifications for the rosco_6502 are:
 
-* WDC 65C02 at up-to 14MHz.
+* WDC 65C02 at up-to 14MHz (In theory, 10MHz testing target currently).
 * XR68C681P provides two UARTs, Timers and SD Card / SPI / GPIO
 * 528KB RAM 
-    * 16 low RAM ($0000 - $3FFF)
+    * 16KB low RAM ($0000 - $3FFF)
     * 16 x 32KB RAM banks ($4000 - $BFFF) 
     * 8KB IO space ($C000 - $DFFF)
     * 8KB ROM $E000 - $FFFF (8KB)
@@ -34,6 +34,12 @@ The hardware specifications for the rosco_6502 are:
 
 ### Software
 
-Currently, the first prototypes are on order, and software development has
-not been started. Watch this space!
+The first prototype boards are back from the fab, and work is underway on 
+initial bringup and basic feature tests. You can see the code that's being
+used for this in the [firstboot](code/firmware/firstboot) directory.
+
+Along the way there have been a few modifications and improvements made to 
+the board and schematic which will feed into the next batch of prototypes.
+You can see the electrical design changes in the [kicad](design/kicad) 
+directory, and the programmable logic changes in [pld](code/pld).
 
