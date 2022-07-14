@@ -31,10 +31,13 @@ DUA_STARTC  = $c00e
 DUA_OPR_C   = $c00f
 DUA_STOPC   = $c00f
 
+TICKCNT     = $0          ; Stash tick count at bottom of RAM for now...
+TICKSTT     = $1          ; Tick state at 0x1 for now...
+
 start:
-        cli
+        sei
         cld
-        lda #$ff
+        ldx #$ff
         txs
 
         ; Init DUART
@@ -53,6 +56,25 @@ start:
         lda #$05          ; Enable TX/RX port A
         sta DUA_CRA
 
+        ; Set up timer tick
+        lda #$F0          ; Enable timer XCLK/16
+        sta DUA_ACR
+
+        ; Timer will run at ~100Hz: 3686400 / 16 / (1152 * 2) = 100
+        lda #$04          ; Counter MSB = 0x04
+        sta DUA_CTUR
+        lda #$80          ; Counter LSB = 0x80
+        sta DUA_CTLR
+        lda DUA_STARTC    ; Issue START COUNTER
+        lda #$08          ; Unmask counter interrupt
+        sta DUA_IMR
+
+        lda #100          ; Initial tick count is 100
+        sta TICKCNT
+        lda #0            ; Initial state is 0 (LED off)
+        sta TICKSTT
+        cli               ; Enable interrupts
+ 
         ; Do the banner
         jsr printbanner
 
@@ -62,7 +84,7 @@ start:
         ; Go to flash loop
 .flash:
         lda #$08          ; LED on
-        sta DUA_OPR_S     
+        sta DUA_OPR_S
     
         ldy #$FF          ; (2 cycles)
         ldx #$FF          ; (2 cycles)
@@ -146,7 +168,7 @@ bankcheck:
         ldy #$00          ; Start at first character of message
 
 .passloop
-        ldx PASSED,Y      ; Get character at Y into X
+        ldx BCPASSED,Y    ; Get character at Y into X
         beq .done         ; If it's zero, we're done
         jsr putc          ; otherwise, print it
         iny               ; next character
@@ -156,7 +178,7 @@ bankcheck:
 .failed
         ldy #$00          ; Start at first character of message
 .failloop
-        ldx FAILED,Y      ; Get character at Y into X
+        ldx BCFAILED,Y    ; Get character at Y into X
         beq .done         ; If it's zero, we're done
         jsr putc          ; otherwise, print it
         iny               ; next character
@@ -166,7 +188,49 @@ bankcheck:
 .done
         rts
       
+
+; *******************************************************
+; * Not actually an IRQ handler yet, until I figure out why 
+; * interrupt cycle isn't working...
+;
+; * Just called from main code in the meantime...
+; *******************************************************
+irq_handler:
+        pha               ; Stack A
+        phx               ; Stack X
+
+        ldx TICKCNT       ; Get tick count
+        dex               ; Decrement it
+        bne .done         ; If non-zero, we're done
+
+        ; If here, time to toggle green LED
+
+        ldx #100          ; Reset tick count
+
+        lda TICKSTT       ; Get current LED state
+        beq .turnon       ; If it's off, go turn it on
+
+        ; If here, LED is on
+        lda #$20          ; Set up to clear bit 6
+        sta DUA_OPR_C     ; Send command
+        lda #0            ; LED is now off
+        sta TICKSTT       ; Store state
+        bra .done
+
+.turnon
+        lda #$20          ; Set up to set bit 6
+        sta DUA_OPR_S     ; Send command
+        lda #1            ; LED is now on
+        sta TICKSTT       ; Store state
+
+.done
+        lda DUA_STOPC     ; Send "stop timer" command (reset ISR[3])
+        stx TICKCNT       ; Store X as the new tick count
+        plx               ; Unstack X
+        pla               ; Unstack A
+        rti
   
+
 ; *******************************************************
 ; * Data
 ; *******************************************************
@@ -176,8 +240,9 @@ SZ_BANNER2      db      " ___ ___ ___ ___ ___      |  _| __|   |__ |", $D, $A
 SZ_BANNER3      db      "|  _| . |_ -|  _| . |     | . |__ | | | __|", $D, $A
 SZ_BANNER4      db      "|_| |___|___|___|___|_____|___|___|___|___|", $D, $A
 SZ_BANNER5      db      "                    |_____|", $1B, "[1;37mBringup ", $1B, "[1;30m0.01.DEV", $1B, "[0m", $D, $A, 0
-FAILED          db      "Bankcheck failed", $D, $A, 0
-PASSED          db      "Bankcheck passed", $D, $A, 0
+BCFAILED        db      "Bankcheck failed", $D, $A, 0
+BCPASSED        db      "Bankcheck passed", $D, $A, 0
+
 
 ; *******************************************************
 ; * Vectors
@@ -185,5 +250,5 @@ PASSED          db      "Bankcheck passed", $D, $A, 0
         ORG $fffc
 
 RESET           dw      start
-IRQ             dw      $00E0
+IRQ             dw      irq_handler
 
