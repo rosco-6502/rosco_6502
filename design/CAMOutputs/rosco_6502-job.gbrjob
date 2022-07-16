@@ -5,13 +5,13 @@
       "Application": "Pcbnew",
       "Version": "(6.0.0-0)"
     },
-    "CreationDate": "2022-07-14T12:29:12+01:00"
+    "CreationDate": "2022-07-16T16:30:52+01:00"
   },
   "GeneralSpecs": {
     "ProjectId": {
       "Name": "rosco_6502",
       "GUID": "726f7363-6f5f-4363-9530-322e6b696361",
-      "Revision": "0"
+      "Revision": "3"
     },
     "Size": {
       "X": 100.1,
