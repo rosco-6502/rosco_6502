@@ -129,9 +129,9 @@ Pin 16 = NC           S0 = 0   S1 = 0
 109  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 110  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 
-Pin 15 = BANKO1       S0 = 1   S1 = 0
-111  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
-112  ---- ---- ---- ---- ---- x--- ---- ---- ---- ---- ----
+Pin 15 = NC           S0 = 0   S1 = 0
+111  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
+112  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 113  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 114  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 115  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
@@ -142,9 +142,9 @@ Pin 15 = BANKO1       S0 = 1   S1 = 0
 120  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 121  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 
-Pin 14 = BANKO2       S0 = 1   S1 = 0
+Pin 14 = BANKCLK      S0 = 1   S1 = 0
 122  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
-123  ---- ---- ---- ---- ---- ---- ---- ---- ---x ---- ----
+123  -x-- ---- ---- ---- ---- x--- ---- ---- ---- ---- ----
 124  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 125  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 126  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx

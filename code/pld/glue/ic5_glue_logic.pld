@@ -2,7 +2,7 @@ GAL22V10
 GLUE
 
 CLK    DUADT    DUASEL    RnW     HWRST    BANKSEL  VP      ML      IRQ     ROM      IO    GND
-NC     BANKO2   BANKO1    NC      ROMOE1   ROMOE2   NMI     RESET   RD      WR       RDY   VCC
+NC     BANKCLK  NC        NC      ROMOE1   ROMOE2   NMI     RESET   RD      WR       RDY   VCC
 
 /WR         = /RnW * CLK
 /RD         =  RnW * CLK
@@ -13,8 +13,7 @@ RESET.E     =  HWRST
 RDY.T       =  GND
 RDY.E       =  /DUASEL * /DUADT
 
-BANKO1.R    = BANKSEL
-BANKO2.R    = BANKO1
+BANKCLK     = BANKSEL * /CLK
 
 /ROMOE1     = /ROM * RnW
 /ROMOE2     = /ROM * RnW
@@ -22,6 +21,21 @@ BANKO2.R    = BANKO1
 DESCRIPTION
 
 IC5 (Glue logic) for rosco_6502 r1
+
+Note that the BANKCLK generated here is slightly sub-optimal - 
+It will actually generate _two_ pulses of the bank register
+clock signal, once before the data bus is set up (which will
+write garbage) followed by another once the data bus is correct
+(which will write the correct value). 
+
+Although this isn't optimal, it's not an issue (as during this
+time only the bank select write is happening, and bank RAM will
+never be selected).
+
+Doing it this way has been found to give more relible performance
+than (e.g.) involving /WR in the BANKSEL signal, which relies
+on prop delay through the GAL, and gives very marginal timing -
+often not enough for the register to latch reliably at 10MHz
 
 Copyright (c)2022 Ross Bamford. See LICENSE.
 
