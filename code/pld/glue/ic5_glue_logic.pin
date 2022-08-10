@@ -16,8 +16,8 @@
   12   | GND      | GND
   13   | NC       | Input
   14   | BANKCLK  | Output
-  15   | NC       | NC
-  16   | NC       | NC
+  15   | W1       | Output
+  16   | WS       | Output
   17   | ROMOE1   | Output
   18   | ROMOE2   | Output
   19   | NMI      | NC

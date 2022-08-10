@@ -1,11 +1,11 @@
 
 
 AR
-  0  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
+  0  ---- ---- ---- ---- ---- ---- ---- ---x ---- ---- ----
 
 Pin 23 = RDY          S0 = 1   S1 = 0
-  1  ---- -x-- -x-- ---- ---- ---- ---- ---- ---- ---- ----
-  2  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
+  1  ---- ---- ---- ---- ---- ---- ---- --x- ---- ---- ----
+  2  ---- ---- ---- ---- ---- ---- ---- ---- ---x ---- ----
   3  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
   4  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
   5  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
@@ -114,10 +114,10 @@ Pin 17 = ROMOE1       S0 = 0   S1 = 0
  96  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  97  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 
-Pin 16 = NC           S0 = 0   S1 = 0
- 98  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
- 99  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
-100  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
+Pin 16 = WS           S0 = 1   S1 = 0
+ 98  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
+ 99  ---- ---- ---- ---- ---- ---- ---- ---- ---- -x-- ----
+100  ---- ---- -x-- ---- ---- ---- ---- ---- ---- ---- ----
 101  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 102  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 103  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
@@ -129,9 +129,9 @@ Pin 16 = NC           S0 = 0   S1 = 0
 109  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 110  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 
-Pin 15 = NC           S0 = 0   S1 = 0
-111  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
-112  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
+Pin 15 = W1           S0 = 1   S1 = 0
+111  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
+112  ---- ---- ---- ---- -x-- ---- ---- --x- --x- ---- ----
 113  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 114  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 115  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
