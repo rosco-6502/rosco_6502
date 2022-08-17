@@ -78,9 +78,9 @@ Pin 19 = NMI          S0 = 0   S1 = 0
  64  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  65  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 
-Pin 18 = ROMOE2       S0 = 0   S1 = 0
- 66  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
- 67  ---- ---- ---- x--- ---- ---- ---- ---- ---- -x-- ----
+Pin 18 = NC           S0 = 0   S1 = 0
+ 66  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
+ 67  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  68  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  69  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  70  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
@@ -116,8 +116,8 @@ Pin 17 = ROMOE1       S0 = 0   S1 = 0
 
 Pin 16 = WS           S0 = 1   S1 = 0
  98  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
- 99  ---- ---- ---- ---- ---- ---- ---- ---- ---- -x-- ----
-100  ---- ---- -x-- ---- ---- ---- ---- ---- ---- ---- ----
+ 99  ---- ---- -x-- ---- ---- ---- ---- ---- ---- ---- ----
+100  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 101  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 102  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 103  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx

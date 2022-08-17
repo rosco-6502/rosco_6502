@@ -19,7 +19,7 @@
   15   | W1       | Output
   16   | WS       | Output
   17   | ROMOE1   | Output
-  18   | ROMOE2   | Output
+  18   | NC       | NC
   19   | NMI      | NC
   20   | RESET    | Output
   21   | RD       | Output

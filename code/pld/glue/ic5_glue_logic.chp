@@ -15,7 +15,7 @@
                           |                 |
                   BANKSEL |  6           19 | NMI
                           |                 |
-                       VP |  7           18 | ROMOE2
+                       VP |  7           18 | NC
                           |                 |
                        ML |  8           17 | ROMOE1
                           |                 |

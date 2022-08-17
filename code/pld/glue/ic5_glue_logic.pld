@@ -2,7 +2,7 @@ GAL22V10
 GLUE
 
 CLK    DUADT    DUASEL    RnW     HWRST    BANKSEL  VP      ML      IRQ     ROM      IO    GND
-NC     BANKCLK  W1        WS      ROMOE1   ROMOE2   NMI     RESET   RD      WR       RDY   VCC
+NC     BANKCLK  W1        WS      ROMOE1   NC       NMI     RESET   RD      WR       RDY   VCC
 
 /WR         = /RnW * CLK
 /RD         =  RnW * CLK
@@ -10,8 +10,7 @@ NC     BANKCLK  W1        WS      ROMOE1   ROMOE2   NMI     RESET   RD      WR  
 RESET.T     =  GND
 RESET.E     =  HWRST
 
-WS          = /ROM
-            + /DUASEL
+WS          = /DUASEL
 W1.R        =  WS * /W1 * /HWRST
 
 RDY.T       =  W1
@@ -21,7 +20,6 @@ AR          = /WS
 BANKCLK     =  BANKSEL * /CLK
 
 /ROMOE1     = /ROM * RnW
-/ROMOE2     = /ROM * RnW
 
 DESCRIPTION
 
