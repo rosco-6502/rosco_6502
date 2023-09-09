@@ -190,10 +190,7 @@ bankcheck:
       
 
 ; *******************************************************
-; * Not actually an IRQ handler yet, until I figure out why 
-; * interrupt cycle isn't working...
-;
-; * Just called from main code in the meantime...
+; Timer tick IRQ handler; Driven by DUART timer
 ; *******************************************************
 irq_handler:
         pha               ; Stack A
