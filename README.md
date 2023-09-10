@@ -28,7 +28,7 @@ The hardware specifications for the rosco_6502 are:
     * 16KB low RAM ($0000 - $3FFF)
     * 16 x 32KB RAM banks ($4000 - $BFFF) 
     * 8KB IO space ($C000 - $DFFF)
-    * 8KB ROM $E000 - $FFFF (8KB)
+    * 8KB or 32KB (banked) ROM $E000 - $FFFF (8KB)
 * High-speed decode and glue logic handled by Atmel F22V10C PLDs.
 * Comprehensive expansion and IO connectors allow the system to be easily expanded!
 

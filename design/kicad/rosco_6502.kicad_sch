@@ -5452,7 +5452,7 @@
     (property "Value" "AT28C256-15PU" (id 1) (at 196.9644 22.225 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
-    (property "Footprint" "Package_DIP:DIP-28_W15.24mm" (id 2) (at 194.945 92.075 0)
+    (property "Footprint" "Package_DIP:DIP-28_W15.24mm_Socket_LongPads" (id 2) (at 194.945 92.075 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "https://ww1.microchip.com/downloads/en/DeviceDoc/doc0006.pdf" (id 3) (at 194.945 89.535 0)
@@ -6592,7 +6592,7 @@
       (reference "U2") (unit 1) (value "AS6C62256-55PCN") (footprint "Package_DIP:DIP-28_W15.24mm_Socket_LongPads")
     )
     (path "/4538bf2d-4cfd-4cc4-8255-e988871e9c9f"
-      (reference "U3") (unit 1) (value "AT28C256-15PU") (footprint "Package_DIP:DIP-28_W15.24mm")
+      (reference "U3") (unit 1) (value "AT28C256-15PU") (footprint "Package_DIP:DIP-28_W15.24mm_Socket_LongPads")
     )
     (path "/7935fa25-e96e-4855-a3e0-7a704a6c1626"
       (reference "U4") (unit 1) (value "74HCT174") (footprint "Package_DIP:DIP-16_W7.62mm_Socket_LongPads")
