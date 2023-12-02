@@ -3,15 +3,15 @@
     "GenerationSoftware": {
       "Vendor": "KiCad",
       "Application": "Pcbnew",
-      "Version": "(6.0.0-0)"
+      "Version": "7.0.9"
     },
-    "CreationDate": "2023-09-10T11:44:04+01:00"
+    "CreationDate": "2023-12-02T11:44:08+00:00"
   },
   "GeneralSpecs": {
     "ProjectId": {
       "Name": "rosco_6502",
       "GUID": "726f7363-6f5f-4363-9530-322e6b696361",
-      "Revision": "3"
+      "Revision": "4"
     },
     "Size": {
       "X": 100.1,
@@ -24,15 +24,15 @@
   "DesignRules": [
     {
       "Layers": "Outer",
-      "PadToPad": 0.2,
-      "PadToTrack": 0.2,
+      "PadToPad": 0.0,
+      "PadToTrack": 0.0,
       "TrackToTrack": 0.2,
       "MinLineWidth": 0.25
     },
     {
       "Layers": "Inner",
-      "PadToPad": 0.2,
-      "PadToTrack": 0.2,
+      "PadToPad": 0.0,
+      "PadToTrack": 0.0,
       "TrackToTrack": 0.2,
       "MinLineWidth": 0.25,
       "TrackToRegion": 0.508,
