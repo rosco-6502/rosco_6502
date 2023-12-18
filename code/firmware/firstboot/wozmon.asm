@@ -27,7 +27,7 @@ IN              = $0200         ;  Input buffer to $027F
 
 WOZMON:         CLD             ; Clear decimal arithmetic mode.
 ;                CLI
-;                LDY #$7F        ; First increment will zero
+                LDY #$7F        ; First increment will make negative
 ;                STY DSP         ; Set it up.
                 LDA #$1B        ; Begin with escape
 ;                STA KBDCR       ; Enable interrupts, set CA1, CB1, for
@@ -160,8 +160,6 @@ ECHOLOOP:
 ;                STA DSP         ; Output character. Sets DA.
                 RTS             ; Return.
 
-                BRK             ; Unused
-                BRK             ; Unused
                 BRK             ; Unused
                 BRK             ; Unused
                 BRK             ; Unused
