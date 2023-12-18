@@ -10,29 +10,9 @@
 ;
 ; Initial bringup and basic testing code for the board.
 ;------------------------------------------------------------
-        section .data
-        ORG 0
 
-        section .text
-        ORG $e000
-
-DUA_MR1A    = $c000
-DUA_MR2A    = $c000
-DUA_SRA     = $c001
-DUA_CSRA    = $c001
-DUA_CRA     = $c002 
-DUA_TBA     = $c003
-DUA_ACR     = $c004
-DUA_IMR     = $c005
-DUA_CTUR    = $c006
-DUA_CTLR    = $c007
-DUA_OPR_S   = $c00e
-DUA_STARTC  = $c00e
-DUA_OPR_C   = $c00f
-DUA_STOPC   = $c00f
-
-TICKCNT     = $0          ; Stash tick count at bottom of RAM for now...
-TICKSTT     = $1          ; Tick state at 0x1 for now...
+        section .bank0.text
+        include "defines.asm"
 
 start:
         sei
@@ -189,50 +169,25 @@ bankcheck:
 ; We're done.
 .done
         rts
+
       
+; *******************************************************
+; * Include IRQ handling for this bank
+; *******************************************************
+        section .bank0.irq
+        include "irq.asm"
+
 
 ; *******************************************************
-; Timer tick IRQ handler; Driven by DUART timer
+; * Include vectors for this bank
 ; *******************************************************
-irq_handler:
-        pha               ; Stack A
-        phx               ; Stack X
-
-        ldx TICKCNT       ; Get tick count
-        dex               ; Decrement it
-        bne .done         ; If non-zero, we're done
-
-        ; If here, time to toggle green LED
-
-        ldx #100          ; Reset tick count
-
-        lda TICKSTT       ; Get current LED state
-        beq .turnon       ; If it's off, go turn it on
-
-        ; If here, LED is on
-        lda #$20          ; Set up to clear bit 6
-        sta DUA_OPR_C     ; Send command
-        lda #0            ; LED is now off
-        sta TICKSTT       ; Store state
-        bra .done
-
-.turnon
-        lda #$20          ; Set up to set bit 6
-        sta DUA_OPR_S     ; Send command
-        lda #1            ; LED is now on
-        sta TICKSTT       ; Store state
-
-.done
-        lda DUA_STOPC     ; Send "stop timer" command (reset ISR[3])
-        stx TICKCNT       ; Store X as the new tick count
-        plx               ; Unstack X
-        pla               ; Unstack A
-        rti
-  
+        section .bank0.vectors
+        include "vectors.asm"
 
 ; *******************************************************
-; * Data
+; * Readonly data
 ; *******************************************************
+        section .bank0.rodata
 SZ_BANNER0      db      $D, $A, $1B, "[1;33m"
 SZ_BANNER1      db      "                           ___ ___ ___ ___ ", $D, $A
 SZ_BANNER2      db      " ___ ___ ___ ___ ___      |  _| __|   |__ |", $D, $A
@@ -241,16 +196,3 @@ SZ_BANNER4      db      "|_| |___|___|___|___|_____|___|___|___|___|", $D, $A
 SZ_BANNER5      db      "                    |_____|", $1B, "[1;37mBringup ", $1B, "[1;30m0.01.DEV", $1B, "[0m", $D, $A, 0
 BCFAILED        db      "Bankcheck failed", $D, $A, 0
 BCPASSED        db      "Bankcheck passed", $D, $A, 0
-
-
-        ORG $ff00
-
-        include "wozmon.asm"
-; *******************************************************
-; * Vectors
-; *******************************************************
-        ORG $fffc
-
-RESET           dw      start
-IRQ             dw      irq_handler
-
