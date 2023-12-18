@@ -23,24 +23,24 @@ IN              = $0200         ;  Input buffer to $027F
 ;DSP             = $D012         ;  PIA.B display output register
 ;DSPCR           = $D013         ;  PIA.B display control register
 
-               ORG $FF00
+                ORG $FF00
 
 WOZMON:         CLD             ; Clear decimal arithmetic mode.
 ;                CLI
-                LDY #$7F        ; Mask for DSP data direction register.
+;                LDY #$7F        ; First increment will zero
 ;                STY DSP         ; Set it up.
-                LDA #$A7        ; KBD and DSP control register mask.
+                LDA #$1B        ; Begin with escape
 ;                STA KBDCR       ; Enable interrupts, set CA1, CB1, for
 ;                STA DSPCR       ;  positive edge sense/output mode.
-NOTCR:          CMP #'_'+$80    ; "_"?
+NOTCR:          CMP #$08        ; Backspace?
                 BEQ BACKSPACE   ; Yes.
-                CMP #$9B        ; ESC?
+                CMP #$1B        ; ESC?
                 BEQ ESCAPE      ; Yes.
                 INY             ; Advance text index.
                 BPL NEXTCHAR    ; Auto ESC if > 127.
-ESCAPE:         LDA #'\'+$80    ; "\".
+ESCAPE:         LDA #'\'        ; "\".
                 JSR ECHO        ; Output it.
-GETLINE:        LDA #$8D        ; CR.
+GETLINE:        LDA #$0D        ; CR.
                 JSR ECHO        ; Output it.
                 LDY #$01        ; Initialize text index.
 BACKSPACE:      DEY             ; Back up text index.
@@ -49,32 +49,32 @@ NEXTCHAR:       LDA DUA_SRA     ; Key ready?
                 AND #$01        ; (Bit 1 of DUART SRA set?)
                 BEQ NEXTCHAR    ; Loop until ready.
                 LDA DUA_TBA     ; Load character. 
-                ORA #$80        ; B7 should be ‘1’.
                 STA IN,Y        ; Add to text buffer.
                 JSR ECHO        ; Display character.
-                CMP #$8D        ; CR?
+                CMP #$0D        ; CR?
                 BNE NOTCR       ; No.
                 LDY #$FF        ; Reset text index.
                 LDA #$00        ; For XAM mode.
                 TAX             ; 0->X.
+SETBLOCK:       ASL             ; Leaves $B8 if setting BLOCK XAM mode.
 SETSTOR:        ASL             ; Leaves $7B if setting STOR mode.
-SETMODE:        STA MODE        ; $00=XAM, $7B=STOR, $AE=BLOCK XAM.
+                STA MODE        ; $00=XAM, $74=STOR, $B8=BLOCK XAM.
 BLSKIP:         INY             ; Advance text index.
 NEXTITEM:       LDA IN,Y        ; Get character.
-                CMP #$8D        ; CR?
+                CMP #$0D        ; CR?
                 BEQ GETLINE     ; Yes, done this line.
-                CMP #'.'+$80    ; "."?
+                CMP #'.'        ; "."?
                 BCC BLSKIP      ; Skip delimiter.
-                BEQ SETMODE     ; Set BLOCK XAM mode.
-                CMP #':'+$80    ; ":"?
+                BEQ SETBLOCK    ; Set BLOCK XAM mode.
+                CMP #':'        ; ":"?
                 BEQ SETSTOR     ; Yes. Set STOR mode.
-                CMP #'R'+$80    ; "R"?
+                CMP #'R'        ; "R"?
                 BEQ RUN         ; Yes. Run user program.
                 STX L           ; $00->L.
                 STX H           ;  and H.
                 STY YSAV        ; Save Y for comparison.
 NEXTHEX:        LDA IN,Y        ; Get character for hex test.
-                EOR #$B0        ; Map digits to $0-9.
+                EOR #$30        ; Map digits to $0-9.
                 CMP #$0A        ; Digit?
                 BCC DIG         ; Yes.
                 ADC #$88        ; Map letter "A"-"F" to $FA-FF.
@@ -111,15 +111,15 @@ SETADR:         LDA L-1,X       ; Copy hex data to
                 DEX             ; Next of 2 bytes.
                 BNE SETADR      ; Loop unless X=0.
 NXTPRNT:        BNE PRDATA      ; NE means no address to print.
-                LDA #$8D        ; CR.
+                LDA #$0D        ; CR.
                 JSR ECHO        ; Output it.
                 LDA XAMH        ; ‘Examine index’ high-order byte.
                 JSR PRBYTE      ; Output it in hex format.
                 LDA XAML        ; Low-order ‘examine index’ byte.
                 JSR PRBYTE      ; Output it in hex format.
-                LDA #':'+$80    ; ":".
+                LDA #':'        ; ":".
                 JSR ECHO        ; Output it.
-PRDATA:         LDA #$A0        ; Blank.
+PRDATA:         LDA #$20        ; Blank.
                 JSR ECHO        ; Output it.
                 LDA (XAML,X)    ; Get data byte at ‘examine index’.
                 JSR PRBYTE      ; Output it in hex format.
@@ -143,8 +143,8 @@ PRBYTE:         PHA             ; Save A for LSD.
                 JSR PRHEX       ; Output hex digit.
                 PLA             ; Restore A.
 PRHEX:          AND #$0F        ; Mask LSD for hex print.
-                ORA #'0'+$80    ; Add "0".
-                CMP #$BA        ; Digit?
+                ORA #'0'        ; Add "0".
+                CMP #$3A        ; Digit?
                 BCC ECHO        ; Yes, output it.
                 ADC #$06        ; Add offset for letter.
 ECHO:
@@ -154,20 +154,21 @@ ECHOLOOP:
                 AND #$04
                 BEQ ECHOLOOP    ; Loop if not ready (bit clear)
                 LDA SCRATCH
-                AND #$7f
                 STA DUA_TBA       ; else, send character
-                ORA #$80
 ;                BIT DSP         ; DA bit (B7) cleared yet?
 ;                BMI ECHO        ; No, wait for display.
 ;                STA DSP         ; Output character. Sets DA.
                 RTS             ; Return.
 
-;                BRK             ; unused
-;                BRK             ; unused
+                BRK             ; Unused
+                BRK             ; Unused
+                BRK             ; Unused
+                BRK             ; Unused
+                BRK             ; Unused
 
 ; Interrupt Vectors
 
-;                dw $0F00        ; NMI
+                dw WOZMON       ; NMI
 ;                dw RESET        ; RESET
 ;                dw $0000        ; BRK/IRQ
 

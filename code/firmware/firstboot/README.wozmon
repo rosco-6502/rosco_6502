@@ -1,0 +1,24 @@
+The WOZ Monitor for the Apple 1
+Written by Steve Wozniak in 1976
+
+Modified for rosco_6502 / VASM by 
+Ross Bamford forty-seven years later.
+
+To use wozmon on the rosco_6502, you'll
+want to set your terminal to treat CR 
+as CRLF and send a single CR on return.
+
+I've done the bare minimum to make the 
+code work on the rosco_6502. This has
+changed the entrypoints of some routines:
+
+* `GETLINE` is now at `FF13`
+* `ECHO` is now at `FFE6`
+* `PRBYTE` is now at `FFD3`
+* `PRHEX` is now at `FFDC`
+
+The monitor entrypoint (not `GETLINE` but
+the actual beginning at `FF00`) is loaded
+into `NMI`, but there's not a way to
+trigger than right now without adding a button...
+ 
