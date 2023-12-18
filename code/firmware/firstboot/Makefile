@@ -1,20 +1,27 @@
-VASM=vasm6502_oldstyle 
-ASFLAGS=-c02 -Fbin 
-LDFLAGS=
+VASM=vasm6502_oldstyle
+VLINK=vlink
+ASFLAGS=-c02 -Fvobj -quiet 
+LDFLAGS=-brawbin1
 
-all: rom.bin
+all: boot8k.bin boot32k.bin
 
-boot64k.bin: boot.asm wozmon.asm
+%.o : %.asm
 	$(VASM) $(ASFLAGS) -L $<.lst -o $@ $<
 
-rom.bin: boot64k.bin
-	tail -c 8192 $< > $@
+boot8k.bin: boot.o wozmon.o
+	$(VLINK) $(LDFLAGS) -T link8.ld -L $@.lst -o $@ $^
 
-burn: rom.bin
+boot32k.bin: boot.o wozmon.o bank1.o bank2.o bank3.o
+	$(VLINK) $(LDFLAGS) -T link32.ld -L $@.lst -o $@ $^
+
+burn8: boot8k.bin
 	minipro -p AT28C64B -s -w $<
 
+burn32: boot32k.bin
+	minipro -p AT28C256 -s -w $<
+
 clean:
-	$(RM) -f boot64k.bin rom.bin *.o *.lst
+	$(RM) -f *bin *.o *.lst
 
 .PHONY: all burn clean
 
