@@ -27,19 +27,22 @@ The hardware specifications for the rosco_6502 are:
 * 528KB RAM 
     * 16KB low RAM ($0000 - $3FFF)
     * 16 x 32KB RAM banks ($4000 - $BFFF) 
-    * 8KB IO space ($C000 - $DFFF)
-    * 8KB or 32KB (banked) ROM $E000 - $FFFF (8KB)
+* 8KB IO space ($C000 - $DFFF)
+* 8KB or 32KB (banked) ROM $E000 - $FFFF
 * High-speed decode and glue logic handled by Atmel F22V10C PLDs.
 * Comprehensive expansion and IO connectors allow the system to be easily expanded!
 
+You can see the electrical designs in the [kicad](design/kicad). Programmable logic lives in [pld](code/pld).
+
 ### Software
 
-The first prototype boards are back from the fab, and work is underway on 
-initial bringup and basic feature tests. You can see the code that's being
-used for this in the [firstboot](code/firmware/firstboot) directory.
+The board design is proven and working well, and work is underway on 
+initial bringup code and user ROM. Currently, this means the board can
+boot, initialize hardware, and drop into [WozMon](http://jefftranter.blogspot.com/2012/05/woz-mon.html)
+allowing programs to be keyed in (slowly!) or pasted-to-terminal 
+for running on the board.
 
-Along the way there have been a few modifications and improvements made to 
-the board and schematic which will feed into the next batch of prototypes.
-You can see the electrical design changes in the [kicad](design/kicad) 
-directory, and the programmable logic changes in [pld](code/pld).
+You can see the code that's being used for this in the [firstboot](code/firmware/firstboot) 
+directory. This is also where the banked ROM layout is being developed.
+
 
