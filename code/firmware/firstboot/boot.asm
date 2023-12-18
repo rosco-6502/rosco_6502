@@ -81,6 +81,8 @@ start:
         ; Basic banking check
         jsr bankcheck
 
+        jmp WOZMON
+
         ; Go to flash loop
 .flash:
         lda #$08          ; LED on
@@ -241,6 +243,9 @@ BCFAILED        db      "Bankcheck failed", $D, $A, 0
 BCPASSED        db      "Bankcheck passed", $D, $A, 0
 
 
+        ORG $ff00
+
+        include "wozmon.asm"
 ; *******************************************************
 ; * Vectors
 ; *******************************************************
