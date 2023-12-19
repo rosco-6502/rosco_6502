@@ -144,7 +144,7 @@ Pin 15 = NC           S0 = 0   S1 = 0
 
 Pin 14 = BANKCLK      S0 = 1   S1 = 0
 122  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
-123  -x-- ---- ---- ---- ---- x--- ---- ---- ---- ---- ----
+123  -x-- ---- ---- -x-- ---- x--- ---- ---- ---- ---- ----
 124  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 125  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 126  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx

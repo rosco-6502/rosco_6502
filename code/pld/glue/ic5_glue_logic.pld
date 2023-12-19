@@ -13,7 +13,7 @@ RESET.E     =  HWRST
 RDY.T       =  GND
 RDY.E       =  /DUASEL * /DUADT
 
-BANKCLK     = BANKSEL * /CLK
+BANKCLK     = BANKSEL * /RnW * /CLK
 
 /ROMOE1     = /ROM * RnW
 /ROMOE2     = /ROM * RnW
