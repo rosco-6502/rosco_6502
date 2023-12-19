@@ -11,6 +11,16 @@
 ; Main code for ROM bank 1
 ;------------------------------------------------------------
 
+; *******************************************************
+; * Include routine table for this bank
+; *******************************************************
+        section .bank1.rtable
+        include "rtable.asm"
+
+
+; *******************************************************
+; * RESET vector entry for this bank
+; *******************************************************
         section .bank1.text
         include "defines.asm"
 
@@ -24,6 +34,27 @@ start:
 
 
 ; *******************************************************
+; * include common routines
+; *******************************************************
+        section .bank1.routines
+        include "routines.asm"
+
+
+; *******************************************************
+; * Include bank switch code for this bank
+; *******************************************************
+        section .bank1.bank
+        include "bank.asm"
+
+bankenter1:
+        lda #<EBANK
+        ldx #>EBANK
+        jsr printsz
+        lda #$20          ; Switch to bank 2!
+        jmp (R_BANK)
+
+          
+; *******************************************************
 ; * Include IRQ handling for this bank
 ; *******************************************************
         section .bank1.irq
@@ -35,3 +66,12 @@ start:
 ; *******************************************************
         section .bank1.vectors
         include "vectors.asm"
+
+
+; *******************************************************
+; * Readonly data
+; *******************************************************
+        section .bank1.rodata
+
+EBANK           db      "ROM   Bank #1 ", $1B, "[1;32mpassed", $1B, "[0m", $D, 0
+
