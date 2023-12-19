@@ -23,8 +23,6 @@ IN              = $0200         ;  Input buffer to $027F
 ;DSP             = $D012         ;  PIA.B display output register
 ;DSPCR           = $D013         ;  PIA.B display control register
 
-                global WOZMON
-
 WOZMON:         CLD             ; Clear decimal arithmetic mode.
 ;                CLI
                 LDY #$7F        ; First increment will make negative
