@@ -4,8 +4,6 @@
 ;  Modified for rosco_6502 / VASM by 
 ;  Ross Bamford forty-seven years later.
 
-                include defines.asm
-
 ; Page 0 Variables
 
 XAML            = $24           ;  Last "opened" location Low
@@ -25,7 +23,6 @@ IN              = $0200         ;  Input buffer to $027F
 ;DSP             = $D012         ;  PIA.B display output register
 ;DSPCR           = $D013         ;  PIA.B display control register
 
-                section .text.wozmon
                 global WOZMON
 
 WOZMON:         CLD             ; Clear decimal arithmetic mode.

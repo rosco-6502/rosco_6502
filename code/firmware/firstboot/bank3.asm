@@ -11,6 +11,16 @@
 ; Main code for ROM bank 3
 ;------------------------------------------------------------
 
+; *******************************************************
+; * Include routine table for this bank
+; *******************************************************
+        section .bank3.rtable
+        include "rtable.asm"
+
+
+; *******************************************************
+; * RESET vector entry for this bank
+; *******************************************************
         section .bank3.text
         include "defines.asm"
 
@@ -21,6 +31,27 @@ start:
                           ; This will need to switch back to 
                           ; bank0, in case the board is reset
                           ; while this bank is selected...
+
+
+; *******************************************************
+; * include common routines
+; *******************************************************
+        section .bank3.routines
+        include "routines.asm"
+
+
+; *******************************************************
+; * Include bank switch code for this bank
+; *******************************************************
+        section .bank3.bank
+        include "bank.asm"
+
+bankenter3:
+        lda #<EBANK
+        ldx #>EBANK
+        jsr printsz
+        lda #$00          ; Switch to bank 0!
+        jmp (R_BANK)
 
 
 ; *******************************************************
@@ -35,3 +66,12 @@ start:
 ; *******************************************************
         section .bank3.vectors
         include "vectors.asm"
+
+
+; *******************************************************
+; * Readonly data
+; *******************************************************
+        section .bank3.rodata
+
+EBANK           db      "      Bank #3 ", $1B, "[1;32mpassed", $1B, "[0m", $D, 0
+

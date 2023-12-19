@@ -5,12 +5,22 @@
 ; |_| |___|___|___|___|_____|___|___|___|___|
 ;                     |_____|    Bringup Code
 ;------------------------------------------------------------
-; Copyright (c)2022 Ross Bamford and contributors
+; Copyright (c)2022-2023 Ross Bamford and contributors
 ; See top-level LICENSE.md for licence information.
 ;
 ; Initial bringup and basic testing code for the board.
 ;------------------------------------------------------------
 
+; *******************************************************
+; * Include routine table for this bank
+; *******************************************************
+        section .bank0.rtable
+        include "rtable.asm"
+
+
+; *******************************************************
+; * RESET vector entry for this bank
+; *******************************************************
         section .bank0.text
         include "defines.asm"
 
@@ -58,10 +68,13 @@ start:
         ; Do the banner
         jsr printbanner
 
-        ; Basic banking check
+        ; Basic RAM banking check
         jsr bankcheck
 
-        jmp WOZMON
+        ; Cycle ROM banks
+        lda #$10          ; Switch to bank 1
+        jmp (R_BANK)
+
 
         ; Go to flash loop
 .flash:
@@ -106,17 +119,6 @@ printbanner:
 .done
         rts
 
-        
-; *******************************************************
-; * Blocking putc to DUART. Character in X
-; *******************************************************
-putc:
-        lda DUA_SRA       ; Check TXRDY bit
-        and #4
-        beq putc          ; Loop if not ready (bit clear)
-        stx DUA_TBA       ; else, send character
-        rts
-        
 
 ; *******************************************************
 ; * Basic test of the memory bank hardware
@@ -170,13 +172,39 @@ bankcheck:
 .done
         rts
 
-      
+
+; *******************************************************
+; * include common routines
+; *******************************************************
+        section .bank0.routines
+        include "routines.asm"
+
+
+; *******************************************************
+; * Include bank switch code for this bank
+; *******************************************************
+        section .bank0.bank
+        include "bank.asm"
+
+bankenter0:
+        lda #<EBANK
+        ldx #>EBANK
+        jsr printsz
+        jmp WOZMON
+
+          
 ; *******************************************************
 ; * Include IRQ handling for this bank
 ; *******************************************************
         section .bank0.irq
         include "irq.asm"
 
+
+; *******************************************************
+; * Include wozmon for this bank
+; *******************************************************
+        section .bank0.wozmon
+        include "wozmon.asm"
 
 ; *******************************************************
 ; * Include vectors for this bank
@@ -189,10 +217,12 @@ bankcheck:
 ; *******************************************************
         section .bank0.rodata
 SZ_BANNER0      db      $D, $A, $1B, "[1;33m"
-SZ_BANNER1      db      "                           ___ ___ ___ ___ ", $D, $A
-SZ_BANNER2      db      " ___ ___ ___ ___ ___      |  _| __|   |__ |", $D, $A
-SZ_BANNER3      db      "|  _| . |_ -|  _| . |     | . |__ | | | __|", $D, $A
-SZ_BANNER4      db      "|_| |___|___|___|___|_____|___|___|___|___|", $D, $A
-SZ_BANNER5      db      "                    |_____|", $1B, "[1;37mBringup ", $1B, "[1;30m0.01.DEV", $1B, "[0m", $D, $A, 0
-BCFAILED        db      "Bankcheck failed", $D, $A, 0
-BCPASSED        db      "Bankcheck passed", $D, $A, 0
+SZ_BANNER1      db      "                           ___ ___ ___ ___ ", $D
+SZ_BANNER2      db      " ___ ___ ___ ___ ___      |  _| __|   |__ |", $D
+SZ_BANNER3      db      "|  _| . |_ -|  _| . |     | . |__ | | | __|", $D
+SZ_BANNER4      db      "|_| |___|___|___|___|_____|___|___|___|___|", $D 
+SZ_BANNER5      db      "                    |_____|", $1B, "[1;37mBringup ", $1B, "[1;30m0.01.DEV", $1B, "[0m", $D, 0
+BCFAILED        db      "Bankcheck ", $1B, "[1;31mfailed", $1B, "[0m", $D, 0
+BCPASSED        db      "RAM Bankcheck ", $1B, "[1;32mpassed", $1B, "[0m", $D, 0
+EBANK           db      "ROM Bankcheck ", $1B, "[1;32mpassed", $1B, "[0m", $D, 0
+
