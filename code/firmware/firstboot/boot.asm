@@ -59,7 +59,7 @@ start:
         lda #$08          ; Unmask counter interrupt
         sta DUA_IMR
 
-        lda #100          ; Initial tick count is 100
+        lda #FLASHDELAY   ; Initial tick count is 100
         sta TICKCNT
         lda #0            ; Initial state is 0 (LED off)
         sta TICKSTT
@@ -68,39 +68,19 @@ start:
         ; Do the banner
         jsr printbanner
 
-        ; Basic RAM banking check
+        ; Do RAM bank checks
         jsr bankcheck
 
-        ; Cycle ROM banks
+        ; Cycle ROM banks - this will end up switching back
+        ; to this bank, and will jump in to bankenter0, continuing
+        ; the boot process...
+        lda #<EBANK
+        ldx #>EBANK
+        jsr printsz       ; Print message
+
         lda #$10          ; Switch to bank 1
-        jmp (R_BANK)
+        jmp bankswitch
 
-
-        ; Go to flash loop
-.flash:
-        lda #$08          ; LED on
-        sta DUA_OPR_S
-    
-        ldy #$FF          ; (2 cycles)
-        ldx #$FF          ; (2 cycles)
-.delay:  
-        dex               ; (2 cycles)
-        bne .delay        ; (3 cycles in loop, 2 cycles at end)
-        dey               ; (2 cycles)
-        bne .delay        ; (3 cycles in loop, 2 cycles at end)
-
-        lda #$08          ; LED off
-        sta DUA_OPR_C
-
-        ldy #$FF          ; (2 cycles)
-        ldx #$FF          ; (2 cycles)
-.delay2:
-        dex               ; (2 cycles)
-        bne .delay2       ; (3 cycles in loop, 2 cycles at end)
-        dey               ; (2 cycles)
-        bne .delay2       ; (3 cycles in loop, 2 cycles at end)
-
-        bra .flash
 
 
 ; *******************************************************
@@ -187,8 +167,8 @@ bankcheck:
         include "bank.asm"
 
 bankenter0:
-        lda #<EBANK
-        ldx #>EBANK
+        lda #<PBANK
+        ldx #>PBANK
         jsr printsz
         jmp WOZMON
 
@@ -221,8 +201,9 @@ SZ_BANNER1      db      "                           ___ ___ ___ ___ ", $D
 SZ_BANNER2      db      " ___ ___ ___ ___ ___      |  _| __|   |__ |", $D
 SZ_BANNER3      db      "|  _| . |_ -|  _| . |     | . |__ | | | __|", $D
 SZ_BANNER4      db      "|_| |___|___|___|___|_____|___|___|___|___|", $D 
-SZ_BANNER5      db      "                    |_____|", $1B, "[1;37mBringup ", $1B, "[1;30m0.01.DEV", $1B, "[0m", $D, 0
-BCFAILED        db      "Bankcheck ", $1B, "[1;31mfailed", $1B, "[0m", $D, 0
+SZ_BANNER5      db      "                    |_____|", $1B, "[1;37mBringup ", $1B, "[1;30m0.01.DEV", $1B, "[0m", $D, $D, 0
+BCFAILED        db      "RAM Bankcheck ", $1B, "[1;31mfailed", $1B, "[0m", $D, 0
 BCPASSED        db      "RAM Bankcheck ", $1B, "[1;32mpassed", $1B, "[0m", $D, 0
-EBANK           db      "ROM Bankcheck ", $1B, "[1;32mpassed", $1B, "[0m", $D, 0
+EBANK           db      "ROM   Bank #0 ", $1B, "[1;32mpassed", $1B, "[0m", $D, 0
+PBANK           db      "Memory checks ", $1B, "[1;32mpassed", $1B, "[0m", $D, 0
 

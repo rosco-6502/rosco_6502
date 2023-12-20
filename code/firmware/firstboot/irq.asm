@@ -26,7 +26,7 @@ irq_handler:
 
         ; If here, time to toggle green LED
 
-        ldx #100          ; Reset tick count
+        ldx #FLASHDELAY   ; Reset tick count
 
         lda TICKSTT       ; Get current LED state
         beq .turnon       ; If it's off, go turn it on

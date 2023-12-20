@@ -51,7 +51,7 @@ bankenter1:
         ldx #>EBANK
         jsr printsz
         lda #$20          ; Switch to bank 2!
-        jmp (R_BANK)
+        jmp bankswitch
 
           
 ; *******************************************************
@@ -80,5 +80,4 @@ bankenter1:
 ; *******************************************************
         section .bank1.rodata
 
-EBANK           db      "ROM   Bank #1 ", $1B, "[1;32mpassed", $1B, "[0m", $D, 0
-
+EBANK           db      "      Bank #1 ", $1B, "[1;32mpassed", $1B, "[0m", $D, 0

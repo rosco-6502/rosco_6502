@@ -51,7 +51,7 @@ bankenter3:
         ldx #>EBANK
         jsr printsz
         lda #$00          ; Switch to bank 0!
-        jmp (R_BANK)
+        jmp bankswitch
 
 
 ; *******************************************************
