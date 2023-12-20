@@ -32,7 +32,7 @@ The hardware specifications for the rosco_6502 are:
 * High-speed decode and glue logic handled by Atmel F22V10C PLDs.
 * Comprehensive expansion and IO connectors allow the system to be easily expanded!
 
-You can see the electrical designs in the [kicad](design/kicad). Programmable logic lives in [pld](code/pld).
+You can see the electrical designs in [kicad](design/kicad). Programmable logic lives in [pld](code/pld).
 
 ### Software
 
