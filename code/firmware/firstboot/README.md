@@ -8,11 +8,31 @@ wozmon.
 
 ### Building
 
+#### Prerequisites
+
 You'll need VASM (6502, oldstyle) installed, plus VLINK, and
 the usual build tools (`make` etc).
 
 * http://sun.hasenbraten.de/vasm/
 * http://sun.hasenbraten.de/vlink/
+
+VASM (with the 6502 modules) is currently available in the rosco_m68k toolchain homebrew tap.
+To install, do:
+
+```shell
+brew install rosco-m68k/toolchain/vasm-all
+```
+
+Or alternatively, tap and then install with:
+
+```shell
+brew tap rosco-m68k/toolchain
+brew install vasm-all
+```
+
+Note that VLINK is not yet available in the tap - we're working on that!
+
+#### The Build
 
 This code builds both 8KiB and 32KiB (banked) ROMs - 
 to build all targets, just do:
