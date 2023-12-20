@@ -80,5 +80,5 @@ bankenter2:
 ; *******************************************************
         section .bank2.rodata
 
-EBANK           db      "      Bank #2 ", $1B, "[1;32mpassed", $1B, "[0m", $D, 0
+EBANK           db      $1B, "[0;37m    Bank   #2 ", $1B, "[1;32mpassed", $1B, "[0m", $D, 0
 

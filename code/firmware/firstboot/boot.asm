@@ -201,9 +201,9 @@ SZ_BANNER1      db      "                           ___ ___ ___ ___ ", $D
 SZ_BANNER2      db      " ___ ___ ___ ___ ___      |  _| __|   |__ |", $D
 SZ_BANNER3      db      "|  _| . |_ -|  _| . |     | . |__ | | | __|", $D
 SZ_BANNER4      db      "|_| |___|___|___|___|_____|___|___|___|___|", $D 
-SZ_BANNER5      db      "                    |_____|", $1B, "[1;37mBringup ", $1B, "[1;30m0.01.DEV", $1B, "[0m", $D, $D, 0
-BCFAILED        db      "RAM Bankcheck ", $1B, "[1;31mfailed", $1B, "[0m", $D, 0
-BCPASSED        db      "RAM Bankcheck ", $1B, "[1;32mpassed", $1B, "[0m", $D, 0
-EBANK           db      "ROM   Bank #0 ", $1B, "[1;32mpassed", $1B, "[0m", $D, 0
-PBANK           db      "Memory checks ", $1B, "[1;32mpassed", $1B, "[0m", $D, 0
+SZ_BANNER5      db      "                    |_____|", $1B, "[1;37m System ", $1B, "[1;30m0.01.DEV", $1B, "[0m", $D, $D, 0
+BCFAILED        db      $1B, "[0;37mRAM Bankcheck ", $1B, "[1;31mfailed", $1B, "[0m", $D, 0
+BCPASSED        db      $1B, "[0;37mRAM Bankcheck ", $1B, "[1;32mpassed", $1B, "[0m", $D, 0
+EBANK           db      $1B, "[0;37mROM Bank   #0 ", $1B, "[1;32mpassed", $1B, "[0m", $D, 0
+PBANK           db      $1B, "[0;37mMemory checks ", $1B, "[1;32mpassed", $1B, "[0m", $D, 0
 
