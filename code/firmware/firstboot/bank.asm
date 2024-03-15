@@ -17,8 +17,7 @@
 ;
 ; Target bank byte in A
 bankswitch:
-        sta BANKS         ; Store new bank in memory 
-        sta BANK_SET      ; Set (write-only) bank register
+        sta BANK_SET      ; Set bank register
 
         ; ... will continue to bank-specific entry code
 
