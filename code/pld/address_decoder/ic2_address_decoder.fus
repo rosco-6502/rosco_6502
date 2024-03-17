@@ -30,9 +30,9 @@ Pin 22 = BANKSEL      S0 = 1   S1 = 0
 Pin 21 = ROM          S0 = 0   S1 = 0
  21  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
  22  x--- x--- x--- ---- ---- ---- ---- ---- ---- ---- ----
- 23  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
- 24  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
- 25  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
+ 23  x--- x--- ---- x--- ---- ---- ---- ---- ---- ---- ----
+ 24  x--- x--- ---- ---- x--- ---- ---- ---- ---- ---- ----
+ 25  x--- x--- ---- ---- ---- x--- ---- ---- ---- ---- ----
  26  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  27  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  28  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
@@ -44,7 +44,7 @@ Pin 21 = ROM          S0 = 0   S1 = 0
 
 Pin 20 = IO           S0 = 0   S1 = 0
  34  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
- 35  x--- x--- -x-- ---- ---- ---- ---- ---- ---- ---- ----
+ 35  x--- x--- -x-- -x-- -x-- -x-- ---- ---- ---- ---- ----
  36  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  37  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  38  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
