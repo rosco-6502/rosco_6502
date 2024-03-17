@@ -32,14 +32,14 @@ irq_handler:
         beq .turnon       ; If it's off, go turn it on
 
         ; If here, LED is on
-        lda #$20          ; Set up to clear bit 6
+        lda #OP_LED_G     ; Set up to clear bit 6 (LED G)
         sta DUA_OPR_C     ; Send command
         lda #0            ; LED is now off
         sta TICKSTT       ; Store state
         bra .done
 
 .turnon
-        lda #$20          ; Set up to set bit 6
+        lda #OP_LED_G     ; Set up to set bit 6 (LED G)
         sta DUA_OPR_S     ; Send command
         lda #1            ; LED is now on
         sta TICKSTT       ; Store state

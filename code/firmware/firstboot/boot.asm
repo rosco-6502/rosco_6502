@@ -30,7 +30,7 @@ start:
         ldx #$ff
         txs
 
-        ; Init DUART
+        ; Init DUART A
         lda #$a0          ; Enable extended TX rates
         sta DUA_CRA
         lda #$80          ; Enable extended RX rates
@@ -39,6 +39,8 @@ start:
         sta DUA_ACR
         lda #$88          ; Select 115k2
         sta DUA_CSRA
+        lda #$10          ; Select MR1A
+        sta DUA_CRA
         lda #$13          ; No RTS, RxRDY, Char, No Parity, 8 bits
         sta DUA_MR1A
         lda #$07          ; Normal, No TX CTX/RTS, 1 stop bit
@@ -46,15 +48,33 @@ start:
         lda #$05          ; Enable TX/RX port A
         sta DUA_CRA
 
+;        ; Init DUART B
+        lda #$a0          ; Enable extended TX rates
+        sta DUA_CRB
+        lda #$80          ; Enable extended RX rates
+        sta DUA_CRB
+        lda #$80          ; Select bit rate set 2
+        sta DUA_ACR
+        lda #$88          ; Select 115k2
+        sta DUA_CSRB
+        lda #$10          ; Select MR1B
+        sta DUA_CRB
+        lda #$13          ; No RTS, RxRDY, Char, No Parity, 8 bits
+        sta DUA_MR1B
+        lda #$07          ; Normal, No TX CTX/RTS, 1 stop bit
+        sta DUA_MR2B
+        lda #$05          ; Enable TX/RX port B
+        sta DUA_CRB
+
         ; Set up timer tick
         lda #$F0          ; Enable timer XCLK/16
         sta DUA_ACR
 
         ; Timer will run at ~100Hz: 3686400 / 16 / (1152 * 2) = 100
         lda #$04          ; Counter MSB = 0x04
-        sta DUA_CTUR
+        sta DUA_CTU
         lda #$80          ; Counter LSB = 0x80
-        sta DUA_CTLR
+        sta DUA_CTL
         lda DUA_STARTC    ; Issue START COUNTER
         lda #$08          ; Unmask counter interrupt
         sta DUA_IMR
@@ -106,9 +126,9 @@ printbanner:
 bankcheck:
         ldx #$00          ; Start at bank 0
 .writeloop
-        stx $DFFF         ; Set bank register
-        stx $4000         ; Store bank num to start of bank...
-        stx $BFFF         ; ... and to end also
+        stx BANK_SET      ; Set bank register
+        stx BANK_RAM_AD   ; Store bank num to start of bank...
+        stx BANK_RAM_AD+BANK_RAM_SZ-1 ; ... and to end also
         inx               ; Next bank...
         cpx #$10          ; ... unless we're out of banks
         beq .read         ; (go to read if so)
@@ -117,10 +137,10 @@ bankcheck:
 .read
         ldx #$00          ; Start back at bank 0
 .readloop
-        stx $DFFF         ; Set bank register
-        cpx $4000         ; Is first byte of bank the bank num?
+        stx BANK_SET      ; Set bank register
+        cpx BANK_RAM_AD   ; Is first byte of bank the bank num?
         bne .failed       ; ... failed if not :-(
-        cpx $BFFF         ; Is last byte of bank the bank num?
+        cpx BANK_RAM_AD+BANK_RAM_SZ-1 ; Is last byte of bank the bank num?
         bne .failed       ; ... also failed if not :-(
         inx               ; Next bank...
         cpx #$10          ; ... unless we're out of banks
