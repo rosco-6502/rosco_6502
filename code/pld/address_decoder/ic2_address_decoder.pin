@@ -18,7 +18,7 @@
   14   | A3       | Input
   15   | A2       | Input
   16   | A1       | Input
-  17   | A0       | Input
+  17   | A0       | NC
   18   | LOWRAM   | Output
   19   | BANKRAM  | Output
   20   | IO       | Output

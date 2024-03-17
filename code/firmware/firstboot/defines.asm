@@ -12,7 +12,7 @@
 ;------------------------------------------------------------
 
 ; 65C02S ROM and RAM bank register (write-only, mirrored in BANKS)
-BANK_SET    = $dfff         ; W [5:4] ROM bank, [3:0] RAM bank
+BANK_SET    = $0            ; W [5:4] ROM bank, [3:0] RAM bank
 
 ; XR68C681P DUART registers
 DUA_MR1A    = $c000         ; R/W

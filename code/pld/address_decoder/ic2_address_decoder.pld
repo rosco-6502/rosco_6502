@@ -10,7 +10,7 @@ A4    A3       A2        A1        A0        LOWRAM  BANKRAM   IO    ROM     BAN
 /IO         =  A15 *  A14 * /A13
 /ROM        =  A15 *  A14 *  A13
    
-BANKSEL     = /IO *  A0 *  A1 *  A2 *  A3 *  A4 *  A5 *  A6  *  A7  *   A8 *  A9  *  A10 *  A11 *  A12
+BANKSEL     = /A1 * /A2 * /A3 * /A4 * /A5 * /A6 * /A7 * /A8  * /A9  * /A10 * /A11 * /A12 * /A13 * /A14 * /A15
 /DUASEL     = /IO * /A4 * /A5 * /A6 * /A7 * /A8 * /A9 * /A10 * /A11 * /A12
 
 DESCRIPTION
@@ -22,7 +22,8 @@ IC2 (Address Decoder) for rosco_6502 r1
 * IO             : $C000 - $DFFF (8KB)
 * ROM            : $E000 - $FFFF (8KB)
 
-The top byte of IO space ($DFFF) is the bank register.
+The lowest two bytes of RAM ($0000 & $0001) are the bank register
+(Currenly 8-bit, repeated twice, but may be 16-bit in future versions).
 
 N.B. BANKSEL is active high!
 
