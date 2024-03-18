@@ -168,7 +168,8 @@ NOTHEX:         CPY     YSAV            ; Check if L, H empty (no hex digits).
                 BNE     NOESCAPE        ; Branch out of range, had to improvise...
                 JMP     ESCAPE          ; Yes, generate ESC sequence
 
-RUN:            JSR     ACTRUN          ; JSR to the Address we want to run
+RUN:            JSR     CRLF
+                JSR     ACTRUN          ; JSR to the Address we want to run
                 JMP     SOFTRESET       ; When returned for the program, reset EWOZ
 ACTRUN:         LDA     REGP
                 PHP
