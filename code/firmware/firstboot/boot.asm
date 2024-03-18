@@ -190,6 +190,7 @@ bankenter0:
         lda #<PBANK
         ldx #>PBANK
         jsr printsz
+        stz BANK_SET
         jmp WOZMON
 
           

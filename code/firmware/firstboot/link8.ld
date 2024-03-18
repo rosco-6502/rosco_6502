@@ -10,11 +10,11 @@ SECTIONS {
         *(.bank0.text*)
         *(.bank0.rodata*)
         *(.bank0.routines*)
-        . = 0xfd00;
+        . = 0xf800;
         *(.bank0.bank*)
-        . = 0xfe00;
+        . = 0xf900;
         *(.bank0.irq)
-        . = 0xff00;
+        . = 0xfa00;
         *(.bank0.wozmon)
         . = 0xfffa;
         *(.bank0.vectors)

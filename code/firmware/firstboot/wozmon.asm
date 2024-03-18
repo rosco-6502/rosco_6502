@@ -4,6 +4,9 @@
 ;  Modified for rosco_6502 / VASM by 
 ;  Ross Bamford forty-seven years later.
 
+; Tweaked by Xark with enhancments from ewozmon6850.asm:
+; https://gist.github.com/robinharris/b529a24f39bcbd53f1e21775e24d0b9e
+
 ; Page 0 Variables
 
 XAML            = $24           ;  Last "opened" location Low
@@ -14,7 +17,12 @@ L               = $28           ;  Hex value parsing Low
 H               = $29           ;  Hex value parsing High
 YSAV            = $2A           ;  Used to see if hex value is given
 MODE            = $2B           ;  $00=XAM, $7F=STOR, $AE=BLOCK XAM
-SCRATCH         = $2C           ;  Scratch storage (1 word)
+MSGL            = $2C
+MSGH            = $2D
+COUNTER         = $2E
+CRC             = $2F
+CRCCHECK        = $30
+
 ; Other Variables
 
 IN              = $0200         ;  Input buffer to $027F
@@ -23,13 +31,32 @@ IN              = $0200         ;  Input buffer to $027F
 ;DSP             = $D012         ;  PIA.B display output register
 ;DSPCR           = $D013         ;  PIA.B display control register
 
+;-------------------------------------------------------------------------
+;  Constants
+;-------------------------------------------------------------------------
+
+PROMPT          EQU     $5C            ;Prompt character
+BS              EQU     $08            ;Backspace key, arrow left key
+CR              EQU     $0D            ;Carriage Return
+LF              EQU     $0A            ;Carriage Return
+ESC             EQU     $1B            ;ESC key
+
 WOZMON:         CLD             ; Clear decimal arithmetic mode.
 ;                CLI
-                LDY #$7F        ; First increment will make negative
-;                STY DSP         ; Set it up.
-                LDA #$1B        ; Begin with escape
-;                STA KBDCR       ; Enable interrupts, set CA1, CB1, for
-;                STA DSPCR       ;  positive edge sense/output mode.
+SOFTRESET:      JSR     CRLF           
+                LDA     #<MSG1
+                STA     MSGL
+                LDA     #>MSG1
+                STA     MSGH
+                JSR     SHWMSG         ;* Show Welcome
+                LDA     #$9B           
+                LDY     #$7F           ;* Auto escape
+; Program falls through to the GETLINE routine to save some program bytes
+
+;-------------------------------------------------------------------------
+; The GETLINE process
+;-------------------------------------------------------------------------
+
 NOTCR:          CMP #$08        ; Backspace?
                 BEQ BACKSPACE   ; Yes.
                 CMP #$1B        ; ESC?
@@ -38,16 +65,25 @@ NOTCR:          CMP #$08        ; Backspace?
                 BPL NEXTCHAR    ; Auto ESC if > 127.
 ESCAPE:         LDA #'\'        ; "\".
                 JSR ECHO        ; Output it.
-GETLINE:        LDA #$0D        ; CR.
-                JSR ECHO        ; Output it.
+GETLINE:        JSR CRLF
                 LDY #$01        ; Initialize text index.
 BACKSPACE:      DEY             ; Back up text index.
                 BMI GETLINE     ; Beyond start of line, reinitialize.
+                LDA #$20
+                JSR ECHO
+                LDA #$08
+                JSR ECHO
 NEXTCHAR:       LDA DUA_SRA     ; Key ready?
                 AND #$01        ; (Bit 1 of DUART SRA set?)
                 BEQ NEXTCHAR    ; Loop until ready.
-                LDA DUA_TBA     ; Load character. 
-                STA IN,Y        ; Add to text buffer.
+                LDA DUA_TBA     ; Load character.
+                CMP #$7F        ; DEL?
+                BNE NOTDEL
+                LDA #$08        ; convert to BS 
+NOTDEL:         CMP #$60           ;*Is it Lower case
+                BMI CONVERT        ;*Nope, just convert it
+                AND #$5F           ;*If lower case, convert to Upper case
+CONVERT:        STA IN,Y        ; Add to text buffer.
                 JSR ECHO        ; Display character.
                 CMP #$0D        ; CR?
                 BNE NOTCR       ; No.
@@ -68,6 +104,8 @@ NEXTITEM:       LDA IN,Y        ; Get character.
                 BEQ SETSTOR     ; Yes. Set STOR mode.
                 CMP #'R'        ; "R"?
                 BEQ RUN         ; Yes. Run user program.
+                CMP #'L'        ;* "L"?
+                BEQ LOADINT     ;* Yes, Load Intel Code
                 STX L           ; $00->L.
                 STX H           ;  and H.
                 STY YSAV        ; Save Y for comparison.
@@ -91,8 +129,17 @@ HEXSHIFT:       ASL             ; Hex digit left, MSB to carry.
                 INY             ; Advance text index.
                 BNE NEXTHEX     ; Always taken. Check next character for hex.
 NOTHEX:         CPY YSAV        ; Check if L, H empty (no hex digits).
-                BEQ ESCAPE      ; Yes, generate ESC sequence.
-                BIT MODE        ; Test MODE byte.
+                BNE     NOESCAPE       ;* Branch out of range, had to improvise...
+                JMP     ESCAPE         ;Yes, generate ESC sequence
+
+RUN:            JSR     ACTRUN         ;* JSR to the Address we want to run
+                JMP     SOFTRESET      ;* When returned for the program, reset EWOZ
+ACTRUN:         JMP     (XAML)         ;Run at current XAM index
+
+LOADINT:        JSR     LOADINTEL      ;* Load the Intel code
+                JMP     SOFTRESET      ;* When returned from the program, reset EWOZ
+
+NOESCAPE:       BIT MODE        ; Test MODE byte.
                 BVC NOTSTOR     ; B6=0 STOR, 1 for XAM and BLOCK XAM
                 LDA L           ; LSD’s of hex data.
                 STA (STL,X)     ; Store at current ‘store index’.
@@ -100,7 +147,6 @@ NOTHEX:         CPY YSAV        ; Check if L, H empty (no hex digits).
                 BNE NEXTITEM    ; Get next item. (no carry).
                 INC STH         ; Add carry to ‘store index’ high order.
 TONEXTITEM:     JMP NEXTITEM    ; Get next command item.
-RUN:            JMP (XAML)      ; Run at current XAM index.
 NOTSTOR:        BMI XAMNEXT     ; B7=0 for XAM, 1 for BLOCK XAM.
                 LDX #$02        ; Byte count.
 SETADR:         LDA L-1,X       ; Copy hex data to
@@ -109,8 +155,8 @@ SETADR:         LDA L-1,X       ; Copy hex data to
                 DEX             ; Next of 2 bytes.
                 BNE SETADR      ; Loop unless X=0.
 NXTPRNT:        BNE PRDATA      ; NE means no address to print.
-                LDA #$0D        ; CR.
-                JSR ECHO        ; Output it.
+
+                JSR CRLF        ; CR.
                 LDA XAMH        ; ‘Examine index’ high-order byte.
                 JSR PRBYTE      ; Output it in hex format.
                 LDA XAML        ; Low-order ‘examine index’ byte.
@@ -146,21 +192,150 @@ PRHEX:          AND #$0F        ; Mask LSD for hex print.
                 BCC ECHO        ; Yes, output it.
                 ADC #$06        ; Add offset for letter.
 ECHO:
-                STA SCRATCH
+                PHA
 ECHOLOOP:
                 LDA DUA_SRA     ; Check TXRDY bit
                 AND #$04
                 BEQ ECHOLOOP    ; Loop if not ready (bit clear)
-                LDA SCRATCH
+                PLA
                 STA DUA_TBA       ; else, send character
-;                BIT DSP         ; DA bit (B7) cleared yet?
-;                BMI ECHO        ; No, wait for display.
-;                STA DSP         ; Output character. Sets DA.
                 RTS             ; Return.
 
-                BRK             ; Unused
-                BRK             ; Unused
-                BRK             ; Unused
+SHWMSG:         LDY     #$0
+SHWMSG1:        LDA     (MSGL),Y
+                BEQ     .DONE
+                JSR     ECHO
+                INY 
+                BNE     SHWMSG1
+.DONE           RTS 
+
+CRLF            LDA     #CR
+                JSR     ECHO
+                LDA     #LF
+                JMP     ECHO
+
+;-------------------------------------------------------------------------
+; Load an program in Intel Hex Format.
+;-------------------------------------------------------------------------
+
+LOADINTEL:      LDA     #CR
+                JSR     ECHO           
+                LDA     #<MSG2
+                STA     MSGL
+                LDA     #>MSG2
+                STA     MSGH
+                JSR     SHWMSG         ;Show Start Transfer           
+                LDY     #$00
+                STY     CRCCHECK       ;If CRCCHECK=0, all is good
+INTELLINE:      JSR     GETCHAR        ;Get char
+                STA     IN,Y           ;Store it
+                INY                    ;Next
+                CMP     #$1B           ;Escape ?
+                BEQ     INTELDONE      ;Yes, abort
+                CMP     #$0A            ;Did we find a new line ?
+                BNE     INTELLINE      ;Nope, continue to scan line
+                LDY     #$FF           ;Find (:)
+FINDCOL:        INY
+                LDA     IN,Y
+                CMP     #":"           ; Is it Colon ?
+                BNE     FINDCOL        ; Nope, try next
+                INY                    ; Skip colon
+                LDX     #$00           ; Zero in X
+                STX     CRC            ; Zero Check sum
+                JSR     GETHEX         ; Get Number of bytes
+                STA     COUNTER        ; Number of bytes in Counter
+                CLC                    ; Clear carry
+                ADC     CRC            ; Add CRC
+                STA     CRC            ; Store it
+                JSR     GETHEX         ; Get Hi byte
+                STA     STH            ; Store it
+                CLC                    ; Clear carry
+                ADC     CRC            ; Add CRC
+                STA     CRC            ; Store it
+                JSR     GETHEX         ; Get Lo byte
+                STA     STL            ; Store it
+                CLC                    ; Clear carry
+                ADC     CRC            ; Add CRC
+                STA     CRC            ; Store it
+                LDA     #"."           ; Load "."
+                JSR     ECHO           ; Print it to indicate activity
+NODOT:          JSR     GETHEX         ; Get Control byte
+                CMP     #$01           ; Is it a Termination record ?
+                BEQ     INTELDONE      ; Yes, we are done
+                CLC                    ; Clear carry
+                ADC     CRC            ; Add CRC
+                STA     CRC            ; Store it
+INTELSTORE:     JSR     GETHEX         ; Get Data Byte
+                STA     (STL,X)        ; Store it
+                CLC                    ; Clear carry
+                ADC     CRC            ; Add CRC
+                STA     CRC            ; Store it
+                INC     STL            ; Next Address
+                BNE     TESTCOUNT      ; Test to see if Hi byte needs INC
+                INC     STH            ; If so, INC it
+TESTCOUNT:      DEC     COUNTER        ; Count down
+                BNE     INTELSTORE     ; Next byte
+                JSR     GETHEX         ; Get Checksum
+                LDY     #$00           ; Zero Y
+                CLC                    ; Clear carry
+                ADC     CRC            ; Add CRC
+                BEQ     INTELLINE      ; Checksum OK
+                LDA     #$01           ; Flag CRC error
+                STA     CRCCHECK       ; Store it
+                JMP     INTELLINE      ; Process next line
+
+INTELDONE:      LDA     CRCCHECK       ; Test if everything is OK
+                BEQ     OKMESS         ; Show OK message
+                LDA     #<MSG4         ; Load Error Message
+                STA     MSGL
+                LDA     #>MSG4
+                STA     MSGH
+                JSR     SHWMSG         ;Show Error
+                RTS
+
+OKMESS:
+                LDA     #<MSG3         ;Load OK Message
+                STA     MSGL
+                LDA     #>MSG3
+                STA     MSGH
+                JSR     SHWMSG         ;Show Done
+                RTS
+
+GETHEX:         LDA     IN,Y           ;Get first char
+                EOR     #$30
+                CMP     #$0A
+                BCC     DONEFIRST
+                ADC     #$08
+DONEFIRST:      ASL
+                ASL
+                ASL
+                ASL
+                STA     L
+                INY
+                LDA     IN,Y           ;Get next char
+                EOR     #$30
+                CMP     #$0A
+                BCC     DONESECOND
+                ADC     #$08
+DONESECOND:     AND     #$0F
+                ORA     L
+                INY
+                RTS
+
+;-------------------------------------------------------------------------
+
+GETCHAR:        LDA DUA_SRA     ; Key ready?
+                ROR             ; (Bit 1 of DUART SRA to C)
+                BCC GETCHAR    ; Loop until ready.
+                LDA DUA_TBA     ; Load character. 
+                RTS
+
+;-------------------------------------------------------------------------
+
+MSG1            asciiz "Welcome to Rob's EWOZ 1.0 for rosco_6502.",$0D,$0A
+MSG2            asciiz "Start Intel Hex code Transfer.",$0D,$0A
+MSG3            asciiz $0D,$0A,"Intel Hex Imported OK.",$0D,$0A
+MSG4            asciiz $0D,$0A,$07,"Intel Hex Imported with checksum error.",$0D,$0A
 
 ; Interrupt Vectors
 
