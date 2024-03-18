@@ -9,6 +9,11 @@
 
 ; Page 0 Variables
 
+REGA            = $20
+REGX            = $21
+REGY            = $22
+REGP            = $23
+
 XAML            = $24           ;  Last "opened" location Low
 XAMH            = $25           ;  Last "opened" location High
 STL             = $26           ;  Store address Low
@@ -41,16 +46,52 @@ CR              EQU     $0D            ;Carriage Return
 LF              EQU     $0A            ;Carriage Return
 ESC             EQU     $1B            ;ESC key
 
-WOZMON:         CLD             ; Clear decimal arithmetic mode.
-;                CLI
-SOFTRESET:      JSR     CRLF           
+WOZMON:
+                SEI
+                LDX     #$FF
+                TSX
+                CLD             ; Clear decimal arithmetic mode.
+                CLI
+                CLC
+                LDA     #$00
+                TAX
+                TAY
+SOFTRESET:
+                PHP
+                PHY
+                PHX
+                PHA
+                CLD
+                CLI
                 LDA     #<MSG1
                 STA     MSGL
                 LDA     #>MSG1
                 STA     MSGH
                 JSR     SHWMSG         ;* Show Welcome
-                LDA     #$9B           
-                LDY     #$7F           ;* Auto escape
+BRKCONT:
+                LDA     #'A'
+                JSR     PRREGNAME
+                PLA
+                STA     REGA
+                JSR     PRBYTE
+                LDA     #'X'
+                JSR     PRREGNAME
+                PLA
+                STA     REGX
+                JSR     PRBYTE
+                LDA     #'Y'
+                JSR     PRREGNAME
+                PLA
+                STA     REGY
+                JSR     PRBYTE
+                LDA     #'P'
+                JSR     PRREGNAME
+                PLA
+                STA     REGP
+                JSR     PRBYTE
+CONTRESET:
+                JSR     CRLF
+                LDA     #$1B           
 ; Program falls through to the GETLINE routine to save some program bytes
 
 ;-------------------------------------------------------------------------
@@ -63,7 +104,8 @@ NOTCR:          CMP #$08        ; Backspace?
                 BEQ ESCAPE      ; Yes.
                 INY             ; Advance text index.
                 BPL NEXTCHAR    ; Auto ESC if > 127.
-ESCAPE:         LDA #'\'        ; "\".
+ESCAPE:         JSR CRLF
+                LDA #'\'        ; "\".
                 JSR ECHO        ; Output it.
 GETLINE:        JSR CRLF
                 LDY #$01        ; Initialize text index.
@@ -134,7 +176,13 @@ NOTHEX:         CPY YSAV        ; Check if L, H empty (no hex digits).
 
 RUN:            JSR     ACTRUN         ;* JSR to the Address we want to run
                 JMP     SOFTRESET      ;* When returned for the program, reset EWOZ
-ACTRUN:         JMP     (XAML)         ;Run at current XAM index
+ACTRUN:         LDA     REGP
+                PHP
+                LDA     REGA
+                LDX     REGX
+                LDY     REGY
+                PLP
+                JMP     (XAML)         ;Run at current XAM index
 
 LOADINT:        JSR     LOADINTEL      ;* Load the Intel code
                 JMP     SOFTRESET      ;* When returned from the program, reset EWOZ
@@ -209,9 +257,41 @@ SHWMSG1:        LDA     (MSGL),Y
                 BNE     SHWMSG1
 .DONE           RTS 
 
-CRLF            LDA     #CR
+CRLF:           LDA     #CR
                 JSR     ECHO
                 LDA     #LF
+                JMP     ECHO
+
+HITBRK:
+                CLD
+                LDA     #<BRKMSG
+                STA     MSGL
+                LDA     #>BRKMSG
+                STA     MSGH
+                JSR     SHWMSG
+                LDA     $106,X
+                STA     MSGH
+                LDA     $105,X
+                SEC
+                SBC     #2
+                STA     MSGL
+                LDA     MSGH
+                SBC     #0
+                JSR     PRBYTE
+                LDA     MSGL
+                JSR     PRBYTE
+                LDA     #'S'
+                JSR     PRREGNAME
+                TXA
+                JSR     PRBYTE
+                JMP     BRKCONT
+
+PRREGNAME:      PHA
+                LDA     #' '
+                JSR     ECHO
+                PLA
+                JSR     ECHO
+                LDA     #'='
                 JMP     ECHO
 
 ;-------------------------------------------------------------------------
@@ -332,10 +412,11 @@ GETCHAR:        LDA DUA_SRA     ; Key ready?
 
 ;-------------------------------------------------------------------------
 
-MSG1            asciiz "Welcome to Rob's EWOZ 1.0 for rosco_6502.",$0D,$0A
+MSG1            asciiz $0D, $0A, "rosco_6502 EWozMon:"
 MSG2            asciiz "Start Intel Hex code Transfer.",$0D,$0A
 MSG3            asciiz $0D,$0A,"Intel Hex Imported OK.",$0D,$0A
 MSG4            asciiz $0D,$0A,$07,"Intel Hex Imported with checksum error.",$0D,$0A
+BRKMSG          asciiz $0D,$0A,$07, "BRK@"
 
 ; Interrupt Vectors
 

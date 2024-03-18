@@ -218,13 +218,13 @@ bankenter0:
 ; *******************************************************
         section .bank0.rodata
 SZ_BANNER0      db      $D, $A, $1B, "[1;33m"
-SZ_BANNER1      db      "                           ___ ___ ___ ___ ", $D
-SZ_BANNER2      db      " ___ ___ ___ ___ ___      |  _| __|   |__ |", $D
-SZ_BANNER3      db      "|  _| . |_ -|  _| . |     | . |__ | | | __|", $D
-SZ_BANNER4      db      "|_| |___|___|___|___|_____|___|___|___|___|", $D 
-SZ_BANNER5      db      "                    |_____|", $1B, "[1;37m System ", $1B, "[1;30m0.01.DEV", $1B, "[0m", $D, $D, 0
-BCFAILED        db      $1B, "[0;37mRAM Bankcheck ", $1B, "[1;31mfailed", $1B, "[0m", $D, 0
-BCPASSED        db      $1B, "[0;37mRAM Bankcheck ", $1B, "[1;32mpassed", $1B, "[0m", $D, 0
-EBANK           db      $1B, "[0;37mROM Bank   #0 ", $1B, "[1;32mpassed", $1B, "[0m", $D, 0
-PBANK           db      $1B, "[0;37mMemory checks ", $1B, "[1;32mpassed", $1B, "[0m", $D, 0
+SZ_BANNER1      db      "                           ___ ___ ___ ___ ", $D, $A
+SZ_BANNER2      db      " ___ ___ ___ ___ ___      |  _| __|   |__ |", $D, $A
+SZ_BANNER3      db      "|  _| . |_ -|  _| . |     | . |__ | | | __|", $D, $A
+SZ_BANNER4      db      "|_| |___|___|___|___|_____|___|___|___|___|", $D, $A
+SZ_BANNER5      db      "                    |_____|", $1B, "[1;37m System ", $1B, "[1;30m0.01.DEV", $1B, "[0m", $D, $A, $D, $A, 0
+BCFAILED        db      $1B, "[0;37mRAM Bankcheck ", $1B, "[1;31mfailed", $1B, "[0m", $D, $A, 0
+BCPASSED        db      $1B, "[0;37mRAM Bankcheck ", $1B, "[1;32mpassed", $1B, "[0m", $D, $A, 0
+EBANK           db      $1B, "[0;37mROM Bank   #0 ", $1B, "[1;32mpassed", $1B, "[0m", $D, $A, 0
+PBANK           db      $1B, "[0;37mMemory checks ", $1B, "[1;32mpassed", $1B, "[0m", $D, $A, 0
 

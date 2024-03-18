@@ -17,9 +17,17 @@
 ; Timer tick IRQ handler; Driven by DUART timer
 ; *******************************************************
 irq_handler:
+        phy
+        phx
         pha               ; Stack A
-        phx               ; Stack X
+        tsx
+        lda $104,x				; get the status register from the stack
+        and #$10				; Isolate B status bit
+        beq .checktick  			; If B = 1, BRK detected
 
+        jmp HITBRK                              ; wozmon
+
+.checktick
         ldx TICKCNT       ; Get tick count
         dex               ; Decrement it
         bne .done         ; If non-zero, we're done
@@ -47,7 +55,8 @@ irq_handler:
 .done
         lda DUA_STOPC     ; Send "stop timer" command (reset ISR[3])
         stx TICKCNT       ; Store X as the new tick count
-        plx               ; Unstack X
-        pla               ; Unstack A
+        pla
+        plx
+        ply
         rti
 
