@@ -79,10 +79,13 @@ start:
         lda #$08          ; Unmask counter interrupt
         sta DUA_IMR
 
-        lda #FLASHDELAY   ; Initial tick count is 100
+        lda #BLINKCOUNT   ; Initial tick count is 100
         sta TICKCNT
-        lda #0            ; Initial state is 0 (LED off)
-        sta TICKSTT
+        stz TICK100HZ
+        lda #$60          ; RTS
+        sta USERTICK    
+        sta USERTICK+1    
+        sta USERTICK+2    
         cli               ; Enable interrupts
  
         ; Do the banner

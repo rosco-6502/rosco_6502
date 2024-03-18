@@ -17,46 +17,44 @@
 ; Timer tick IRQ handler; Driven by DUART timer
 ; *******************************************************
 irq_handler:
-        phy
-        phx
-        pha               ; Stack A
-        tsx
-        lda $104,x				; get the status register from the stack
-        and #$10				; Isolate B status bit
-        beq .checktick  			; If B = 1, BRK detected
+                phy
+                phx
+                pha
 
-        jmp HITBRK                              ; wozmon
+                tsx
+                lda     $104,x	                ; get the status register from the stack
+                and     #$10			; Isolate B status bit
+                beq     .checktick  		; If B = 1, BRK detected
+        
+                jmp     HITBRK                  ; wozmon
 
 .checktick
-        ldx TICKCNT       ; Get tick count
-        dex               ; Decrement it
-        bne .done         ; If non-zero, we're done
+                ldx     TICKCNT                 ; Get tick count
+                dex                             ; Decrement it
+                txa                             ; copy new count to A
+                asl                             ; shift out high bit
+                bne     .done                   ; if non-zero, we're done
 
-        ; If here, time to toggle green LED
+                ; If here, time to toggle green LED
 
-        ldx #FLASHDELAY   ; Reset tick count
+                lda     #OP_LED_G               ; Set up to bit 6 (LED G) to set/clear
+                bcc     .turnon                 ; if high bit was clear, turn on
 
-        lda TICKSTT       ; Get current LED state
-        beq .turnon       ; If it's off, go turn it on
+                ; If here, LED is on
+                ldx     #BLINKCOUNT             ; Reset tick count
+                sta     DUA_OPR_C               ; Send command
+                bra     .done
+.turnon:
+                ldx     #$80|BLINKCOUNT         ; Reset tick count OR'd with on flag
+                sta     DUA_OPR_S               ; Send command
+.done:
+                stx     TICKCNT                 ; Store X as the new tick count
+                inc     TICK100HZ
+                jsr     USERTICK
+                lda     DUA_STOPC               ; Send "stop timer" command (reset ISR[3])
 
-        ; If here, LED is on
-        lda #OP_LED_G     ; Set up to clear bit 6 (LED G)
-        sta DUA_OPR_C     ; Send command
-        lda #0            ; LED is now off
-        sta TICKSTT       ; Store state
-        bra .done
+                pla
+                plx
+                ply
 
-.turnon
-        lda #OP_LED_G     ; Set up to set bit 6 (LED G)
-        sta DUA_OPR_S     ; Send command
-        lda #1            ; LED is now on
-        sta TICKSTT       ; Store state
-
-.done
-        lda DUA_STOPC     ; Send "stop timer" command (reset ISR[3])
-        stx TICKCNT       ; Store X as the new tick count
-        pla
-        plx
-        ply
-        rti
-
+                rti
