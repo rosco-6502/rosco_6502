@@ -88,7 +88,8 @@ BANK_RSVD       ds      1               ; -/- reserved future banking register
 
 ; bios uses ZP $0002-$000F
 FW_ZP_PTR       ds      2               ; firmware ZP pointer
-FW_ZP_rsvd      ds      12              ; firmware future reserved
+FW_ZP_TMP       ds      1
+FW_ZP_rsvd      ds      11              ; firmware future reserved
 
                 assert  $0010==*        ; user ZP should start at $0010
 USER_ZP_START   ds      0
@@ -98,14 +99,26 @@ INPUTBUF        ds      256             ; 256 byte input buffer (or user buffer)
 
                 org     $0300           ; system global page
 
-TICK100HZ       ds      3               ; free incrementing 24-bit 100Hz counter (L/M/H)
-TICKCNT         ds      1               ; LED tick count (high bit is LED state)
-USER_TICK       ds      3               ; 100 Hz user routine (JMP or RTS)
-
 ; bios I/O vectors, JMP to actual routine
 COUT            ds      3               ; JMP to current char output (output char in A)
 CIN             ds      3               ; JMP to current char input (C set when char returned in A)
 
+USER_TICK       ds      3               ; 100 Hz user routine (JMP or RTS)
+TICKCNT         ds      1               ; LED tick count (high bit is LED state)
+TICK100HZ       ds      3               ; free incrementing 24-bit 100Hz counter (L/M/H)
+
+
                 assert  $0380>=*        ; all firmware use should end before $0380
 
                 dend
+
+
+                ifnd    CUR_ROMBANK     ; if not building for ROM, include rtable symbols
+                dsect
+                org     BANK_ROM_AD
+
+                include "rtable.asm"
+                dend
+
+                endif
+

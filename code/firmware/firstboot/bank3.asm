@@ -47,11 +47,11 @@ CUR_ROMBANK     =       3       ; assemble for ROM bank 3
 ; * Bank init/test
 ; *******************************************************
 bank_init:
-                txa                     ; copy ROM bank
-                and     #BANK_ROM_M     ; mask ROM bits
+                and     #$80|BANK_ROM_M ; mask ROM bits
                 cmp     #CUR_ROMBANK<<BANK_ROM_B
                 beq     .goodbank
                 sec
+                ldy     #CUR_ROMBANK<<BANK_ROM_B
                 rts
 .goodbank       lda     #<EBANK
                 ldx     #>EBANK
@@ -69,4 +69,4 @@ bank_init:
 ; *******************************************************
                 section .bank3.rodata
 
-EBANK           db      $1B, "[0;37m    Bank   #3 ", $1B, "[1;32mpassed", $1B, "[0m", $D, $A, 0
+EBANK           db      $1B, "[0;37m    Bank   #3 ", $1B, "[1;32mpassed", $1B, "[0m (unused)", $D, $A, 0

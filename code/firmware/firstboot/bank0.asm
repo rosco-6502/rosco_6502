@@ -47,7 +47,6 @@ CUR_ROMBANK     =       0       ; assemble for ROM bank 0
 ; * Bank init/test
 ; *******************************************************
 bank_init:
-                txa                     ; copy ROM bank
                 and     #BANK_ROM_M     ; mask ROM bits
                 cmp     #CUR_ROMBANK<<BANK_ROM_B
                 beq     .goodbank
@@ -57,7 +56,7 @@ bank_init:
                 ldx     #>EBANK
                 jsr     PRINT_SZ        ; Print message
                 clc
-                rts
+an_rts:         rts
 
 system_reset:
                 sei
@@ -150,10 +149,58 @@ system_reset:
                 lda     #<SYSINFO0
                 ldx     #>SYSINFO0
                 jsr     PRINT_SZ      ; Print message
-                lda     #'?'
+
+                stz     FW_ZP_PTR
+                stz     FW_ZP_PTR+1
+                ldx     TICK100HZ
+.tickwait       cpx     TICK100HZ
+                beq     .tickwait
+                ldx     TICK100HZ
+
+.timeloop
+                jsr     an_rts          ; 12
+                lda     FW_ZP_PTR       ; 3
+                clc                     ; 2
+                adc     #1              ; 2
+                sta     FW_ZP_PTR       ; 3
+                lda     FW_ZP_PTR+1     ; 3
+                adc     #0              ; 2
+                sta     FW_ZP_PTR+1     ; 3
+                cpx     TICK100HZ       ; 4
+                beq     .timeloop       ; 3 = 37 per iteration
+
+                ldx     #'0'
+                lda     FW_ZP_PTR+1
+.tencnt         cmp     #10
+                bcc     .tensdone
+                inx
+                sbc     #10                
+                bne     .tencnt
+.tensdone       pha
+                txa
+                cmp     #'0'
+                beq     .notens
                 jsr     COUT
+.notens         pla
+                ora     #'0'
+                jsr     COUT
+
                 lda     #<SYSINFO1
                 ldx     #>SYSINFO1
+                jsr     PRINT_SZ      ; Print message
+
+                lda     #$80|(3<<BANK_ROM_B)
+                tay
+                jsr     init_rom_bank
+                lda     #'1'
+                bcc     .smallrom
+                cpy     #3<<BANK_ROM_B
+                bne     .smallrom
+                lda     #'4'
+.smallrom       jsr     COUT
+
+                lda     #<SYSINFO2
+                ldx     #>SYSINFO2
                 jsr     PRINT_SZ      ; Print message
 
                 ; Do bank checks
@@ -171,6 +218,20 @@ system_reset:
                 jsr     PRINT_SZ
 
                 jmp     WOZMON
+
+outbyte:        pha                     ; save a for lsd.
+                lsr             
+                lsr             
+                lsr                     ; msd to lsd position.
+                lsr             
+                jsr     .prhex          ; output hex digit.
+                pla                     ; restore a.
+.prhex:         and     #$0f            ; mask lsd for hex print.
+                ora     #'0'            ; add "0".
+                cmp     #$3a            ; digit?
+                bcc     .echo           ; yes, output it.
+                adc     #$06            ; add offset for letter.
+.echo:          jmp     COUT
 
 ; *******************************************************
 ; * Basic test of the memory bank hardware
@@ -217,14 +278,14 @@ bankcheck:
                 ; rts
 
 ; *******************************************************
-; * include common routines
-; *******************************************************
-                include "routines.asm"
-
-; *******************************************************
 ; * Include wozmon
 ; *******************************************************
                 include "wozmon.asm"
+
+; *******************************************************
+; * include common routines
+; *******************************************************
+                include "routines.asm"
 
 ; *******************************************************
 ; * Readonly data
@@ -236,10 +297,11 @@ SZ_BANNER1      db      "                           ___ ___ ___ ___ ", $D, $A
 SZ_BANNER2      db      " ___ ___ ___ ___ ___      |  _| __|   |__ |", $D, $A
 SZ_BANNER3      db      "|  _| . |_ -|  _| . |     | . |__ | | | __|", $D, $A
 SZ_BANNER4      db      "|_| |___|___|___|___|_____|___|___|___|___|", $D, $A
-SZ_BANNER5      db      "                    |_____|", $1B, "[1;37m System ", $1B, "[1;30m0.01.DEV", $1B, "[0m", $D, $A, $D, $A, 0
+SZ_BANNER5      db      "                    |_____|", $1B, "[1;37m System ", $1B, "[1;30m0.02.DEV", $1B, "[0m", $D, $A, $D, $A, 0
 SYSINFO0        db      "W65C02S CPU @ ", 0
-SYSINFO1        db      "MHz with 16KB+16x32KB RAM and 4x8KB ROM", $D, $A, 0
+SYSINFO1        db      "MHz with 16KB+16x32KB RAM and ", 0
+SYSINFO2        db      "x8KB ROM", $D, $A, 0
 BCFAILED        db      $1B, "[0;37mRAM Bankcheck ", $1B, "[1;31mfailed", $1B, "[0m", $D, $A, 0
 BCPASSED        db      $1B, "[0;37mRAM Bankcheck ", $1B, "[1;32mpassed", $1B, "[0m", $D, $A, 0
-EBANK           db      $1B, "[0;37mROM Bank   #0 ", $1B, "[1;32mpassed", $1B, "[0m", $D, $A, 0
+EBANK           db      $1B, "[0;37mROM Bank   #0 ", $1B, "[1;32mpassed", $1B, "[0m (BIOS+Monitor)", $D, $A, 0
 PBANK           db      $1B, "[0;37mMemory checks ", $1B, "[1;32mpassed", $1B, "[0m", $D, $A, 0
