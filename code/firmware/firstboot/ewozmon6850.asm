@@ -319,7 +319,7 @@ FINDCOL:        INY
                 CLC                    ; Clear carry
                 ADC     CRC            ; Add CRC
                 STA     CRC            ; Store it
-                LDA     #"."           ; Load "."
+                LDA     #'.'           ; Load "."
                 JSR     ECHO           ; Print it to indicate activity
 NODOT:          JSR     GETHEX         ; Get Control byte
                 CMP     #$01           ; Is it a Termination record ?

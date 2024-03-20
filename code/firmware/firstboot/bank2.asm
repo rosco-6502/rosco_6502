@@ -5,80 +5,67 @@
 ; |_| |___|___|___|___|_____|___|___|___|___|
 ;                     |_____|    Bringup Code
 ;------------------------------------------------------------
-; Copyright (c)2022 Ross Bamford and contributors
+; Copyright (c)2022-2024 Ross Bamford and contributors
 ; See top-level LICENSE.md for licence information.
 ;
 ; Main code for ROM bank 2
 ;------------------------------------------------------------
+CUR_ROMBANK     =       2       ; assemble for ROM bank 2
+
+; *******************************************************
+; * include system defines
+; *******************************************************
+                include "defines.asm"
 
 ; *******************************************************
 ; * Include routine table for this bank
 ; *******************************************************
-        section .bank2.rtable
-        include "rtable.asm"
-
-
-; *******************************************************
-; * RESET vector entry for this bank
-; *******************************************************
-        section .bank2.text
-        include "defines.asm"
-
-start:
-        sei
-        cld
-        jmp start         ; Just halt for now...
-                          ; This will need to switch back to 
-                          ; bank0, in case the board is reset
-                          ; while this bank is selected...
-
-
-; *******************************************************
-; * include common routines
-; *******************************************************
-        section .bank2.routines
-        include "routines.asm"
-
-
-; *******************************************************
-; * Include bank switch code for this bank
-; *******************************************************
-        section .bank2.bank
-        include "bank.asm"
-
-bankenter2:
-        lda #<EBANK
-        ldx #>EBANK
-        jsr printsz
-        lda #$30          ; Switch to bank 3!
-        jmp bankswitch
-
+                section .bank2.rtable
+                include "rtable.asm"
 
 ; *******************************************************
 ; * Include IRQ handling for this bank
 ; *******************************************************
-        section .bank2.irq
-        include "irq.asm"
-
-
-; *******************************************************
-; * Include wozmon for this bank
-; *******************************************************
-        section .bank2.wozmon
-        include "wozmon.asm"
-
+                section .bank2.irq
+                include "irq.asm"
 
 ; *******************************************************
 ; * Include vectors for this bank
 ; *******************************************************
-        section .bank2.vectors
-        include "vectors.asm"
+                section .bank2.vectors
+                include "vectors.asm"
 
+; Above this point, all addresses must match between banks
+
+; *******************************************************
+; * Bank specific code
+; *******************************************************
+                section .bank2.text
+
+; *******************************************************
+; * Bank init/test
+; *******************************************************
+bank_init:
+                txa                     ; copy ROM bank
+                and     #BANK_ROM_M     ; mask ROM bits
+                cmp     #CUR_ROMBANK<<BANK_ROM_B
+                beq     .goodbank
+                sec
+                rts
+.goodbank       lda     #<EBANK
+                ldx     #>EBANK
+                jsr     PRINT_SZ        ; Print message
+                clc
+                rts
+
+; *******************************************************
+; * include common routines
+; *******************************************************
+                include "routines.asm"
 
 ; *******************************************************
 ; * Readonly data
 ; *******************************************************
-        section .bank2.rodata
+                section .bank2.rodata
 
-EBANK           db      $1B, "[0;37m    Bank   #2 ", $1B, "[1;32mpassed", $1B, "[0m", $D, 0
-
+EBANK           db      $1B, "[0;37m    Bank   #2 ", $1B, "[1;32mpassed", $1B, "[0m", $D, $A, 0

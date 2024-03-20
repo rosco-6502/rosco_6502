@@ -11,6 +11,6 @@
 ; Vectors; needs to be in all banks so pulled in from here...
 ;------------------------------------------------------------
 
-NMI             dw      WOZMON
-RESET           dw      start
+NMI             dw      nmi_handler
+RESET           dw      reset_handler
 IRQ             dw      irq_handler

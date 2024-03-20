@@ -13,6 +13,7 @@ REGA            =       $20
 REGX            =       $21
 REGY            =       $22
 REGP            =       $23
+BANKSAV         =       $30
 
 XAML            =       $24             ;  Last "opened" location Low
 XAMH            =       $25             ;  Last "opened" location High
@@ -44,6 +45,8 @@ LF              EQU     $0A            ; Carriage Return
 ESC             EQU     $1B            ; ESC key
 
 WOZMON:
+                LDA     BANK_SET
+                STA     BANKSAV
                 LDA     #$00
                 TAX
                 TAY
@@ -257,7 +260,8 @@ CRLF:           LDA     #CR
                 LDA     #LF
                 JMP     ECHO
 
-HITBRK:
+WOZHITBRK:
+                STY     BANKSAV         ; save BANK_SET at BRK time
                 CLI
                 CLD
                 LDA     #<BRKMSG
@@ -275,6 +279,10 @@ HITBRK:
                 SBC     #0
                 JSR     PRBYTE
                 LDA     MSGL
+                JSR     PRBYTE
+                LDA     #'B'
+                JSR     PRREGNAME
+                LDA     BANKSAV
                 JSR     PRBYTE
                 LDA     #'S'
                 JSR     PRREGNAME
@@ -315,7 +323,7 @@ INTELLINE:      JSR     GETCHAR         ; Get char
                 LDY     #$FF            ; Find (:)
 FINDCOL:        INY     
                 LDA     IN,Y    
-                CMP     #":"            ; Is it Colon ?
+                CMP     #':'            ; Is it Colon ?
                 BNE     FINDCOL         ; Nope, try next
                 INY                     ; Skip colon
                 LDX     #$00            ; Zero in X
@@ -335,7 +343,7 @@ FINDCOL:        INY
                 CLC                     ; Clear carry
                 ADC     CRC             ; Add CRC
                 STA     CRC             ; Store it
-                LDA     #"."            ; Load "."
+                LDA     #'.'            ; Load "."
                 JSR     ECHO            ; Print it to indicate activity
 NODOT:          JSR     GETHEX          ; Get Control byte
                 CMP     #$01            ; Is it a Termination record ?

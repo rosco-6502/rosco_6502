@@ -17,17 +17,61 @@
 ; banks, since the routine table will point to them.
 ;------------------------------------------------------------
 
+; NOTE: To save size, UART A and B could be combined (with index)
 
 ; *******************************************************
-; * Blocking putc to DUART. Character in X
+; * Blocking output to DUART A. Character in A
 ; *******************************************************
-putc:
-        lda DUA_SRA       ; Check TXRDY bit
-        and #4
-        beq putc          ; Loop if not ready (bit clear)
-        stx DUA_TBA       ; else, send character
-        rts
-        
+_uart_a_out:
+                pha                     ; save character
+
+.loop           lda     DUA_SRA         ; load UART A staus
+                and     #4              ; check TXRDY bit
+                beq     .loop           ; loop if not ready (bit clear)
+
+                pla                     ; restore character
+                sta     DUA_TBA         ; send character to UART B
+
+                rts
+
+; *******************************************************
+; * Blocking output to DUART B. Character in A
+; *******************************************************
+_uart_b_out:
+                pha                     ; save character
+
+.loop           lda     DUA_SRB         ; load UART A staus
+                and     #4              ; check TXRDY bit
+                beq     .loop           ; loop if not ready (bit clear)
+
+                pla                     ; restore character
+                sta     DUA_TBB         ; send character to UART B
+
+                rts
+
+; *******************************************************
+; * Non-blocking getc for DUART A. if C=1 then character in A
+; *******************************************************
+_uart_a_in:
+                lda     DUA_SRA         ; load UART B status
+                ror                     ; check RXRDY bit (shift into carry)
+                bcc     .done           ; return with C clear if not ready
+
+                lda     DUA_RBA         ; get UART A character
+
+.done           rts
+
+; *******************************************************
+; * Non-blocking getc for DUART A. if C=1 then character in A
+; *******************************************************
+_uart_b_in:
+                lda     DUA_SRB         ; load UART B status
+                ror                     ; check RXRDY bit (shift into carry)
+                bcc     .done           ; return with C clear if not ready
+
+                lda     DUA_RBB         ; get UART B character
+
+.done           rts
 
 ; *******************************************************
 ; * Null-terminated string print
@@ -35,19 +79,16 @@ putc:
 ; * Callable routine; A,X points to string (Low,High)
 ; * Trashes everything
 ; *******************************************************
-printsz:
-        sta $4            ; Low part of pointer to $4
-        stx $5            ; High part of pointer to $5
-        ldy #$00          ; Start at first character
-
-.loop
-        lda ($4),Y        ; Get character into x
-        beq .done         ; If it's zero, we're done..
-        tax
-        jsr putc          ; otherwise, print it
-        iny               ; next character
-        bra .loop         ; and continue
-
-.done
-        rts
+_printsz:
+                sta     FW_ZP_PTR       ; ptr low
+                stx     FW_ZP_PTR+1     ; ptr high
+                ldy     #$00            ; Start at first character
+.printloop
+                lda     (FW_ZP_PTR),Y   ; Get character into x
+                beq     .printdone      ; If it's zero, we're done..
+                jsr     COUT            ; otherwise, print it
+                iny                     ; next character
+                bne     .printloop      ; and continue (unless Y wraps)
+.printdone
+                rts
 

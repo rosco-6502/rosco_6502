@@ -8,11 +8,11 @@ all: boot8k.bin boot32k.bin
 %.o : %.asm
 	$(VASM) $(ASFLAGS) -L $<.lst -o $@ $<
 
-boot8k.bin: boot.o 
-	$(VLINK) $(LDFLAGS) -T link8.ld -o $@ $^
+boot8k.bin: bank0.o 
+	$(VLINK) $(LDFLAGS) -T link8.ld -o $@ -M$@.sym $^
 
-boot32k.bin: boot.o bank1.o bank2.o bank3.o
-	$(VLINK) $(LDFLAGS) -T link32.ld -o $@ $^
+boot32k.bin: bank0.o bank1.o bank2.o bank3.o
+	$(VLINK) $(LDFLAGS) -T link32.ld -o $@ -M$@.sym $^
 
 burn8: boot8k.bin
 	minipro -p AT28C64B -s -w $<
