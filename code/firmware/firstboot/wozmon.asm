@@ -28,6 +28,8 @@ MSGH            =       $2D
 COUNTER         =       $2E
 CRC             =       $2F
 CRCCHECK        =       $30
+BYTESL          =       $31
+BYTESH          =       $32
 
 ; Other Variables
 
@@ -98,7 +100,7 @@ NOTCR:          CMP     #BS             ; Backspace?
 ESCAPE:         LDA     #'?'            ; "?".
                 JSR     ECHO            ; Output it.
 GETLINE:        JSR     CRLF
-        JSR     CRLF
+                JSR     CRLF
                 LDA     #'\'            ; "\".
                 JSR     ECHO            ; Output it.
                 LDY     #$01            ; Initialize text index.
@@ -181,7 +183,7 @@ ACTRUN:         LDA     REGP
                 JMP     (XAML)          ; Run at current XAM index
 
 LOADINT:        JSR     LOADINTEL       ; Load the Intel code
-                JMP     SOFTRESET       ; When returned from the program, reset EWOZ
+                JMP     GETLINE         ; When returned from the program, reset EWOZ
 
 NOESCAPE:       BIT     MODE            ; Test MODE byte.
                 BVC     NOTSTOR         ; B6=0 STOR, 1 for XAM and BLOCK XAM
@@ -286,28 +288,39 @@ PRREGNAME:      PHA
 ; Load an program in Intel Hex Format.
 ;-------------------------------------------------------------------------
 
+INTELABORT:
+                INC     CRCCHECK
+                JMP     INTELDONE
+INTELIGNORE:
+                LDA     #1
+                STA     CRCCHECK
+                JMP     INTELLINE
 LOADINTEL:
                 LDA     #<TRBEGMSG
                 LDY     #>TRBEGMSG
                 JSR     SHWMSG          ; Show Start Transfer           
                 LDY     #$00
                 STY     CRCCHECK        ; If CRCCHECK=0, all is good
+                STZ     BYTESL
+                STZ     BYTESH
+                STZ     XAML
+                STZ     XAMH
 INTELLINE:      JSR     CIN             ; Get char
                 BCC     INTELLINE
                 STA     IN,Y            ; Store it
-                INY                     ; Next
                 CMP     #ESC            ; Escape ?
-                BEQ     INTELDONE       ; Yes, abort
+                BEQ     INTELABORT      ; Yes, abort
+                INY                     ; Next
+                BEQ     INTELABORT      ; line too long
                 CMP     #LF             ; Did we find a new line ?
                 BNE     INTELLINE       ; Nope, continue to scan line
-                LDY     #$FF            ; Find (:)
-FINDCOL:        INY     
-                LDA     IN,Y    
+                LDY     #$00            ; Find (:)
+FINDCOL:        LDA     IN,Y            ; get char from line
+                INY                     ; increment Y
+                BEQ     INTELIGNORE     ; no colon, abort
                 CMP     #':'            ; Is it Colon ?
                 BNE     FINDCOL         ; Nope, try next
-                INY                     ; Skip colon
-                LDX     #$00            ; Zero in X
-                STX     CRC             ; Zero Check sum
+                STZ     CRC             ; Zero Check sum
                 JSR     GETHEX          ; Get Number of bytes
                 STA     COUNTER         ; Number of bytes in Counter
                 CLC                     ; Clear carry
@@ -323,8 +336,13 @@ FINDCOL:        INY
                 CLC                     ; Clear carry
                 ADC     CRC             ; Add CRC
                 STA     CRC             ; Store it
-                LDA     #'.'            ; Load "."
-                JSR     ECHO            ; Print it to indicate activity
+                LDA     XAML
+                ORA     XAMH
+                BNE     NODOT
+                LDA     STL
+                STA     XAML
+                LDA     STH
+                STA     XAMH
 NODOT:          JSR     GETHEX          ; Get Control byte
                 CMP     #$01            ; Is it a Termination record ?
                 BEQ     INTELDONE       ; Yes, we are done
@@ -332,8 +350,11 @@ NODOT:          JSR     GETHEX          ; Get Control byte
                 ADC     CRC             ; Add CRC
                 STA     CRC             ; Store it
 INTELSTORE:     JSR     GETHEX          ; Get Data Byte
-                STA     (STL,X)         ; Store it
-                CLC                     ; Clear carry
+                STA     (STL)           ; Store it
+                INC     BYTESL          ; increment byte count
+                BNE     NOBYTESHI       ; low wrapped?
+                INC     BYTESH          ; increment high byte count
+NOBYTESHI       CLC                     ; Clear carry
                 ADC     CRC             ; Add CRC
                 STA     CRC             ; Store it
                 INC     STL             ; Next Address
@@ -345,11 +366,14 @@ TESTCOUNT:      DEC     COUNTER         ; Count down
                 LDY     #$00            ; Zero Y
                 CLC                     ; Clear carry
                 ADC     CRC             ; Add CRC
-                BEQ     INTELLINE       ; Checksum OK
-                LDA     #$01            ; Flag CRC error
+                BNE     BADCRC          ; Checksum not OK
+                LDA     #'.'            ; Load "."
+                JSR     ECHO            ; Print it to indicate activity
+                JMP     INTELLINE       ; Checksum OK
+BADCRC:         LDA     #'X'            ; Flag CRC error
                 STA     CRCCHECK        ; Store it
+                JSR     ECHO            ; Print it to indicate activity
                 JMP     INTELLINE       ; Process next line
-
 INTELDONE:
                 LDA     #<TRDONMSG      ; Load Done Message
                 LDY     #>TRDONMSG
@@ -359,14 +383,23 @@ INTELDONE:
                 BEQ     OKMESS          ; Show OK message
                 LDA     #<TRBADMSG      ; Load Error Message
                 LDY     #>TRBADMSG
-                JSR     SHWMSG          ; Show Error
-                RTS
+                JMP     SHWMSG          ; Show Error
 
 OKMESS:
                 LDA     #<TROKMSG      ; Load OK Message
                 LDY     #>TROKMSG
-                JSR     SHWMSG          ; Show Done
-                RTS
+                JSR     SHWMSG         ; Show Done
+                LDA     XAMH
+                JSR     PRBYTE
+                LDA     XAML
+                JSR     PRBYTE
+                LDA     #<TROKMSG2     ; Load OK Message
+                LDY     #>TROKMSG2
+                JSR     SHWMSG
+                LDA     BYTESH
+                JSR     PRBYTE
+                LDA     BYTESL
+                JMP     PRBYTE
 
 GETHEX:         LDA     IN,Y            ; Get first char
                 EOR     #$30
@@ -408,7 +441,8 @@ SHWMSG1:        LDA     (MSGL),Y
 
 MONMSG          asciiz  $0D, "rosco_6502 EWozMon:"
 BRKMSG          asciiz  $0D, $0D, $07, "BRK @"
-TRBEGMSG        asciiz  $0D, "Start Intel hex file import:",$0D
-TRDONMSG        asciiz  $0D, "Done, hex imported "
-TROKMSG         asciiz  "OK.", $0D
-TRBADMSG        asciiz  "with checksum ERROR!", $07, $0D
+TRBEGMSG        asciiz  $0D, "Start Intel hex file import:", $0D
+TRDONMSG        asciiz  $0D, "Done, hex import"
+TROKMSG         asciiz  "ed OK.", $0D, "Start:"
+TROKMSG2        asciiz  " Bytes:"
+TRBADMSG        asciiz  " had checksum ERRORs!", $07, $0D
