@@ -1,7 +1,7 @@
 VASM=vasm6502_oldstyle
 VLINK=vlink
 ASFLAGS=-nocase -c02 -Fvobj -quiet -I../../firmware/firstboot
-LDFLAGS=-e _start -bihex
+LDFLAGS=-e_start -bihex
 
 LOADADDR := 0x4000
 
@@ -24,7 +24,7 @@ $(OBJECTS): $(SOURCES) $(MAKEFILE_LIST)
 $(TARGET).hex: $(OBJECTS)
 	$(VLINK) $(LDFLAGS) -Ttext $(LOADADDR) -M$(TARGET).sym -o $@ $(OBJECTS)
 	$(VLINK) -brawbin1 -Ttext $(LOADADDR) -o $(TARGET).bin $(OBJECTS)
-	da65 --comments 4 --cpu 65c02 --start-addr 0x4000 $(TARGET).bin >$(TARGET).dis
+	da65 --comments 4 --cpu 65c02 --start-addr $(LOADADDR) $(TARGET).bin >$(TARGET).dis
 
 %.o : %.asm
 	$(VASM) $(ASFLAGS) -L $(basename $<).lst -o $@ $<

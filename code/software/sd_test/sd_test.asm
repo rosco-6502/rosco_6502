@@ -18,18 +18,20 @@
 ; *******************************************************
         section .text
 
+        global  _start
+
 _start:
-                lda     #<TESTMSG
-                ldx     #>TESTMSG
+                lda     #<RUNMSG
+                ldx     #>RUNMSG
                 jsr     PRINT_SZ
 
-                lda     #$12
-                jsr     outbyte
-                lda     #$34
-                jsr     outbyte
-                brk
-                rts
+                jsr     sd_init
 
+                lda     #<EXITMSG
+                ldx     #>EXITMSG
+                jmp     PRINT_SZ
+
+                global  outbyte
 outbyte:        pha                     ; save a for lsd.
                 lsr
                 lsr
@@ -47,13 +49,13 @@ outbyte:        pha                     ; save a for lsd.
 ; *******************************************************
 ; * Initialized data
 ; *******************************************************
-                section  .data
+                section  .rodata
 
-TESTMSG         asciiz  "RAM test okay.", $D, $A
+RUNMSG          asciiz  "SD Test running.", $D, $A
+EXITMSG         asciiz  $D, $A, "Exit.", $D, $A
 
 ; *******************************************************
 ; * Uninitialized data
 ; *******************************************************
                 section  .bss
-
-                ds      32
+                ds      4
