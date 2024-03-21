@@ -41,7 +41,7 @@ PROMPT          EQU     $5C            ; Prompt character
 BS              EQU     $08            ; Backspace key, arrow left key
 DEL             EQU     $7F            ; DEL
 CR              EQU     $0D            ; Carriage Return
-LF              EQU     $0A            ; Carriage Return
+LF              EQU     $0A            ; Line Feed
 ESC             EQU     $1B            ; ESC key
 
 WOZMON:
@@ -60,9 +60,7 @@ SOFTRESET:
                 CLD                     ; Clear decimal arithmetic mode.
                 CLI
                 LDA     #<MONMSG
-                STA     MSGL
-                LDA     #>MONMSG
-                STA     MSGH
+                LDY     #>MONMSG
                 JSR     SHWMSG         ; Show Welcome
 BRKCONT:
                 LDA     #'A'
@@ -87,9 +85,7 @@ BRKCONT:
                 JSR     PRBYTE
                 LDX     #$FF
                 TXS
-                JSR     CRLF
-                LDA     #$1B           
-; Program falls through to the GETLINE routine to save some program bytes
+                BRA     GETLINE
 
 ;-------------------------------------------------------------------------
 ; The GETLINE process
@@ -97,14 +93,14 @@ BRKCONT:
 
 NOTCR:          CMP     #BS             ; Backspace?
                 BEQ     BACKSPACE       ; Yes.
-                CMP     #ESC            ; ESC?
-                BEQ     ESCAPE          ; Yes.
                 INY                     ; Advance text index.
                 BPL     NEXTCHAR        ; Auto ESC if > 127.
-ESCAPE:         JSR     CRLF
-                LDA     #'\'            ; "\".
+ESCAPE:         LDA     #'?'            ; "?".
                 JSR     ECHO            ; Output it.
 GETLINE:        JSR     CRLF
+        JSR     CRLF
+                LDA     #'\'            ; "\".
+                JSR     ECHO            ; Output it.
                 LDY     #$01            ; Initialize text index.
 BACKSPACE:      DEY                     ; Back up text index.
                 BMI     GETLINE         ; Beyond start of line, reinitialize.
@@ -112,10 +108,10 @@ BACKSPACE:      DEY                     ; Back up text index.
                 JSR     ECHO
                 LDA     #BS
                 JSR     ECHO
-NEXTCHAR:       LDA     DUA_SRA         ; Key ready?
-                AND     #$01            ; (Bit 1 of DUART SRA set?)
-                BEQ     NEXTCHAR        ; Loop until ready.
-                LDA     DUA_TBA         ; Load character.
+NEXTCHAR:       JSR     CIN             ; Key ready?
+                BCC     NEXTCHAR
+                CMP     #ESC            ; ESC?
+                BEQ     ESCAPE          ; Yes.
                 CMP     #DEL            ; DEL?
                 BNE     NOTDEL          ; branch if not
                 LDA     #BS             ; convert DEL to BS 
@@ -123,10 +119,11 @@ NOTDEL:         CMP     #$60            ;*Is it Lower case
                 BMI     CONVERT         ;*Nope, just convert it
                 AND     #$5F            ;*If lower case, convert to Upper case
 CONVERT:        STA     IN,Y            ; Add to text buffer.
-                JSR     ECHO            ; Display character.
                 CMP     #CR             ; CR?
-                BNE     NOTCR           ; No.
-                LDY     #$FF            ; Reset text index.
+                BEQ     ISCR            ; branch yes
+                JSR     ECHO            ; else echo
+                BRA     NOTCR           
+ISCR:           LDY     #$FF            ; Reset text index.
                 LDA     #$00            ; For XAM mode.
                 TAX                     ; 0->X.
 SETBLOCK:       ASL                     ; Leaves $B8 if setting BLOCK XAM mode.
@@ -169,6 +166,7 @@ HEXSHIFT:       ASL                     ; Hex digit left, MSB to carry.
                 BNE     NEXTHEX         ; Always taken. Check next character for hex.
 NOTHEX:         CPY     YSAV            ; Check if L, H empty (no hex digits).
                 BNE     NOESCAPE        ; Branch out of range, had to improvise...
+;                JSR     CRLF                
                 JMP     ESCAPE          ; Yes, generate ESC sequence
 
 RUN:            JSR     CRLF
@@ -238,36 +236,20 @@ PRHEX:          AND     #$0F            ; Mask LSD for hex print.
                 BCC     ECHO            ; Yes, output it.
                 ADC     #$06            ; Add offset for letter.
 ECHO:
-                PHA
-ECHOLOOP:
-                LDA     DUA_SRA         ; Check TXRDY bit
-                AND     #$04    
-                BEQ     ECHOLOOP        ; Loop if not ready (bit clear)
-                PLA             
-                STA     DUA_TBA         ; else, send character
-                RTS                     ; Return.
-
-SHWMSG:         LDY     #$0
-SHWMSG1:        LDA     (MSGL),Y
-                BEQ     .DONE
-                JSR     ECHO
-                INY 
-                BNE     SHWMSG1
-.DONE           RTS 
-
-CRLF:           LDA     #CR
-                JSR     ECHO
+                JSR     COUT
+                CMP     #CR
+                BNE     NOADDLF
                 LDA     #LF
-                JMP     ECHO
+                JSR     COUT
+                LDA     #CR
+NOADDLF:        RTS
 
 WOZHITBRK:
                 STY     BANKSAV         ; save BANK_SET at BRK time
                 CLI
                 CLD
                 LDA     #<BRKMSG
-                STA     MSGL
-                LDA     #>BRKMSG
-                STA     MSGH
+                LDY     #>BRKMSG
                 JSR     SHWMSG
                 LDA     $106,X
                 STA     MSGH
@@ -304,16 +286,14 @@ PRREGNAME:      PHA
 ; Load an program in Intel Hex Format.
 ;-------------------------------------------------------------------------
 
-LOADINTEL:      LDA     #CR
-                JSR     ECHO           
+LOADINTEL:
                 LDA     #<TRBEGMSG
-                STA     MSGL
-                LDA     #>TRBEGMSG
-                STA     MSGH
+                LDY     #>TRBEGMSG
                 JSR     SHWMSG          ; Show Start Transfer           
                 LDY     #$00
                 STY     CRCCHECK        ; If CRCCHECK=0, all is good
-INTELLINE:      JSR     GETCHAR         ; Get char
+INTELLINE:      JSR     CIN             ; Get char
+                BCC     INTELLINE
                 STA     IN,Y            ; Store it
                 INY                     ; Next
                 CMP     #ESC            ; Escape ?
@@ -370,20 +350,21 @@ TESTCOUNT:      DEC     COUNTER         ; Count down
                 STA     CRCCHECK        ; Store it
                 JMP     INTELLINE       ; Process next line
 
-INTELDONE:      LDA     CRCCHECK        ; Test if everything is OK
+INTELDONE:
+                LDA     #<TRDONMSG      ; Load Done Message
+                LDY     #>TRDONMSG
+                JSR     SHWMSG          ; Show Done
+
+                LDA     CRCCHECK        ; Test if everything is OK
                 BEQ     OKMESS          ; Show OK message
                 LDA     #<TRBADMSG      ; Load Error Message
-                STA     MSGL
-                LDA     #>TRBADMSG
-                STA     MSGH
+                LDY     #>TRBADMSG
                 JSR     SHWMSG          ; Show Error
                 RTS
 
 OKMESS:
                 LDA     #<TROKMSG      ; Load OK Message
-                STA     MSGL
-                LDA     #>TROKMSG
-                STA     MSGH
+                LDY     #>TROKMSG
                 JSR     SHWMSG          ; Show Done
                 RTS
 
@@ -408,18 +389,26 @@ DONESECOND:     AND     #$0F
                 INY
                 RTS
 
+CRLF:           LDA     #CR
+                JMP     ECHO
+
+; show NUL terminated string in A/Y (l/h)
+SHWMSG:
+                STA     MSGL
+                STY     MSGH
+                LDY     #$0
+SHWMSG1:        LDA     (MSGL),Y
+                BEQ     .DONE
+                JSR     ECHO
+                INY 
+                BNE     SHWMSG1
+.DONE           RTS 
+
 ;-------------------------------------------------------------------------
 
-GETCHAR:        LDA     DUA_SRA         ; Key ready?
-                ROR                     ; (Bit 0 of DUART SRA to C)
-                BCC     GETCHAR         ; Loop until ready.
-                LDA     DUA_TBA         ; Load character. 
-                RTS
-
-;-------------------------------------------------------------------------
-
-MONMSG          asciiz   $0D, $0A, "rosco_6502 EWozMon:"
-BRKMSG          asciiz  $0D,$0A,$07, "BRK @"
-TRBEGMSG        asciiz  "Start Intel hex code import:",$0D,$0A
-TROKMSG         asciiz  $0D,$0A,"Intel hex imported OK.",$0D,$0A
-TRBADMSG        asciiz  $0D,$0A,$07,"Intel hex imported with checksum error.",$0D,$0A
+MONMSG          asciiz  $0D, "rosco_6502 EWozMon:"
+BRKMSG          asciiz  $0D, $0D, $07, "BRK @"
+TRBEGMSG        asciiz  $0D, "Start Intel hex file import:",$0D
+TRDONMSG        asciiz  $0D, "Done, hex imported "
+TROKMSG         asciiz  "OK.", $0D
+TRBADMSG        asciiz  "with checksum ERROR!", $07, $0D

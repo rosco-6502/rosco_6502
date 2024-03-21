@@ -47,16 +47,9 @@ CUR_ROMBANK     =       3       ; assemble for ROM bank 3
 ; * Bank init/test
 ; *******************************************************
 bank_init:
-                and     #$80|BANK_ROM_M ; mask ROM bits
-                cmp     #CUR_ROMBANK<<BANK_ROM_B
-                beq     .goodbank
-                sec
-                ldy     #CUR_ROMBANK<<BANK_ROM_B
-                rts
-.goodbank       lda     #<EBANK
+                lda     #<EBANK
                 ldx     #>EBANK
                 jsr     PRINT_SZ        ; Print message
-                clc
                 rts
 
 ; *******************************************************

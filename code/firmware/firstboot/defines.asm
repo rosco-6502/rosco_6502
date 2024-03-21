@@ -43,18 +43,18 @@ DUA_STOPC       =       $c00f           ; R (stop timer)
 DUA_OPR_C       =       $c00f           ; W (clear GPIO OPn)
 
 ; DUART GPIO output usage constants
-OP_RTSA         =       $01             ; GPIO output UART A RTS
-OP_RTSB         =       $02             ; GPIO output UART B RTS
-OP_SPI_CS       =       $04             ; GPIO output SPI CS 1
-OP_LED_R        =       $08             ; GPIO output RED LED
-OP_SPI_CLK      =       $10             ; GPIO output SPI CLK
-OP_LED_G        =       $20             ; GPIO output GREEN LED
-OP_SPI_MOSI     =       $40             ; GPIO output SPI MOSI
-OP_SPI_CS2      =       $80             ; GPIO output SPI CS 2
+OP_RTSA         =       $01             ; OP output UART A RTS
+OP_RTSB         =       $02             ; OP output UART B RTS
+OP_SPI_CS       =       $04             ; OP output SPI CS 1
+OP_LED_R        =       $08             ; OP output RED LED
+OP_SPI_SCK      =       $10             ; OP output SPI SCK
+OP_LED_G        =       $20             ; OP output GREEN LED
+OP_SPI_COPI     =       $40             ; OP output SPI COPI
+OP_SPI_CS2      =       $80             ; OP output SPI CS 2
 ; DUART GPIO input usage constants
-IP_CTSA         =       $01             ; GPIO input UART A CTS
-IP_CTSB         =       $02             ; GPIO input UART B CTS
-IP_SPI_MISO     =       $04             ; GPIO input SPI MISO
+IP_CTSA         =       $01             ; IP input UART A CTS
+IP_CTSB         =       $02             ; IP input UART B CTS
+IP_SPI_CIPO     =       $04             ; IP input SPI CIPO
 
 ; memory bank map constants
 BANK_RAM_AD     =       $4000           ; $4000 - $BFFF 16 x 32KB RAM banks BANK_SET[3:0]
@@ -88,10 +88,10 @@ BANK_RSVD       ds      1               ; -/- reserved future banking register
 
 ; bios uses ZP $0002-$000F
 FW_ZP_PTR       ds      2               ; firmware ZP pointer
-FW_ZP_TMP       ds      1
+FW_ZP_IOBYTE    ds      1               ; firmware IO byte temp
 FW_ZP_rsvd      ds      11              ; firmware future reserved
 
-                assert  $0010==*        ; user ZP should start at $0010
+                assert  *==$0010        ; user ZP should start at $0010
 USER_ZP_START   ds      0
 
                 org     $0200           ; input buffer page
@@ -108,7 +108,7 @@ TICKCNT         ds      1               ; LED tick count (high bit is LED state)
 TICK100HZ       ds      3               ; free incrementing 24-bit 100Hz counter (L/M/H)
 
 
-                assert  $0380>=*        ; all firmware use should end before $0380
+                assert  *<=$0380         ; all firmware use should end before $0380
 
                 dend
 
