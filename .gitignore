@@ -4,6 +4,11 @@
 **/*.L68
 **/*.S68
 **/*.zip
+**/*.lst
+**/*.dis
+**/*.sym
+**/*.elf
+**/*.hex
 *.s#*
 *.b#*
 *.job
@@ -15,10 +20,4 @@
 **/*.sch-bak
 **/*.kicad_pcb-bak
 **/fp-info-cache
-**/*.lst
-**/*.dis
-**/*.sym
-**/*.elf
 .vscode/*
-code/software/lcd-ili9341/images/BMPToRLE555
-code/software/lcd-ili9341/rle_images.h

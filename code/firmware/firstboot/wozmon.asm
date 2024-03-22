@@ -13,7 +13,6 @@ REGA            =       $20
 REGX            =       $21
 REGY            =       $22
 REGP            =       $23
-BANKSAV         =       $30
 
 XAML            =       $24             ;  Last "opened" location Low
 XAMH            =       $25             ;  Last "opened" location High
@@ -23,13 +22,11 @@ L               =       $28             ;  Hex value parsing Low
 H               =       $29             ;  Hex value parsing High
 YSAV            =       $2A             ;  Used to see if hex value is given
 MODE            =       $2B             ;  $00=XAM, $7F=STOR, $AE=BLOCK XAM
-MSGL            =       $2C
-MSGH            =       $2D
-COUNTER         =       $2E
-CRC             =       $2F
-CRCCHECK        =       $30
-BYTESL          =       $31
-BYTESH          =       $32
+COUNTER         =       $2C
+CRC             =       $2D
+CRCCHECK        =       $2E             ; used for BANK on BRK
+BYTESL          =       $2F
+BYTESH          =       $30
 
 ; Other Variables
 
@@ -47,8 +44,6 @@ LF              EQU     $0A            ; Line Feed
 ESC             EQU     $1B            ; ESC key
 
 WOZMON:
-                LDA     BANK_SET
-                STA     BANKSAV
                 LDA     #$00
                 TAX
                 TAY
@@ -85,8 +80,6 @@ BRKCONT:
                 PLA
                 STA     REGP
                 JSR     PRBYTE
-                LDX     #$FF
-                TXS
                 BRA     GETLINE
 
 ;-------------------------------------------------------------------------
@@ -127,7 +120,6 @@ CONVERT:        STA     IN,Y            ; Add to text buffer.
                 BRA     NOTCR           
 ISCR:           LDY     #$FF            ; Reset text index.
                 LDA     #$00            ; For XAM mode.
-                TAX                     ; 0->X.
 SETBLOCK:       ASL                     ; Leaves $B8 if setting BLOCK XAM mode.
 SETSTOR:        ASL                     ; Leaves $7B if setting STOR mode.
                 STA     MODE            ; $00=XAM, $74=STOR, $B8=BLOCK XAM.
@@ -144,8 +136,8 @@ NEXTITEM:       LDA     IN,Y            ; Get character.
                 BEQ     RUN             ; Yes. Run user program.
                 CMP     #'L'            ;* "L"?
                 BEQ     LOADINT         ;* Yes, Load Intel Code
-                STX     L               ; $00->L.
-                STX     H               ;  and H.
+                STZ     L               ; $00->L.
+                STZ     H               ;  and H.
                 STY     YSAV            ; Save Y for comparison.
 NEXTHEX:        LDA     IN,Y            ; Get character for hex test.
                 EOR     #$30            ; Map digits to $0-9.
@@ -188,7 +180,7 @@ LOADINT:        JSR     LOADINTEL       ; Load the Intel code
 NOESCAPE:       BIT     MODE            ; Test MODE byte.
                 BVC     NOTSTOR         ; B6=0 STOR, 1 for XAM and BLOCK XAM
                 LDA     L               ; LSD’s of hex data.
-                STA     (STL,X)         ; Store at current ‘store index’.
+                STA     (STL)           ; Store at current ‘store index’.
                 INC     STL             ; Increment store index.
                 BNE     NEXTITEM        ; Get next item. (no carry).
                 INC     STH             ; Add carry to ‘store index’ high order.
@@ -211,9 +203,9 @@ NXTPRNT:        BNE     PRDATA          ; NE means no address to print.
                 JSR     ECHO            ; Output it.
 PRDATA:         LDA     #$20            ; Blank.
                 JSR     ECHO            ; Output it.
-                LDA     (XAML,X)        ; Get data byte at ‘examine index’.
+                LDA     (XAML)          ; Get data byte at ‘examine index’.
                 JSR     PRBYTE          ; Output it in hex format.
-XAMNEXT:        STX     MODE            ; 0->MODE (XAM mode).
+XAMNEXT:        STZ     MODE            ; 0->MODE (XAM mode).
                 LDA     XAML    
                 CMP     L               ; Compare ‘examine index’ to hex data.
                 LDA     XAMH    
@@ -247,32 +239,31 @@ ECHO:
 NOADDLF:        RTS
 
 WOZHITBRK:
-                STY     BANKSAV         ; save BANK_SET at BRK time
+                STY     CRCCHECK        ; save BANK_SET at BRK time
                 CLI
                 CLD
                 LDA     #<BRKMSG
                 LDY     #>BRKMSG
                 JSR     SHWMSG
-                LDA     $106,X
-                STA     MSGH
-                LDA     $105,X
+                LDA     $105,X          ; return address L
                 SEC
                 SBC     #2
-                STA     MSGL
-                LDA     MSGH
-                SBC     #0
-                JSR     PRBYTE
-                LDA     MSGL
+                STA     STL
+                LDA     $106,X          ; return address H
+                BCS     NOBRKDECHI
+                DEC
+NOBRKDECHI:     JSR     PRBYTE
+                LDA     STL
                 JSR     PRBYTE
                 LDA     #'B'
                 JSR     PRREGNAME
-                LDA     BANKSAV
+                LDA     CRCCHECK        ; saved BANK
                 JSR     PRBYTE
                 LDA     #'S'
                 JSR     PRREGNAME
                 TXA
                 CLC
-                ADC     #6              ; A X Y P RL RH
+                ADC     #6              ; skip A X Y P RL RH to point at BRK
                 JSR     PRBYTE
                 JMP     BRKCONT
 
@@ -295,6 +286,7 @@ INTELIGNORE:
                 LDA     #1
                 STA     CRCCHECK
                 JMP     INTELLINE
+; entry
 LOADINTEL:
                 LDA     #<TRBEGMSG
                 LDY     #>TRBEGMSG
@@ -384,7 +376,6 @@ INTELDONE:
                 LDA     #<TRBADMSG      ; Load Error Message
                 LDY     #>TRBADMSG
                 JMP     SHWMSG          ; Show Error
-
 OKMESS:
                 LDA     #<TROKMSG      ; Load OK Message
                 LDY     #>TROKMSG
@@ -427,10 +418,10 @@ CRLF:           LDA     #CR
 
 ; show NUL terminated string in A/Y (l/h)
 SHWMSG:
-                STA     MSGL
-                STY     MSGH
+                STA     L
+                STY     H
                 LDY     #$0
-SHWMSG1:        LDA     (MSGL),Y
+SHWMSG1:        LDA     (L),Y
                 BEQ     .DONE
                 JSR     ECHO
                 INY 
