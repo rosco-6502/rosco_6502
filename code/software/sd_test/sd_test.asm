@@ -25,6 +25,11 @@ _start:
                 ldx     #>RUNMSG
                 jsr     PRINT_SZ
 
+                lda     #$D
+                JSR     COUT
+                lda     #$A
+                JSR     COUT
+
                 jsr     sd_init
 
                 lda     #<EXITMSG
@@ -52,10 +57,10 @@ outbyte:        pha                     ; save a for lsd.
                 section  .rodata
 
 RUNMSG          asciiz  "SD Test running.", $D, $A
-EXITMSG         asciiz  $D, $A, "Exit.", $D, $A
+EXITMSG         ascii   $D, $A, "Exit."
+EOLMSG          asciiz  $D, $A
 
 ; *******************************************************
 ; * Uninitialized data
 ; *******************************************************
                 section  .bss
-                ds      4

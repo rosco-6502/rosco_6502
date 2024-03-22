@@ -18,37 +18,46 @@
 ; *******************************************************
                 section .text
 
-; send buffer at addr FW_ZP_IOPTR, len FW_ZP_IOLEN via SPI
+; write 256 bytes to SPI from buffer at FW_ZP_IOPTR
 ; A, X, Y trashed
 ;
-                global  spi_send_buffer
-spi_send_buffer:
+                global  spi_write_page
+spi_write_page:
                 ldx     #OP_SPI_SCK     ;  2    SCK GPIO bit
-                ldy     #OP_SPI_COPI    ;  2    CPIO GPIO bit
-.loop           lda     FW_ZP_IOLEN
-                bne     .nolenhi
-                lda     FW_ZP_IOLEN+1
-                beq     .done
-                dec     FW_ZP_IOLEN+1
-.nolenhi        dec     FW_ZP_IOLEN
-                lda     (FW_ZP_IOPTR)
-                inc     FW_ZP_IOPTR
-                bne     .nobufhi
-                inc     FW_ZP_IOPTR+1
-.nobufhi        jsr     spi_send_byte2
-                bra     .loop
+                stz     FW_ZP_IOLEN
+.pageloop       ldy     FW_ZP_IOLEN
+                lda     (FW_ZP_IOPTR),y
+                jsr     spi_write_byte2
+                inc     FW_ZP_IOLEN
+                bne     .pageloop
+.done           rts
+
+; write X bytes to SPI from buffer at FW_ZP_IOPTR
+; A, X, Y trashed
+;
+                global  spi_write_bytes
+spi_write_bytes:
+                stx     FW_ZP_IOLEN
+                ldx     #OP_SPI_SCK     ;  2    SCK GPIO bit
+                stz     FW_ZP_IOLEN+1
+.pageloop       ldy     FW_ZP_IOLEN+1
+                lda     (FW_ZP_IOPTR),y
+                jsr     spi_write_byte2
+                inc     FW_ZP_IOLEN+1
+                dec     FW_ZP_IOLEN
+                bne     .pageloop
 .done           rts
 
 ; send byte in A via SPI
 ; A, X, Y trashed
 ;
 ; ~16.5 cycles per bit (138 to 146 cycles per byte)
-                global  spi_send_byte
-spi_send_byte:
+                global  spi_write_byte
+spi_write_byte:
                 ldx     #OP_SPI_SCK     ;  2    SCK GPIO bit
-                ldy     #OP_SPI_COPI    ;  2    CPIO GPIO bit
 
-spi_send_byte2: ; if X and Y already loaded
+spi_write_byte2: ; if X already loaded
+                ldy     #OP_SPI_COPI    ;  2    CPIO GPIO bit
 
 .bit7           stx     DUA_OPR_LO      ;  4    SCK LO
                 asl                     ;  2    shift MSB to carry
@@ -147,25 +156,18 @@ spi_send_byte2: ; if X and Y already loaded
 
 anrts:          rts                     ;  6    done
 
-; read buffer at addr FW_ZP_IOPTR, len FW_ZP_IOLEN via SPI
+; read 256 bytes from SPI into buffer at FW_ZP_IOPTR
 ; A, X, Y trashed
 ;
-                global  spi_read_buffer
-spi_read_buffer:
+                global  spi_read_page
+spi_read_page:
+                ldx     #OP_SPI_SCK     ; pre-load SCK for spi_read_byte2
                 ldy     #0
-                ldx     #OP_SPI_SCK     ;  2    SCK GPIO bit
-.loop           jsr     spi_read_byte2
+.pageloop       jsr     spi_read_byte2
                 sta     (FW_ZP_IOPTR),y
                 iny
-                bne     .nobufhi
-                inc     FW_ZP_IOPTR+1
-.nobufhi        lda     FW_ZP_IOLEN
-                bne     .nolenhi
-                lda     FW_ZP_IOLEN+1
-                beq     anrts
-                dec     FW_ZP_IOLEN+1
-.nolenhi        dec     FW_ZP_IOLEN
-                bra     .loop
+                bne     .pageloop
+                rts
 
 ; read byte via SPI to FW_ZP_IOBYTE
 ; A, X trashed
@@ -174,7 +176,7 @@ spi_read_buffer:
                 global  spi_read_byte,spi_read_byte2 
 spi_read_byte:
                 ldx     #OP_SPI_SCK     ;  2    SCK GPIO bit
-spi_read_byte2: ; if X already loaded
+spi_read_byte2:                         ; if X already loaded
         rept    8
                 stx     DUA_OPR_LO      ;  4    SCK LO
                 lda     DUA_IP          ;  4    read IP byte

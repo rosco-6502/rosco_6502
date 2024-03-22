@@ -90,12 +90,13 @@ BANK_RSVD       ds      1               ; -/- reserved future banking register
 
 ; bios uses ZP $0002-$000F
 FW_ZP_PTR       ds      2               ; firmware ZP pointer
+FW_ZP_TEMP      ds      1               ; firmware ZP temp
 FW_ZP_IOFLAGS   ds      1               ; firmware IO flags
 FW_ZP_IOSTAT    ds      1               ; firmware IO status
 FW_ZP_IOBYTE    ds      1               ; firmware IO byte storage
 FW_ZP_IOPTR     ds      2               ; firmware IO buffer pointer
 FW_ZP_IOLEN     ds      2               ; firmware IO buffer length
-FW_ZP_rsvd      ds      5               ; firmware future reserved
+FW_ZP_BLOCKNUM  ds      4               ; firmware IO block/sector number
 
                 assert  *==$0010        ; user ZP should start at $0010
 USER_ZP_START   ds      0
