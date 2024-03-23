@@ -13,6 +13,7 @@
 
         include "defines.asm"
 
+        if      1
 PRINT           macro   msg
                 lda     #<\msg
                 ldx     #>\msg
@@ -24,6 +25,13 @@ PRINTR          macro   msg
                 ldx     #>\msg
                 jmp     PRINT_SZ
                 endm
+        else
+PRINT           macro   msg
+                endm
+PRINTR          macro   msg
+                rts
+                endm
+        endif
 
 ; *******************************************************
 ; * Entry point for RAM code

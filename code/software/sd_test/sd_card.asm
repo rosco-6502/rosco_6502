@@ -168,7 +168,10 @@ sd_init:
                 trace   ']'
                 rts
 
-;
+; sd_read_block - read 512 byte block
+; 32-bit block number in FW_ZP_BLOCKNUM to FW_ZP_IOPTR
+; trashes A, X, Y
+; returns C set on error
                 global  sd_read_block
 sd_read_block:
                 trace   'R'
@@ -176,7 +179,7 @@ sd_read_block:
                 stx     DUA_OPR_LO
                 trace   '['
                 trace   '>'
-                lda     #$40|17                 ; $51 cmd17 read_single_block
+                lda     #$40|17                 ; cmd17 $51=READ_SINGLE_BLOCK
                 tracea
                 jsr     spi_write_byte
                 trace   '@'
@@ -269,8 +272,9 @@ sd_send_sd_cmd:
         endif
                 ldx     #6
                 jsr     spi_write_bytes
-                jmp     sd_wait_result                  ; C=1 on timeout
+                ; jmp     sd_wait_result                  ; C=1 on timeout
                 ; rts
+        ; FALLS THROUGH
 
 ; sd_wait_result
 ; wait for non-$FF result
@@ -300,12 +304,12 @@ sd_wait_result:
 ; *******************************************************
                 section  .rodata
 
-sd_cmd0_bytes   db      $40| 0,$00,$00,$00,$00,$95      ; $40
-sd_cmd8_bytes   db      $40| 8,$00,$00,$01,$aa,$87      ; $48
-sd_cmd55_bytes  db      $40|55,$00,$00,$00,$00,$FF      ; $77
-sd_cmd41_bytes  db      $40|41,$40,$00,$00,$00,$FF      ; $69
-sd_cmd58_bytes  db      $40|58,$40,$00,$00,$00,$FF      ; $7A
-sd_cmd16_bytes  db      $40|16,$00,$00,$02,$00,$FF      ; $50
+sd_cmd0_bytes   db      $40| 0,$00,$00,$00,$00,$95      ; $40=GO_IDLE_STATE
+sd_cmd8_bytes   db      $40| 8,$00,$00,$01,$aa,$87      ; $48=SEND_IF_COND
+sd_cmd55_bytes  db      $40|55,$00,$00,$00,$00,$FF      ; $77=app command
+sd_cmd41_bytes  db      $40|41,$40,$00,$00,$00,$FF      ; $69=APP_SEND_OP_COND
+sd_cmd58_bytes  db      $40|58,$40,$00,$00,$00,$FF      ; $7A=APP_CMD
+sd_cmd16_bytes  db      $40|16,$00,$00,$02,$00,$FF      ; $50=SET_BLOCKLEN
 
 ; *******************************************************
 ; * Uninitialized data
