@@ -24,29 +24,29 @@
                 global  spi_write_page
 spi_write_page:
                 ldx     #OP_SPI_SCK     ;  2    SCK GPIO bit
-                stz     FW_ZP_IOLEN
-.pageloop       ldy     FW_ZP_IOLEN
+                stz     FW_ZP_LENGTH
+.pageloop       ldy     FW_ZP_LENGTH
                 lda     (FW_ZP_IOPTR),y
                 jsr     spi_write_byte2
-                inc     FW_ZP_IOLEN
+                inc     FW_ZP_LENGTH
                 bne     .pageloop
-.done           rts
+                rts
 
 ; write X bytes to SPI from buffer at FW_ZP_IOPTR
 ; A, X, Y trashed
 ;
                 global  spi_write_bytes
 spi_write_bytes:
-                stx     FW_ZP_IOLEN
-                ldx     #OP_SPI_SCK     ;  2    SCK GPIO bit
-                stz     FW_ZP_IOLEN+1
-.pageloop       ldy     FW_ZP_IOLEN+1
-                lda     (FW_ZP_IOPTR),y
-                jsr     spi_write_byte2
-                inc     FW_ZP_IOLEN+1
-                dec     FW_ZP_IOLEN
-                bne     .pageloop
-.done           rts
+                stx     FW_ZP_LENGTH    ; 3
+                ldx     #OP_SPI_SCK     ; 2    SCK GPIO bit
+                stz     FW_ZP_LENGTH+1  ; 3
+.byteloop       ldy     FW_ZP_LENGTH+1  ; 2
+                lda     (FW_ZP_IOPTR),y ; 5
+                jsr     spi_write_byte2 ; 6
+                inc     FW_ZP_LENGTH+1  ; 5
+                dec     FW_ZP_LENGTH    ; 5
+                bne     .byteloop       ; 2/3
+                rts
 
 ; send byte in A via SPI
 ; A, X, Y trashed
@@ -169,11 +169,11 @@ spi_read_page:
                 bne     .pageloop
                 rts
 
-; read byte via SPI to FW_ZP_IOBYTE
+; read byte via SPI to A
 ; A, X trashed
 ;
 ; ~21 cycles per bit (179 cycles per byte)
-                global  spi_read_byte,spi_read_byte2 
+                global  spi_read_byte
 spi_read_byte:
                 ldx     #OP_SPI_SCK     ;  2    SCK GPIO bit
 spi_read_byte2:                         ; if X already loaded
@@ -183,7 +183,7 @@ spi_read_byte2:                         ; if X already loaded
                 and     #IP_SPI_CIPO    ;  2    isolate CIPO bit
                 stx     DUA_OPR_HI      ;  4    SCK HI
                 cmp     #IP_SPI_CIPO    ;  2    set carry if CIPO set
-                rol     FW_ZP_IOBYTE    ;  5    rotate carry into lsb
+                rol     FW_ZP_PTR       ;  5    rotate carry into lsb
         endr
-                lda     FW_ZP_IOBYTE    ;  3    get result in A
+                lda     FW_ZP_PTR       ;  3    get result in A
                 rts                     ;  6    done

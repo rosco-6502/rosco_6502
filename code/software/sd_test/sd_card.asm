@@ -15,23 +15,23 @@
 
                 include "defines.asm"
 
-SD_RESET_CYCLES         =       20
-SD_IDLE_TIMEOUT         =       20
-SD_START_TIMEOUT        =       200
-SD_MAX_IDLE_RETRIES     =       5
-SD_CMD_WAIT_RETRIES     =       100
-SD_WRITE_WAIT_RETRIES   =       2500
+SD_RESET_CYCLES         =       10
+SD_IDLE_RETRIES         =       5
 SD_CMD_RESP_RETRIES     =       $1000
+SD_WRITE_WAIT_RETRIES   =       $1000
 
 SD_R1_READY_STATE       =       $00
 SD_R1_IDLE_STATE        =       $01
 SD_R1_ILLEGAL_COMMAND   =       $04
 SD_WRITE_RESPONSE_OK    =       $05
 SD_BLOCK_START          =       $FE
+SD_NOT_READY            =       $FF
 
 SD_IOFLG_FORCECMD       =       1<<7
 
-                if      1
+TRACE           =       1
+
+                if      TRACE
 trace           macro   char
                 php
                 pha
@@ -77,24 +77,29 @@ tracev          macro   var
                 global  sd_init
 sd_init:
                 trace   'I'
-                stz     FW_ZP_IOFLAGS
-                stz     FW_ZP_IOSTAT
-
-                lda     #SD_MAX_IDLE_RETRIES
-                sta     sd_init_retries
-                stz     sd_cmd_retries
-                
-.chk_idle       jsr     sd_reset
-                ldx     #OP_SPI_CS      ; CS = LO (assert)
+                lda     #OP_SPI_CS|OP_SPI_COPI  ; CS = HI (de-assert)
+                sta     DUA_OPR_HI
+                trace   '~'
+                lda     #SD_RESET_CYCLES
+                sta     FW_ZP_COUNT
+.resetloop      lda     #$FF
+                jsr     spi_write_byte
+                dec     FW_ZP_COUNT
+                bne     .resetloop
+                lda     #SD_IDLE_RETRIES
+                sta     sd_idle_retry
+                ldx     #OP_SPI_CS              ; CS = LO (assert)
+                trace   '['
                 stx     DUA_OPR_LO
+.chk_idle:
                 lda     #<sd_cmd0_bytes
                 ldx     #>sd_cmd0_bytes
                 jsr     sd_send_sd_cmd          ; send cmd0
                 cmp     #SD_R1_IDLE_STATE
                 beq     .cmd8_if
-.retry_init:    dec     sd_init_retries
+.retry_init:    dec     sd_idle_retry
                 bne     .chk_idle
-                bra     .card_error
+                jmp     .card_error
 .cmd8_if:       lda     #<sd_cmd8_bytes
                 ldx     #>sd_cmd8_bytes
                 jsr     sd_send_sd_cmd          ; send cmd8
@@ -102,10 +107,11 @@ sd_init:
                 bne     .retry_init
                 trace   '='
                 ldy     #4
-.eatresponse:   jsr     spi_read_byte
+.cmd8_resp:     jsr     spi_read_byte
                 tracea
                 dey
-                bne     .eatresponse
+                bne     .cmd8_resp
+                stz     sd_init_timeout
 .cmd55_app_cmd: lda     #<sd_cmd55_bytes
                 ldx     #>sd_cmd55_bytes
                 jsr     sd_send_sd_cmd          ; send cmd 55
@@ -115,10 +121,10 @@ sd_init:
                 ldx     #>sd_cmd41_bytes
                 jsr     sd_send_sd_cmd          ; send cmd 41
                 cmp     #SD_R1_READY_STATE
-                beq     .card_ready
+                beq     .cmd58_ocr
                 cmp     #SD_R1_IDLE_STATE
                 bne     .retry_init
-                inc     sd_cmd_retries
+                inc     sd_init_timeout
                 beq     .card_error
                 trace   '.'
                 lda     #14                     ; ~2.5 ms @ 10 Mhz
@@ -128,35 +134,122 @@ sd_init:
                 dec
                 bne     .delay
                 bra     .cmd55_app_cmd
+.cmd58_ocr:     lda     #<sd_cmd58_bytes
+                ldx     #>sd_cmd58_bytes
+                jsr     sd_send_sd_cmd
+                cmp     #SD_R1_READY_STATE
+                bne     .card_error
+                trace   '='
+                jsr     spi_read_byte
+                sta     sd_sdhc_flag
+                tracea
+                and     #$40
+                beq     .nosdhc
+                trace   '+'
+                bra     .cmd58_resp
+.nosdhc:        trace   '-'
+.cmd58_resp:    ldy     #3
+.cmd58_resp2:   jsr     spi_read_byte
+                tracea
+                dey
+                bne     .cmd58_resp2
+.cmd16_blklen:  lda     #<sd_cmd16_bytes
+                ldx     #>sd_cmd16_bytes
+                jsr     sd_send_sd_cmd
+                cmp     #SD_R1_READY_STATE
+                beq     .card_ready
 .card_error:    sec
                 trace   '!'
                 bra     .done
-.card_ready:    trace   '^'
-                clc
+.card_ready:    clc
+                trace   '^'
 .done:          ldx     #OP_SPI_CS|OP_SPI_COPI ; CS,COPI = HI (de-assert)
                 stx     DUA_OPR_HI
-                trace   'i'
+                trace   ']'
                 rts
 
-; 
-sd_read_sector:
-                rts
-
-; de-assert CS and send $FFs to reset card
-; trashes A, X, Y
-sd_reset:
+;
+                global  sd_read_block
+sd_read_block:
                 trace   'R'
-                lda     #OP_SPI_CS|OP_SPI_COPI  ; CS = HI (de-assert)
-                sta     DUA_OPR_HI
-
-                lda     #SD_RESET_CYCLES
-                sta     FW_ZP_IOBYTE
-.resetloop      lda     #$FF
+                ldx     #OP_SPI_CS              ; CS = LO (assert)
+                stx     DUA_OPR_LO
+                trace   '['
+                trace   '>'
+                lda     #$40|17                 ; $51 cmd17 read_single_block
+                tracea
                 jsr     spi_write_byte
-                dec     FW_ZP_IOBYTE
-                bne     .resetloop
-                trace   'r'
+                trace   '@'
+                bit     sd_sdhc_flag
+                bvs     .use_sdhcblk
+                lda     FW_ZP_BLOCKNUM+0        ; byte = block << 9
+                asl
+                sta     FW_ZP_WORD
+                lda     FW_ZP_BLOCKNUM+1
+                rol
+                sta     FW_ZP_WORD+1
+                lda     FW_ZP_BLOCKNUM+2
+                rol
+                tracea
+                jsr     spi_write_byte          ; byte number (big endian)
+                lda     FW_ZP_WORD+1            ; byte number (big endian)
+                tracea
+                jsr     spi_write_byte
+                lda     FW_ZP_WORD              ; byte number (big endian)
+                tracea
+                jsr     spi_write_byte
+                lda     #0                      ; byte number (big endian)
+                tracea
+                jsr     spi_write_byte
+                bra     .dummycrc
+.use_sdhcblk:   lda     FW_ZP_BLOCKNUM+3        ; block number (big endian)
+                tracea
+                jsr     spi_write_byte
+                lda     FW_ZP_BLOCKNUM+2        ; block number (big endian)
+                tracea
+                jsr     spi_write_byte
+                lda     FW_ZP_BLOCKNUM+1        ; block number (big endian)
+                tracea
+                jsr     spi_write_byte
+                lda     FW_ZP_BLOCKNUM+0        ; block number (big endian)
+                tracea
+                jsr     spi_write_byte
+.dummycrc:      lda     #$FF                    ; ignored CRC (and end bit)
+;                tracea
+                jsr     spi_write_byte
+
+                jsr     sd_wait_result
+                cmp     #SD_R1_READY_STATE
+                bne     .sd_read_fail
+
+                jsr     sd_wait_result
+                cmp     #SD_BLOCK_START
+                beq     .sd_read_data
+
+.sd_read_fail:  sec
+                trace   '!'
+                bra     .sd_read_done
+
+.sd_read_data:  jsr     spi_read_page
+                inc     FW_ZP_IOPTR+1
+                jsr     spi_read_page
+                dec     FW_ZP_IOPTR+1
+
+                trace   '='
+                jsr     spi_read_byte
+                sta     FW_ZP_COUNT
+                tracea
+                jsr     spi_read_byte
+                sta     FW_ZP_COUNT+1
+                tracea
+
+                clc
+                trace   '^'
+.sd_read_done:  ldx     #OP_SPI_CS|OP_SPI_COPI ; CS,COPI = HI (de-assert)
+                stx     DUA_OPR_HI
+                trace   ']'
                 rts
+
 
 ; send sd command
 ; 6 byte command at FW_ZP_IOPTR
@@ -165,75 +258,61 @@ sd_reset:
 sd_send_sd_cmd:
                 sta     FW_ZP_IOPTR
                 stx     FW_ZP_IOPTR+1
-                trace   'S'
                 trace   '>'
-                tracev  (FW_ZP_IOPTR)
-
+        if      TRACE
+                ldy     #0
+.loop           lda     (FW_ZP_IOPTR),y
+                jsr     outbyte
+                iny
+                cpy     #6
+                bne     .loop
+        endif
                 ldx     #6
                 jsr     spi_write_bytes
-                jsr     sd_wait_result                  ; C=1 on timeout
-
-.sd_send_err
-                trace   's'
-                rts
+                jmp     sd_wait_result                  ; C=1 on timeout
+                ; rts
 
 ; sd_wait_result
 ; wait for non-$FF result
 ; trashes A, X, Y
 ; returns C set if timeout
 sd_wait_result:
-                trace   'W'
+                trace   '|'
                 stz     sd_timeout_ctr
                 lda     #>SD_CMD_RESP_RETRIES
                 sta     sd_timeout_ctr+1
-
 .sd_wait_loop:  jsr     spi_read_byte
-                cmp     #$ff
-                bne     .sd_wait_good
+                cmp     #SD_NOT_READY
+                bne     .sd_ready
                 inc     sd_timeout_ctr
                 bne     .sd_wait_loop
                 dec     sd_timeout_ctr+1
                 bne     .sd_wait_loop
-                trace   '!'
                 sec
-                bra     .sd_wait_exit
-.sd_wait_good:  trace   '='
-                tracea
-                clc
-.sd_wait_exit:  trace   'w'
+                trace   '!'
                 rts
+.sd_ready:      clc
+                tracea
+.sd_wait_exit:  rts
 
 ; *******************************************************
 ; * Initialized data
 ; *******************************************************
                 section  .rodata
 
-sd_cmd0_bytes   db      $40|0,$00,$00,$00,$00,$95       ; 40
-sd_cmd8_bytes   db      $40|8,$00,$00,$01,$aa,$87       ; 48
-sd_cmd55_bytes  db      $40|55,$00,$00,$00,$00,$01      ; 77
-sd_cmd41_bytes  db      $40|41,$40,$00,$00,$00,$01      ; 69
+sd_cmd0_bytes   db      $40| 0,$00,$00,$00,$00,$95      ; $40
+sd_cmd8_bytes   db      $40| 8,$00,$00,$01,$aa,$87      ; $48
+sd_cmd55_bytes  db      $40|55,$00,$00,$00,$00,$FF      ; $77
+sd_cmd41_bytes  db      $40|41,$40,$00,$00,$00,$FF      ; $69
+sd_cmd58_bytes  db      $40|58,$40,$00,$00,$00,$FF      ; $7A
+sd_cmd16_bytes  db      $40|16,$00,$00,$02,$00,$FF      ; $50
 
 ; *******************************************************
 ; * Uninitialized data
 ; *******************************************************
                 section  .bss
 
-SD_TYPE_V1      =       1
-SD_TYPE_V2      =       2
-SD_TYPE_SDHC    =       3
-SD_TYPE_UNKN    =       $ff
-
-SD_STAT_INIT    =       1<<7
-SD_STAT_PARTIAL =       1<<6
-
-sd_card_stat    ds      1               ; bit 7 = initialized, bit 6 = can do partial read
-sd_card_type    ds      1               ; sd card type SD_TYPE_*
-sd_blk_start    ds      4               ; sd card current block start
-sd_blk_offset   ds      2               ; sd card current block offset
+sd_sdhc_flag    ds      1       ; bit 6 SDHC
+sd_init_timeout ds      1
+sd_idle_retry   ds      1
 sd_timeout_ctr  ds      2
-
-sd_init_retries ds      1
-sd_cmd_retries  ds      1
-
-sd_cmd_number   ds      1
-sd_cmd_arg      ds      4
