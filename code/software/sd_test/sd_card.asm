@@ -15,13 +15,13 @@
 
                 include "defines.asm"
 
-SD_RESET_CYCLES         =       10
+SD_RESET_CYCLES         =       20
 SD_IDLE_TIMEOUT         =       20
 SD_START_TIMEOUT        =       200
 SD_MAX_IDLE_RETRIES     =       5
 SD_CMD_WAIT_RETRIES     =       100
 SD_WRITE_WAIT_RETRIES   =       2500
-SD_CMD_RESP_RETRIES     =       4000
+SD_CMD_RESP_RETRIES     =       $1000
 
 SD_R1_READY_STATE       =       $00
 SD_R1_IDLE_STATE        =       $01
@@ -31,6 +31,7 @@ SD_BLOCK_START          =       $FE
 
 SD_IOFLG_FORCECMD       =       1<<7
 
+                if      1
 trace           macro   char
                 php
                 pha
@@ -39,7 +40,6 @@ trace           macro   char
                 pla
                 plp
                 endm
-
 tracea          macro
                 php
                 pha
@@ -47,7 +47,6 @@ tracea          macro
                 pla
                 plp
                 endm
-
 tracev          macro   var
                 php
                 pha
@@ -57,12 +56,24 @@ tracev          macro   var
                 plp
                 endm
 
+                else
+
+trace           macro   char
+                endm
+tracea          macro
+                endm
+tracev          macro   var
+                endm
+                endif
 
 ; *******************************************************
-; * SPI routines
+; * SD card routines
 ; *******************************************************
                 section .text
 
+; sd_init - initialize SD card
+; trashes A, X, Y
+; returns C set if init failed
                 global  sd_init
 sd_init:
                 trace   'I'
@@ -74,19 +85,22 @@ sd_init:
                 stz     sd_cmd_retries
                 
 .chk_idle       jsr     sd_reset
-.cmd0_idle:     lda     #<sd_cmd0_bytes
+                ldx     #OP_SPI_CS      ; CS = LO (assert)
+                stx     DUA_OPR_LO
+                lda     #<sd_cmd0_bytes
                 ldx     #>sd_cmd0_bytes
-                jsr     sd_send_sd_cmd          ; send idle cmd
+                jsr     sd_send_sd_cmd          ; send cmd0
                 cmp     #SD_R1_IDLE_STATE
                 beq     .cmd8_if
 .retry_init:    dec     sd_init_retries
                 bne     .chk_idle
-                bra     .err_return
+                bra     .card_error
 .cmd8_if:       lda     #<sd_cmd8_bytes
                 ldx     #>sd_cmd8_bytes
-                jsr     sd_send_sd_cmd          ; send idle cmd
+                jsr     sd_send_sd_cmd          ; send cmd8
                 cmp     #SD_R1_IDLE_STATE
                 bne     .retry_init
+                trace   '='
                 ldy     #4
 .eatresponse:   jsr     spi_read_byte
                 tracea
@@ -94,35 +108,42 @@ sd_init:
                 bne     .eatresponse
 .cmd55_app_cmd: lda     #<sd_cmd55_bytes
                 ldx     #>sd_cmd55_bytes
-                jsr     sd_send_sd_cmd          ; send idle cmd
+                jsr     sd_send_sd_cmd          ; send cmd 55
                 cmp     #SD_R1_IDLE_STATE
                 bne     .retry_init
 .cmd41_op_cond: lda     #<sd_cmd41_bytes
                 ldx     #>sd_cmd41_bytes
-                jsr     sd_send_sd_cmd          ; send idle cmd
+                jsr     sd_send_sd_cmd          ; send cmd 41
                 cmp     #SD_R1_READY_STATE
                 beq     .card_ready
                 cmp     #SD_R1_IDLE_STATE
                 bne     .retry_init
                 inc     sd_cmd_retries
-                beq     .err_return
+                beq     .card_error
                 trace   '.'
-                lda     #1
-                jsr     delay_10ms            ; give card small delay and retry cmd55
+                lda     #14                     ; ~2.5 ms @ 10 Mhz
+                ldx     #0
+.delay:         dex
+                bne     .delay
+                dec
+                bne     .delay
                 bra     .cmd55_app_cmd
-.card_ready:    trace   '*'
-                clc
-.done:          trace   'i'
-                rts
-.err_return:    sec
+.card_error:    sec
                 trace   '!'
                 bra     .done
+.card_ready:    trace   '^'
+                clc
+.done:          ldx     #OP_SPI_CS|OP_SPI_COPI ; CS,COPI = HI (de-assert)
+                stx     DUA_OPR_HI
+                trace   'i'
+                rts
 
 ; 
 sd_read_sector:
-
+                rts
 
 ; de-assert CS and send $FFs to reset card
+; trashes A, X, Y
 sd_reset:
                 trace   'R'
                 lda     #OP_SPI_CS|OP_SPI_COPI  ; CS = HI (de-assert)
@@ -137,40 +158,33 @@ sd_reset:
                 trace   'r'
                 rts
 
-; send sd idle command
-sd_send_idle:
-                trace   'D'
-                trace   'd'
-                rts
-
 ; send sd command
+; 6 byte command at FW_ZP_IOPTR
+; trashes A, X, Y
+; returns C set if timeout
 sd_send_sd_cmd:
                 sta     FW_ZP_IOPTR
                 stx     FW_ZP_IOPTR+1
                 trace   'S'
+                trace   '>'
                 tracev  (FW_ZP_IOPTR)
-
-                lda     #OP_SPI_CS                      ; CS = LO (assert)
-                sta     DUA_OPR_LO
 
                 ldx     #6
                 jsr     spi_write_bytes
-                jsr     sd_wait_result
-                bcs     .sd_send_err
+                jsr     sd_wait_result                  ; C=1 on timeout
 
-                ldx     #OP_SPI_CS|OP_SPI_COPI          ; CS+COPI = HI (de-assert)
-                stx     DUA_OPR_HI
-                clc
 .sd_send_err
                 trace   's'
                 rts
 
+; sd_wait_result
 ; wait for non-$FF result
+; trashes A, X, Y
+; returns C set if timeout
 sd_wait_result:
                 trace   'W'
-                lda     #<(-SD_CMD_RESP_RETRIES)        ; negate so we can inc
-                sta     sd_timeout_ctr
-                lda     #>(-SD_CMD_RESP_RETRIES)
+                stz     sd_timeout_ctr
+                lda     #>SD_CMD_RESP_RETRIES
                 sta     sd_timeout_ctr+1
 
 .sd_wait_loop:  jsr     spi_read_byte
@@ -178,96 +192,26 @@ sd_wait_result:
                 bne     .sd_wait_good
                 inc     sd_timeout_ctr
                 bne     .sd_wait_loop
-                inc     sd_timeout_ctr+1
+                dec     sd_timeout_ctr+1
                 bne     .sd_wait_loop
                 trace   '!'
                 sec
                 bra     .sd_wait_exit
-.sd_wait_good:  tracea
+.sd_wait_good:  trace   '='
+                tracea
                 clc
 .sd_wait_exit:  trace   'w'
                 rts
-
-; delay for A * ~4.4usec (uses DUART internal timer tick)
-                global  delay_usec
-delay_usec:
-                phy
-.delayouter:    ldy     DUA_CTL
-.delayloop:     cpy     DUA_CTL
-                beq     .delayloop
-                dec
-                bne     .delayouter
-                ply
-                rts
-
-; delay for A * ~10ms (uses DUART interrupt)
-                global  delay_usec
-delay_10ms:
-                phy
-.delayouter:    ldy     TICK100HZ
-.delayloop:     cpy     TICK100HZ
-                beq     .delayloop
-                dec
-                bne     .delayouter
-                ply
-                rts
-
-
-; ; delay for A * ~2.6usec (adjusted vs CPU speed by delay_init)
-;                 global  delay_usec
-; delay_usec:
-;                 phx
-;                 phy
-;                 tay
-; .delayouter:    ldx     delay_value
-;                 lda     delay_value+1
-; .delayloop:     cpx     #$01                    ; 2
-;                 dex                             ; 2
-;                 sbc     #0                      ; 2
-;                 bit     $1337                   ; 4 (timing dummy)
-;                 bcs     .delayloop              ; 3
-;                 dey
-;                 bne     .delayouter
-;                 ply
-;                 plx
-;                 rts
-
-; ; init delay_value
-; delay_init:
-;                 lda     #0
-;                 tax
-;                 ldy     TICK100HZ
-; .waittick:      cpy     TICK100HZ
-;                 beq     .waittick
-;                 iny
-; .calloop:       cpx     #$ff                    ; 2
-;                 inx                             ; 2
-;                 adc     #0                      ; 2
-;                 cpy     TICK100HZ               ; 4
-;                 beq     .calloop                ; 3 = 25 per loop
-;                 sta     delay_value+1
-;                 txa
-;                 clc
-;                 adc     #8
-;                 bcc     .nohiinc
-;                 inc     delay_value+1
-; .nohiinc:       ldx     #4
-; .div16          lsr     delay_value+1
-;                 ror     
-;                 dex
-;                 bne     .div16
-;                 sta     delay_value+0
-;                 rts
 
 ; *******************************************************
 ; * Initialized data
 ; *******************************************************
                 section  .rodata
 
-sd_cmd0_bytes   db      $40,$00,$00,$00,$00,$95
-sd_cmd8_bytes   db      $48,$00,$00,$01,$aa,$87
-sd_cmd55_bytes  db      $77,$00,$00,$00,$00,$01
-sd_cmd41_bytes  db      $69,$40,$00,$00,$00,$01
+sd_cmd0_bytes   db      $40|0,$00,$00,$00,$00,$95       ; 40
+sd_cmd8_bytes   db      $40|8,$00,$00,$01,$aa,$87       ; 48
+sd_cmd55_bytes  db      $40|55,$00,$00,$00,$00,$01      ; 77
+sd_cmd41_bytes  db      $40|41,$40,$00,$00,$00,$01      ; 69
 
 ; *******************************************************
 ; * Uninitialized data
@@ -288,10 +232,8 @@ sd_blk_start    ds      4               ; sd card current block start
 sd_blk_offset   ds      2               ; sd card current block offset
 sd_timeout_ctr  ds      2
 
-sd_init_retries  ds      1
-sd_cmd_retries   ds      1
+sd_init_retries ds      1
+sd_cmd_retries  ds      1
 
 sd_cmd_number   ds      1
 sd_cmd_arg      ds      4
-
-delay_value     ds      2               ; ~0.625ms delay loop count-up

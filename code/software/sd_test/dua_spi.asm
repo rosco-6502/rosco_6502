@@ -154,7 +154,7 @@ spi_write_byte2: ; if X already loaded
 .bit0c          sty     DUA_OPR_LO      ;  4    COPI LO
                 stx     DUA_OPR_HI      ;  4    SCK HI
 
-anrts:          rts                     ;  6    done
+                rts                     ;  6    done
 
 ; read 256 bytes from SPI into buffer at FW_ZP_IOPTR
 ; A, X, Y trashed

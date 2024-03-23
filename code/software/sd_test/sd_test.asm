@@ -13,6 +13,18 @@
 
         include "defines.asm"
 
+PRINT           macro   msg
+                lda     #<\msg
+                ldx     #>\msg
+                jsr     PRINT_SZ
+                endm
+
+PRINTR          macro   msg
+                lda     #<\msg
+                ldx     #>\msg
+                jmp     PRINT_SZ
+                endm
+
 ; *******************************************************
 ; * Entry point for RAM code
 ; *******************************************************
@@ -21,20 +33,17 @@
         global  _start
 
 _start:
-                lda     #<RUNMSG
-                ldx     #>RUNMSG
-                jsr     PRINT_SZ
+                PRINT   RUNMSG
 
-                lda     #$D
-                JSR     COUT
-                lda     #$A
-                JSR     COUT
-
+                PRINT   SDINIT
                 jsr     sd_init
+                jsr     res_msg
 
-                lda     #<EXITMSG
-                ldx     #>EXITMSG
-                jmp     PRINT_SZ
+                PRINTR   EXITMSG
+
+res_msg:        bcc     ok_msg
+                PRINTR   ERRMSG
+ok_msg:         PRINTR   OKMSG
 
                 global  outbyte
 outbyte:        pha                     ; save a for lsd.
@@ -57,6 +66,9 @@ outbyte:        pha                     ; save a for lsd.
                 section  .rodata
 
 RUNMSG          asciiz  "SD Test running.", $D, $A
+OKMSG           asciiz  " OK", $D, $A
+ERRMSG          asciiz  " ERROR!", $D, $A
+SDINIT          asciiz  "sd_init:"
 EXITMSG         ascii   $D, $A, "Exit."
 EOLMSG          asciiz  $D, $A
 
