@@ -65,44 +65,44 @@ spi_write_byte2: ; if X already loaded
                 sty     DUA_OPR_HI      ;  4    COPI HI
                 stx     DUA_OPR_HI      ;  4    SCK HI
 
-                stx     DUA_OPR_LO      ;  4    SCK LO
                 asl                     ;  2    shift MSB to carry
+                stx     DUA_OPR_LO      ;  4    SCK LO
                 bcc     .bit6c          ;  2/3  
 .bit6s          sty     DUA_OPR_HI      ;  4    COPI HI
                 stx     DUA_OPR_HI      ;  4    SCK HI
 
-                stx     DUA_OPR_LO      ;  4    SCK LO
                 asl                     ;  2    shift MSB to carry
+                stx     DUA_OPR_LO      ;  4    SCK LO
                 bcc     .bit5c          ;  2/3  
 .bit5s          sty     DUA_OPR_HI      ;  4    COPI HI
                 stx     DUA_OPR_HI      ;  4    SCK HI
 
-                stx     DUA_OPR_LO      ;  4    SCK LO
                 asl                     ;  2    shift MSB to carry
+                stx     DUA_OPR_LO      ;  4    SCK LO
                 bcc     .bit4c          ;  2/3  
 .bit4s          sty     DUA_OPR_HI      ;  4    COPI HI
                 stx     DUA_OPR_HI      ;  4    SCK HI
 
-                stx     DUA_OPR_LO      ;  4    SCK LO
                 asl                     ;  2    shift MSB to carry
+                stx     DUA_OPR_LO      ;  4    SCK LO
                 bcc     .bit3c          ;  2/3  
 .bit3s          sty     DUA_OPR_HI      ;  4    COPI HI
                 stx     DUA_OPR_HI      ;  4    SCK HI
 
-                stx     DUA_OPR_LO      ;  4    SCK LO
                 asl                     ;  2    shift MSB to carry
+                stx     DUA_OPR_LO      ;  4    SCK LO
                 bcc     .bit2c          ;  2/3  
 .bit2s          sty     DUA_OPR_HI      ;  4    COPI HI
                 stx     DUA_OPR_HI      ;  4    SCK HI
 
-                stx     DUA_OPR_LO      ;  4    SCK LO
                 asl                     ;  2    shift MSB to carry
+                stx     DUA_OPR_LO      ;  4    SCK LO
                 bcc     .bit1c          ;  2/3  
 .bit1s          sty     DUA_OPR_HI      ;  4    COPI HI
                 stx     DUA_OPR_HI      ;  4    SCK HI
 
-                stx     DUA_OPR_LO      ;  4    SCK LO
                 asl                     ;  2    shift MSB to carry
+                stx     DUA_OPR_LO      ;  4    SCK LO
                 bcc     .bit0c          ;  2/3  
 .bit0s          sty     DUA_OPR_HI      ;  4    COPI HI
                 stx     DUA_OPR_HI      ;  4    SCK HI
@@ -112,44 +112,44 @@ spi_write_byte2: ; if X already loaded
                 sty     DUA_OPR_LO      ;  4    COPI LO
                 stx     DUA_OPR_HI      ;  4    SCK HI
 
-                stx     DUA_OPR_LO      ;  4    SCK LO
                 asl                     ;  2    shift MSB to carry
+                stx     DUA_OPR_LO      ;  4    SCK LO
                 bcs     .bit6s          ;  2/3  
 .bit6c          sty     DUA_OPR_LO      ;  4    COPI LO
                 stx     DUA_OPR_HI      ;  4    SCK HI
 
-                stx     DUA_OPR_LO      ;  4    SCK LO
                 asl                     ;  2    shift MSB to carry
+                stx     DUA_OPR_LO      ;  4    SCK LO
                 bcs     .bit5s          ;  2/3  
 .bit5c          sty     DUA_OPR_LO      ;  4    COPI LO
                 stx     DUA_OPR_HI      ;  4    SCK HI
 
-                stx     DUA_OPR_LO      ;  4    SCK LO
                 asl                     ;  2    shift MSB to carry
+                stx     DUA_OPR_LO      ;  4    SCK LO
                 bcs     .bit4s          ;  2/3  
 .bit4c          sty     DUA_OPR_LO      ;  4    COPI LO
                 stx     DUA_OPR_HI      ;  4    SCK HI
 
-                stx     DUA_OPR_LO      ;  4    SCK LO
                 asl                     ;  2    shift MSB to carry
+                stx     DUA_OPR_LO      ;  4    SCK LO
                 bcs     .bit3s          ;  2/3  
 .bit3c          sty     DUA_OPR_LO      ;  4    COPI LO
                 stx     DUA_OPR_HI      ;  4    SCK HI
 
-                stx     DUA_OPR_LO      ;  4    SCK LO
                 asl                     ;  2    shift MSB to carry
+                stx     DUA_OPR_LO      ;  4    SCK LO
                 bcs     .bit2s          ;  2/3  
 .bit2c          sty     DUA_OPR_LO      ;  4    COPI LO
                 stx     DUA_OPR_HI      ;  4    SCK HI
 
-                stx     DUA_OPR_LO      ;  4    SCK LO
                 asl                     ;  2    shift MSB to carry
+                stx     DUA_OPR_LO      ;  4    SCK LO
                 bcs     .bit1s          ;  2/3  
 .bit1c          sty     DUA_OPR_LO      ;  4    COPI LO
                 stx     DUA_OPR_HI      ;  4    SCK HI
 
-                stx     DUA_OPR_LO      ;  4    SCK LO
                 asl                     ;  2    shift MSB to carry
+                stx     DUA_OPR_LO      ;  4    SCK LO
                 bcs     .bit0s          ;  2/3  
 .bit0c          sty     DUA_OPR_LO      ;  4    COPI LO
                 stx     DUA_OPR_HI      ;  4    SCK HI
@@ -170,20 +170,40 @@ spi_read_page:
                 rts
 
 ; read byte via SPI to A
-; A, X trashed
+; A, X, Y trashed
 ;
+; ~21 cycles per bit (179 cycles per byte)
+;                 global  spi_read_byte
+; spi_read_byte:
+;                 ldx     #OP_SPI_SCK     ;  2    SCK GPIO bit
+; spi_read_byte2:                         ; if X already loaded
+;         rept    8
+;                 stx     DUA_OPR_LO      ;  4    SCK LO
+;                 lda     DUA_IP          ;  4    read IP byte
+;                 and     #IP_SPI_CIPO    ;  2    isolate CIPO bit
+;                 stx     DUA_OPR_HI      ;  4    SCK HI
+;                 cmp     #IP_SPI_CIPO    ;  2    set carry if CIPO set
+;                 rol     FW_ZP_PTR       ;  5    rotate carry into lsb
+;         endr
+;                 lda     FW_ZP_PTR       ;  3    get result in A
+;                 rts                     ;  6    done
+
 ; ~21 cycles per bit (179 cycles per byte)
                 global  spi_read_byte
 spi_read_byte:
                 ldx     #OP_SPI_SCK     ;  2    SCK GPIO bit
 spi_read_byte2:                         ; if X already loaded
+                sty     FW_ZP_PTR
+                lda     #0
         rept    8
+                tay                     ;  2    save A in Y
                 stx     DUA_OPR_LO      ;  4    SCK LO
                 lda     DUA_IP          ;  4    read IP byte
                 and     #IP_SPI_CIPO    ;  2    isolate CIPO bit
                 stx     DUA_OPR_HI      ;  4    SCK HI
                 cmp     #IP_SPI_CIPO    ;  2    set carry if CIPO set
-                rol     FW_ZP_PTR       ;  5    rotate carry into lsb
+                tya                     ;  2    load A from Y
+                rol                     ;  2    rotate carry into lsb
         endr
-                lda     FW_ZP_PTR       ;  3    get result in A
+                ldy     FW_ZP_PTR
                 rts                     ;  6    done

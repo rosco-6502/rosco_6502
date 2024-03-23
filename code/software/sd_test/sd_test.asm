@@ -75,6 +75,12 @@ clr_block:      sta     $1000,x
                 lda     #$00
                 sta     FW_ZP_BLOCKNUM+3
 .loop:
+
+                lda     TICK100HZ
+                jsr     outbyte
+                lda     #" "
+                jsr     COUT
+
                 lda     #<$1000
                 sta     FW_ZP_IOPTR
                 lda     #>$1000
