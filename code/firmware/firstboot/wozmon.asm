@@ -79,7 +79,16 @@ BRKCONT:
                 JSR     PRREGNAME
                 PLA
                 STA     REGP
-                JSR     PRBYTE
+                LDY     #7
+FLAGLOOP:       ASL
+                PHA
+                LDA     FLAGNAMES,Y
+                BCS     FLAGPRINT
+                LDA     #'.'     
+FLAGPRINT:      JSR     COUT
+                PLA
+                DEY
+                BPL     FLAGLOOP
                 BRA     GETLINE
 
 ;-------------------------------------------------------------------------
@@ -238,6 +247,7 @@ ECHO:
                 LDA     #CR
 NOADDLF:        RTS
 
+; X has S, Y bas BANK_SET
 WOZHITBRK:
                 STY     CRCCHECK        ; save BANK_SET at BRK time
                 CLI
@@ -429,7 +439,7 @@ SHWMSG1:        LDA     (L),Y
 .DONE           RTS 
 
 ;-------------------------------------------------------------------------
-
+FLAGNAMES       ascii   "CZIDB1VN"
 MONMSG          asciiz  $0D, "rosco_6502 EWozMon:"
 BRKMSG          asciiz  $0D, $0D, $07, "BRK @"
 TRBEGMSG        asciiz  $0D, "Start Intel hex file import:", $0D
