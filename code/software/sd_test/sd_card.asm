@@ -29,7 +29,7 @@ SD_NOT_READY            =       $FF
 
 SD_IOFLG_FORCECMD       =       1<<7
 
-TRACE           =       1
+TRACE           =       0
 
                 if      TRACE
 trace           macro   char
@@ -106,11 +106,14 @@ sd_init:
                 cmp     #SD_R1_IDLE_STATE
                 bne     .retry_init
                 trace   '='
-                ldy     #4
-.cmd8_resp:     jsr     spi_read_byte
+                jsr     spi_read_byte
                 tracea
-                dey
-                bne     .cmd8_resp
+                jsr     spi_read_byte
+                tracea
+                jsr     spi_read_byte
+                tracea
+                jsr     spi_read_byte
+                tracea
                 stz     sd_init_timeout
 .cmd55_app_cmd: lda     #<sd_cmd55_bytes
                 ldx     #>sd_cmd55_bytes
@@ -141,18 +144,22 @@ sd_init:
                 bne     .card_error
                 trace   '='
                 jsr     spi_read_byte
-                sta     sd_sdhc_flag
                 tracea
+                sta     sd_sdhc_flag            ; save, bit 6 = SDHC flag
+        if      TRACE
                 and     #$40
                 beq     .nosdhc
                 trace   '+'
-                bra     .cmd58_resp
+                bra     .ocrchk
 .nosdhc:        trace   '-'
-.cmd58_resp:    ldy     #3
-.cmd58_resp2:   jsr     spi_read_byte
+.ocrchk:
+        endif
+                jsr     spi_read_byte
                 tracea
-                dey
-                bne     .cmd58_resp2
+                jsr     spi_read_byte
+                tracea
+                jsr     spi_read_byte
+                tracea
 .cmd16_blklen:  lda     #<sd_cmd16_bytes
                 ldx     #>sd_cmd16_bytes
                 jsr     sd_send_sd_cmd
@@ -238,6 +245,7 @@ sd_read_block:
                 jsr     spi_read_page
                 dec     FW_ZP_IOPTR+1
 
+        if 0    ; CRC
                 trace   '='
                 jsr     spi_read_byte
                 sta     FW_ZP_COUNT
@@ -245,6 +253,21 @@ sd_read_block:
                 jsr     spi_read_byte
                 sta     FW_ZP_COUNT+1
                 tracea
+
+; if CRC $FFFF, double check card responding
+                cmp     #$FF
+                bne     .notFFFFcrc
+                cmp     FW_ZP_COUNT
+                bne     .notFFFFcrc
+
+; issue BLKSIZE to double check if card happy
+                lda     #<sd_cmd16_bytes
+                ldx     #>sd_cmd16_bytes
+                jsr     sd_send_sd_cmd
+                cmp     #SD_R1_READY_STATE
+                bne     .sd_read_fail 
+.notFFFFcrc:
+        endif
 
                 clc
                 trace   '^'
@@ -295,7 +318,7 @@ sd_wait_result:
                 sec
                 trace   '!'
                 rts
-.sd_ready:      clc
+.sd_ready: ;      clc                   ; always clear from cmp #$FF
                 tracea
 .sd_wait_exit:  rts
 

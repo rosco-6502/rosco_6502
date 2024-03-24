@@ -68,28 +68,39 @@ clr_block:      sta     $1000,x
 ; 00 20 00 00
                 lda     #$00
                 sta     FW_ZP_BLOCKNUM
-                lda     #$00
+                lda     #$10
                 sta     FW_ZP_BLOCKNUM+1
                 lda     #$00
                 sta     FW_ZP_BLOCKNUM+2
                 lda     #$00
                 sta     FW_ZP_BLOCKNUM+3
+
+                lda     #<128
+                sta     benchcount
+                lda     #>128
+                sta     benchcount+1
+
+                sei
+                stz     TICK100HZ
+                stz     TICK100HZ+1
+                stz     TICK100HZ+2
+                cli
 .loop:
 
-                lda     TICK100HZ
-                jsr     outbyte
-                lda     #" "
-                jsr     COUT
+                ; lda     TICK100HZ
+                ; jsr     outbyte
+                ; lda     #" "
+                ; jsr     COUT
 
                 lda     #<$1000
                 sta     FW_ZP_IOPTR
                 lda     #>$1000
                 sta     FW_ZP_IOPTR+1
 
-                PRINT   SDREAD
+;                PRINT   SDREAD
                 jsr     sd_read_block
                 php
-                jsr     res_msg
+;                jsr     res_msg
 
                 inc     FW_ZP_BLOCKNUM
                 bne     .secincdone
@@ -102,9 +113,28 @@ clr_block:      sta     $1000,x
                 plp
                 bcs     .done
                 jsr     CIN
-                bcc     .loop
+                bcs     .done
+
+                lda     benchcount
+                bne     .declo
+                lda     benchcount+1
+                beq     .done
+                dec     benchcount+1
+.declo          dec     benchcount
+                jmp     .loop
 
 .done:
+                sei
+
+                PRINT   BENCHRES
+                lda     TICK100HZ+2
+                jsr     outbyte
+                lda     TICK100HZ+1
+                jsr     outbyte
+                lda     TICK100HZ+0
+                jsr     outbyte
+                cli
+
                 PRINTR   EXITMSG
 
 res_msg:        bcc     ok_msg
@@ -129,7 +159,6 @@ outbyte:        pha                     ; save a for lsd.
 EXAMWIDTH       =       16
 
 examine:
-                
                 lda     FW_ZP_PTR+1
                 jsr     outbyte
                 lda     FW_ZP_PTR
@@ -187,6 +216,7 @@ examine:
 RUNMSG          asciiz  "SD Test running.", $D, $A
 OKMSG           asciiz  " OK", $D, $A
 ERRMSG          asciiz  " ERROR!", $D, $A
+BENCHRES        asciiz  "64KB (128 sectors) 100Hz ticks: "
 SDINIT          asciiz  "sd_init:"
 SDREAD          asciiz  "sd_read_block:"
 EXITMSG         ascii   $D, $A, "Exit."
@@ -196,3 +226,4 @@ EOLMSG          asciiz  $D, $A
 ; * Uninitialized data
 ; *******************************************************
                 section  .bss
+benchcount      ds      2
