@@ -95,6 +95,8 @@ system_reset:
                 lda     #$05            ; Enable TX/RX port B
                 sta     DUA_CRB
 
+                stz     DUA_OPCR        ; set OP to normal outputs
+
                 ; Set up timer tick
                 lda     #$F0            ; Enable timer XCLK/16
                 sta     DUA_ACR
