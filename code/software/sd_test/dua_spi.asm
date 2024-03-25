@@ -61,49 +61,49 @@ spi_write_byte2: ; if X already loaded
 
 .bit7:          stx     DUA_OPR_LO      ;  4    SCK LO
                 asl                     ;  2    shift MSB to carry
-                bcc     .bit7c          ;  2/3  
+                bcc     .bit7c          ;  2/3
                 sty     DUA_OPR_HI      ;  4    COPI HI
                 stx     DUA_OPR_HI      ;  4    SCK HI
 
                 asl                     ;  2    shift MSB to carry
                 stx     DUA_OPR_LO      ;  4    SCK LO
-                bcc     .bit6c          ;  2/3  
+                bcc     .bit6c          ;  2/3
 .bit6s:         sty     DUA_OPR_HI      ;  4    COPI HI
                 stx     DUA_OPR_HI      ;  4    SCK HI
 
                 asl                     ;  2    shift MSB to carry
                 stx     DUA_OPR_LO      ;  4    SCK LO
-                bcc     .bit5c          ;  2/3  
+                bcc     .bit5c          ;  2/3
 .bit5s:         sty     DUA_OPR_HI      ;  4    COPI HI
                 stx     DUA_OPR_HI      ;  4    SCK HI
 
                 asl                     ;  2    shift MSB to carry
                 stx     DUA_OPR_LO      ;  4    SCK LO
-                bcc     .bit4c          ;  2/3  
+                bcc     .bit4c          ;  2/3
 .bit4s:         sty     DUA_OPR_HI      ;  4    COPI HI
                 stx     DUA_OPR_HI      ;  4    SCK HI
 
                 asl                     ;  2    shift MSB to carry
                 stx     DUA_OPR_LO      ;  4    SCK LO
-                bcc     .bit3c          ;  2/3  
+                bcc     .bit3c          ;  2/3
 .bit3s:         sty     DUA_OPR_HI      ;  4    COPI HI
                 stx     DUA_OPR_HI      ;  4    SCK HI
 
                 asl                     ;  2    shift MSB to carry
                 stx     DUA_OPR_LO      ;  4    SCK LO
-                bcc     .bit2c          ;  2/3  
+                bcc     .bit2c          ;  2/3
 .bit2s:         sty     DUA_OPR_HI      ;  4    COPI HI
                 stx     DUA_OPR_HI      ;  4    SCK HI
 
                 asl                     ;  2    shift MSB to carry
                 stx     DUA_OPR_LO      ;  4    SCK LO
-                bcc     .bit1c          ;  2/3  
+                bcc     .bit1c          ;  2/3
 .bit1s:         sty     DUA_OPR_HI      ;  4    COPI HI
                 stx     DUA_OPR_HI      ;  4    SCK HI
 
                 asl                     ;  2    shift MSB to carry
                 stx     DUA_OPR_LO      ;  4    SCK LO
-                bcc     .bit0c          ;  2/3  
+                bcc     .bit0c          ;  2/3
 .bit0s:         sty     DUA_OPR_HI      ;  4    COPI HI
                 stx     DUA_OPR_HI      ;  4    SCK HI
 
@@ -114,43 +114,43 @@ spi_write_byte2: ; if X already loaded
 
                 asl                     ;  2    shift MSB to carry
                 stx     DUA_OPR_LO      ;  4    SCK LO
-                bcs     .bit6s          ;  2/3  
+                bcs     .bit6s          ;  2/3
 .bit6c:         sty     DUA_OPR_LO      ;  4    COPI LO
                 stx     DUA_OPR_HI      ;  4    SCK HI
 
                 asl                     ;  2    shift MSB to carry
                 stx     DUA_OPR_LO      ;  4    SCK LO
-                bcs     .bit5s          ;  2/3  
+                bcs     .bit5s          ;  2/3
 .bit5c:         sty     DUA_OPR_LO      ;  4    COPI LO
                 stx     DUA_OPR_HI      ;  4    SCK HI
 
                 asl                     ;  2    shift MSB to carry
                 stx     DUA_OPR_LO      ;  4    SCK LO
-                bcs     .bit4s          ;  2/3  
+                bcs     .bit4s          ;  2/3
 .bit4c:         sty     DUA_OPR_LO      ;  4    COPI LO
                 stx     DUA_OPR_HI      ;  4    SCK HI
 
                 asl                     ;  2    shift MSB to carry
                 stx     DUA_OPR_LO      ;  4    SCK LO
-                bcs     .bit3s          ;  2/3  
+                bcs     .bit3s          ;  2/3
 .bit3c:         sty     DUA_OPR_LO      ;  4    COPI LO
                 stx     DUA_OPR_HI      ;  4    SCK HI
 
                 asl                     ;  2    shift MSB to carry
                 stx     DUA_OPR_LO      ;  4    SCK LO
-                bcs     .bit2s          ;  2/3  
+                bcs     .bit2s          ;  2/3
 .bit2c:         sty     DUA_OPR_LO      ;  4    COPI LO
                 stx     DUA_OPR_HI      ;  4    SCK HI
 
                 asl                     ;  2    shift MSB to carry
                 stx     DUA_OPR_LO      ;  4    SCK LO
-                bcs     .bit1s          ;  2/3  
+                bcs     .bit1s          ;  2/3
 .bit1c:         sty     DUA_OPR_LO      ;  4    COPI LO
                 stx     DUA_OPR_HI      ;  4    SCK HI
 
                 asl                     ;  2    shift MSB to carry
                 stx     DUA_OPR_LO      ;  4    SCK LO
-                bcs     .bit0s          ;  2/3  
+                bcs     .bit0s          ;  2/3
 .bit0c:         sty     DUA_OPR_LO      ;  4    COPI LO
                 stx     DUA_OPR_HI      ;  4    SCK HI
 

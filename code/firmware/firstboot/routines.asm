@@ -1,5 +1,5 @@
 ;------------------------------------------------------------
-;                            ___ ___ ___ ___ 
+;                            ___ ___ ___ ___
 ;  ___ ___ ___ ___ ___      |  _| __|   |__ |
 ; |  _| . |_ -|  _| . |     | . |__ | | | __|
 ; |_| |___|___|___|___|_____|___|___|___|___|
@@ -8,7 +8,7 @@
 ; Copyright (c)2022-2023 Ross Bamford and contributors
 ; See top-level LICENSE.md for licence information.
 ;
-; Common routines. 
+; Common routines.
 ;
 ; These are pointed to by the routine table at the bottom
 ; of every bank, and must be included in each bank.

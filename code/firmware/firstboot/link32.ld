@@ -13,7 +13,7 @@ SECTIONS {
         . = 0xfffa;
         *(.bank0.vectors)
     }
-    
+
     .bank1 0xe000 : {
         *(.bank1.rtable)
         *(.bank1.irq)

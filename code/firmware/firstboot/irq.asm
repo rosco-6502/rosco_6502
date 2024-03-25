@@ -1,5 +1,5 @@
 ;------------------------------------------------------------
-;                            ___ ___ ___ ___ 
+;                            ___ ___ ___ ___
 ;  ___ ___ ___ ___ ___      |  _| __|   |__ |
 ; |  _| . |_ -|  _| . |     | . |__ | | | __|
 ; |_| |___|___|___|___|_____|___|___|___|___|
@@ -8,7 +8,7 @@
 ; Copyright (c)2022 Ross Bamford and contributors
 ; See top-level LICENSE.md for licence information.
 ;
-; IRQ handling code. This needs to be in all banks in the 
+; IRQ handling code. This needs to be in all banks in the
 ; big ROM, so it's included in each bank main file with
 ; an appropriate section that's used in the link script.
 ;------------------------------------------------------------
@@ -30,9 +30,9 @@ irq_handler:
                 pha
 
                 tsx
-                lda     $104,x	                ; get the status register from the stack
-                and     #$10			; check "fake" B status bit (only in P pushed on stack)
-                bne     brk_handler  		; if B = 1, call BRK handler (EWozMon)
+                lda     $104,x                  ; get the status register from the stack
+                and     #$10                    ; check "fake" B status bit (only in P pushed on stack)
+                bne     brk_handler             ; if B = 1, call BRK handler (EWozMon)
 
                 ldx     TICKCNT                 ; Get tick count
                 dex                             ; Decrement it

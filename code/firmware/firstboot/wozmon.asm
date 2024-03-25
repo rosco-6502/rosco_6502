@@ -1,7 +1,7 @@
 ;  The WOZ Monitor for the Apple 1
 ;  Written by Steve Wozniak in 1976
 
-;  Modified for rosco_6502 / VASM by 
+;  Modified for rosco_6502 / VASM by
 ;  Ross Bamford forty-seven years later.
 
 ; Tweaked by Xark with enhancements from ewozmon6850.asm:
@@ -84,7 +84,7 @@ FLAGLOOP:       ASL
                 PHA
                 LDA     FLAGNAMES,Y
                 BCS     FLAGPRINT
-                LDA     #'.'     
+                LDA     #'.'
 FLAGPRINT:      JSR     COUT
                 PLA
                 DEY
@@ -118,7 +118,7 @@ NEXTCHAR:       JSR     CIN             ; Key ready?
                 BEQ     ESCAPE          ; Yes.
                 CMP     #DEL            ; DEL?
                 BNE     NOTDEL          ; branch if not
-                LDA     #BS             ; convert DEL to BS 
+                LDA     #BS             ; convert DEL to BS
 NOTDEL:         CMP     #$60            ;*Is it Lower case
                 BMI     CONVERT         ;*Nope, just convert it
                 AND     #$5F            ;*If lower case, convert to Upper case
@@ -126,7 +126,7 @@ CONVERT:        STA     IN,Y            ; Add to text buffer.
                 CMP     #CR             ; CR?
                 BEQ     ISCR            ; branch yes
                 JSR     ECHO            ; else echo
-                BRA     NOTCR           
+                BRA     NOTCR
 ISCR:           LDY     #$FF            ; Reset text index.
                 LDA     #$00            ; For XAM mode.
 SETBLOCK:       ASL                     ; Leaves $B8 if setting BLOCK XAM mode.
@@ -169,7 +169,7 @@ HEXSHIFT:       ASL                     ; Hex digit left, MSB to carry.
                 BNE     NEXTHEX         ; Always taken. Check next character for hex.
 NOTHEX:         CPY     YSAV            ; Check if L, H empty (no hex digits).
                 BNE     NOESCAPE        ; Branch out of range, had to improvise...
-;                JSR     CRLF                
+;                JSR     CRLF
                 JMP     ESCAPE          ; Yes, generate ESC sequence
 
 RUN:            JSR     CRLF
@@ -215,22 +215,22 @@ PRDATA:         LDA     #$20            ; Blank.
                 LDA     (XAML)          ; Get data byte at ‘examine index’.
                 JSR     PRBYTE          ; Output it in hex format.
 XAMNEXT:        STZ     MODE            ; 0->MODE (XAM mode).
-                LDA     XAML    
+                LDA     XAML
                 CMP     L               ; Compare ‘examine index’ to hex data.
-                LDA     XAMH    
-                SBC     H       
+                LDA     XAMH
+                SBC     H
                 BCS     TONEXTITEM      ; Not less, so no more data to output.
-                INC     XAML    
+                INC     XAML
                 BNE     MOD8CHK         ; Increment ‘examine index’.
-                INC     XAMH    
+                INC     XAMH
 MOD8CHK:        LDA     XAML            ; Check low-order ‘examine index’ byte
                 AND     #$07            ;  For MOD 8=0
                 BPL     NXTPRNT         ; Always taken.
 PRBYTE:         PHA                     ; Save A for LSD.
-                LSR             
-                LSR             
+                LSR
+                LSR
                 LSR                     ; MSD to LSD position.
-                LSR             
+                LSR
                 JSR     PRHEX           ; Output hex digit.
                 PLA                     ; Restore A.
 PRHEX:          AND     #$0F            ; Mask LSD for hex print.
@@ -300,7 +300,7 @@ INTELIGNORE:
 LOADINTEL:
                 LDA     #<TRBEGMSG
                 LDY     #>TRBEGMSG
-                JSR     SHWMSG          ; Show Start Transfer           
+                JSR     SHWMSG          ; Show Start Transfer
                 LDY     #$00
                 STY     CRCCHECK        ; If CRCCHECK=0, all is good
                 STZ     BYTESL
@@ -434,9 +434,9 @@ SHWMSG:
 SHWMSG1:        LDA     (L),Y
                 BEQ     .DONE
                 JSR     ECHO
-                INY 
+                INY
                 BNE     SHWMSG1
-.DONE           RTS 
+.DONE           RTS
 
 ;-------------------------------------------------------------------------
 FLAGNAMES       ascii   "CZIDB1VN"

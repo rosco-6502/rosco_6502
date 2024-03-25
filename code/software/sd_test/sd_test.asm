@@ -11,7 +11,7 @@
 ; Initial bringup and basic testing code for the board.
 ;------------------------------------------------------------
 
-        include "defines.asm"
+                include "defines.asm"
 
 ZP_COUNT        =       USER_ZP_START
 
@@ -51,10 +51,10 @@ _start:
 
                 lda     #$E3
                 ldx     #$00
-clr_block:      sta     $1000,x
+.clr_block:     sta     $1000,x
                 sta     $1100,x
                 dex
-                bne     clr_block
+                bne     .clr_block
 
                 lda     #<$1000
                 sta     FW_ZP_TMPPTR
@@ -273,7 +273,7 @@ BitLoop:
                 rol     decimalResult+4
                 dex
                 bne     BitLoop
-                rts
+an_rts:                rts
 BinTable:
                 db      $00, $01, $02, $03, $04, $80, $81, $82, $83, $84
 
@@ -298,7 +298,7 @@ examine:
                 cpy     #EXAMWIDTH
                 bne     .examhex
                 ldy     #0
-.examascii:     lda     (FW_ZP_TMPPTR),y	;output characters
+.examascii:     lda     (FW_ZP_TMPPTR),y        ;output characters
                 cmp     #' '
                 bcc     .exambad
                 cmp     #$80
@@ -352,3 +352,4 @@ EOLMSG          asciiz  $D, $A
 benchcount      ds      2
 tempBinary      ds      2
 decimalResult   ds      5
+dummy           ds      1

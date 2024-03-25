@@ -170,7 +170,7 @@ system_reset:
 .tencnt         cmp     #10
                 bcc     .tensdone
                 inx
-                sbc     #10                
+                sbc     #10
                 bne     .tencnt
 .tensdone       pha
                 txa
@@ -216,10 +216,10 @@ system_reset:
                 jmp     WOZMON
 
 outbyte:        pha                     ; save a for lsd.
-                lsr             
-                lsr             
+                lsr
+                lsr
                 lsr                     ; msd to lsd position.
-                lsr             
+                lsr
                 jsr     .prhex          ; output hex digit.
                 pla                     ; restore a.
 .prhex:         and     #$0f            ; mask lsd for hex print.
