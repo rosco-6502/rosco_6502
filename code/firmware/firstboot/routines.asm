@@ -77,18 +77,26 @@ _uart_b_in:
 ; * Null-terminated string print
 ; *
 ; * Callable routine; A,X points to string (Low,High)
-; * Trashes everything
+; * Trashes A, X
 ; *******************************************************
 _printsz:
-                sta     FW_ZP_PTR       ; ptr low
-                stx     FW_ZP_PTR+1     ; ptr high
+                phy
+                ldy     FW_ZP_TMPPTR
+                phy
+                ldy     FW_ZP_TMPPTR+1
+                phy
+                sta     FW_ZP_TMPPTR       ; ptr low
+                stx     FW_ZP_TMPPTR+1     ; ptr high
                 ldy     #$00            ; Start at first character
-.printloop
-                lda     (FW_ZP_PTR),Y   ; Get character into x
+.printloop:     lda     (FW_ZP_TMPPTR),Y   ; Get character into A
                 beq     .printdone      ; If it's zero, we're done..
                 jsr     COUT            ; otherwise, print it
                 iny                     ; next character
                 bne     .printloop      ; and continue (unless Y wraps)
-.printdone
+.printdone:     ply
+                sty     FW_ZP_TMPPTR+1
+                ply
+                sty     FW_ZP_TMPPTR+1
+                ply
                 rts
 

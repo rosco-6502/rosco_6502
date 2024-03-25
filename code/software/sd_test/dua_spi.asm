@@ -24,11 +24,11 @@
                 global  spi_write_page
 spi_write_page:
                 ldx     #OP_SPI_SCK     ;  2    SCK GPIO bit
-                stz     FW_ZP_LENGTH
-.pageloop       ldy     FW_ZP_LENGTH
+                stz     FW_ZP_IOLEN
+.pageloop       ldy     FW_ZP_IOLEN
                 lda     (FW_ZP_IOPTR),y
                 jsr     spi_write_byte2
-                inc     FW_ZP_LENGTH
+                inc     FW_ZP_IOLEN
                 bne     .pageloop
                 rts
 
@@ -37,14 +37,14 @@ spi_write_page:
 ;
                 global  spi_write_bytes
 spi_write_bytes:
-                stx     FW_ZP_LENGTH+1  ; 3
-                stz     FW_ZP_LENGTH    ; 3
+                stx     FW_ZP_IOLEN+1  ; 3
+                stz     FW_ZP_IOLEN    ; 3
                 ldx     #OP_SPI_SCK     ; 2    SCK GPIO bit
-.byteloop       ldy     FW_ZP_LENGTH    ; 2
+.byteloop       ldy     FW_ZP_IOLEN    ; 2
                 lda     (FW_ZP_IOPTR),y ; 5
                 jsr     spi_write_byte2 ; 6
-                inc     FW_ZP_LENGTH    ; 5
-                dec     FW_ZP_LENGTH+1  ; 5
+                inc     FW_ZP_IOLEN    ; 5
+                dec     FW_ZP_IOLEN+1  ; 5
                 bne     .byteloop       ; 2/3
                 rts
 
@@ -183,7 +183,7 @@ spi_read_byte2:                         ; if X already loaded
                 and     DUA_IP          ;  4    AND with IP byte
                 stx     DUA_OPR_HI      ;  4    SCK HI
                 cmp     #IP_SPI_CIPO    ;  2    set carry if CIPO set
-                rol     FW_ZP_PTR       ;  5    rotate carry into lsb
+                rol     FW_ZP_IOBYTE    ;  5    rotate carry into lsb
         endr
-                lda     FW_ZP_PTR       ;  3    get result in A
+                lda     FW_ZP_IOBYTE    ;  3    get result in A
                 rts                     ;  6    done

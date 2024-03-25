@@ -89,12 +89,13 @@ BANK_SET        ds      1               ; R/W [5:4] ROM bank, [3:0] RAM bank
 BANK_RSVD       ds      1               ; -/- reserved future banking register
 
 ; bios uses ZP $0002-$000F
-FW_ZP_PTR       ds      2               ; firmware ZP temp pointer
+FW_ZP_TMPPTR    ds      2               ; firmware ZP temp pointer
+FW_ZP_IOBYTE    ds      1               ; firmware IO temp byte
+FW_ZP_IOTEMP    ds      1               ; firmware IO temp byte
 FW_ZP_IOPTR     ds      2               ; firmware IO buffer pointer
-FW_ZP_LENGTH    ds      2               ; firmware IO buffer length
-FW_ZP_COUNT     ds      2               ; firmware ZP temp count
-FW_ZP_WORD      ds      2               ; firmware ZP temp word
+FW_ZP_IOLEN     ds      2               ; firmware IO buffer length
 FW_ZP_BLOCKNUM  ds      4               ; firmware IO block/sector number
+FW_ZP_rsvd      ds      2               ; reserved
 
                 assert  *==$0010        ; user ZP should start at $0010
 USER_ZP_START   ds      0

@@ -29,7 +29,7 @@ SD_NOT_READY            =       $FF
 
 SD_IOFLG_FORCECMD       =       1<<7
 
-TRACE           =       0
+TRACE           =       1
 
                 if      TRACE
 trace           macro   char
@@ -81,10 +81,10 @@ sd_init:
                 sta     DUA_OPR_HI
                 trace   '~'
                 lda     #SD_RESET_CYCLES
-                sta     FW_ZP_COUNT
+                sta     FW_ZP_IOTEMP
 .resetloop      lda     #$FF
                 jsr     spi_write_byte
-                dec     FW_ZP_COUNT
+                dec     FW_ZP_IOTEMP
                 bne     .resetloop
                 lda     #SD_IDLE_RETRIES
                 sta     sd_idle_retry
@@ -190,43 +190,7 @@ sd_read_block:
                 tracea
                 jsr     spi_write_byte
                 trace   '@'
-                bit     sd_sdhc_flag
-                bvs     .use_sdhcblk
-                lda     FW_ZP_BLOCKNUM+0        ; byte = block << 9
-                asl
-                sta     FW_ZP_WORD
-                lda     FW_ZP_BLOCKNUM+1
-                rol
-                sta     FW_ZP_WORD+1
-                lda     FW_ZP_BLOCKNUM+2
-                rol
-                tracea
-                jsr     spi_write_byte          ; byte number (big endian)
-                lda     FW_ZP_WORD+1            ; byte number (big endian)
-                tracea
-                jsr     spi_write_byte
-                lda     FW_ZP_WORD              ; byte number (big endian)
-                tracea
-                jsr     spi_write_byte
-                lda     #0                      ; byte number (big endian)
-                tracea
-                jsr     spi_write_byte
-                bra     .dummycrc
-.use_sdhcblk:   lda     FW_ZP_BLOCKNUM+3        ; block number (big endian)
-                tracea
-                jsr     spi_write_byte
-                lda     FW_ZP_BLOCKNUM+2        ; block number (big endian)
-                tracea
-                jsr     spi_write_byte
-                lda     FW_ZP_BLOCKNUM+1        ; block number (big endian)
-                tracea
-                jsr     spi_write_byte
-                lda     FW_ZP_BLOCKNUM+0        ; block number (big endian)
-                tracea
-                jsr     spi_write_byte
-.dummycrc:      lda     #$FF                    ; ignored CRC (and end bit)
-;                tracea
-                jsr     spi_write_byte
+                jsr     sd_send_blocknum
 
                 jsr     sd_wait_result
                 cmp     #SD_R1_READY_STATE
@@ -248,19 +212,18 @@ sd_read_block:
         if 0    ; CRC
                 trace   '='
                 jsr     spi_read_byte
-                sta     FW_ZP_COUNT
+                sta     FW_ZP_IOTEMP
                 tracea
                 jsr     spi_read_byte
-                sta     FW_ZP_COUNT+1
                 tracea
 
-; if CRC $FFFF, double check card responding
+; if CRC $FFFF, double check if card yanked
                 cmp     #$FF
                 bne     .notFFFFcrc
-                cmp     FW_ZP_COUNT
+                cmp     FW_ZP_IOTEMP
                 bne     .notFFFFcrc
 
-; issue BLKSIZE to double check if card happy
+; issue BLKSIZE to check if card responding
                 lda     #<sd_cmd16_bytes
                 ldx     #>sd_cmd16_bytes
                 jsr     sd_send_sd_cmd
@@ -276,8 +239,108 @@ sd_read_block:
                 trace   ']'
                 rts
 
+; sd_write_block - write 512 byte block
+; 32-bit block number in FW_ZP_BLOCKNUM to FW_ZP_IOPTR
+; trashes A, X, Y
+; returns C set on error
+                global  sd_write_block
+sd_write_block:
+                trace   'W'
+                ldx     #OP_SPI_CS              ; CS = LO (assert)
+                stx     DUA_OPR_LO
+                trace   '['
+                trace   '>'
+                lda     #$40|24                 ; cmd24 $51=WRITE_BLOCK
+                tracea
+                jsr     spi_write_byte
+                trace   '@'
+                jsr     sd_send_blocknum
 
-; send sd command
+                jsr     sd_wait_result
+                cmp     #SD_R1_READY_STATE
+                bne     .sd_write_fail
+
+                lda     #$FF                    ; dummy byte
+                jsr     spi_write_byte
+
+                lda     #SD_BLOCK_START
+                jsr     spi_write_byte
+
+                jsr     spi_write_page
+                inc     FW_ZP_IOPTR+1
+                jsr     spi_write_page
+                dec     FW_ZP_IOPTR+1
+
+        if 1    ; CRC
+                lda     #$FF
+                tracea
+                jsr     spi_write_byte
+                lda     #$FF
+                tracea
+                jsr     spi_write_byte
+        endif
+
+                jsr     sd_wait_result
+                and     #$1F
+                cmp     #SD_WRITE_RESPONSE_OK
+                bne     .sd_write_fail
+
+                jsr     sd_wait_done
+
+                clc
+                trace   '^'
+.sd_write_done: ldx     #OP_SPI_CS|OP_SPI_COPI ; CS,COPI = HI (de-assert)
+                stx     DUA_OPR_HI
+                trace   ']'
+                rts
+.sd_write_fail: sec
+                trace   '!'
+                bra     .sd_write_done
+
+; sd_send_blocknum - spi write 32 bit blocknum or bytenum and dummy crc byte
+; 32-bit blocknum at FW_ZP_BLOCKNUM
+; trashes A, X, Y
+sd_send_blocknum:
+                bit     sd_sdhc_flag
+                bvc     .not_sdhc
+                lda     FW_ZP_BLOCKNUM+3
+                tracea
+                jsr     spi_write_byte          ; send big endian blocknum[31:24]
+                lda     FW_ZP_BLOCKNUM+2
+                tracea
+                jsr     spi_write_byte          ; send big endian blocknum[23:16]
+                lda     FW_ZP_BLOCKNUM+1
+                tracea
+                jsr     spi_write_byte          ; send big endian blocknum[15:8]
+                lda     FW_ZP_BLOCKNUM+0
+                tracea
+                jsr     spi_write_byte          ; send big endian blocknum[7:0]
+.dummycrc7:     lda     #$FF                    ; ignored CRC (and end bit)
+;                tracea
+                jmp     spi_write_byte
+                ; rts
+.not_sdhc:      lda     FW_ZP_BLOCKNUM+0        ; bytenum = blocknum << 9
+                asl
+                sta     FW_ZP_TMPPTR            
+                lda     FW_ZP_BLOCKNUM+1
+                rol
+                sta     FW_ZP_TMPPTR+1
+                lda     FW_ZP_BLOCKNUM+2
+                rol
+                tracea
+                jsr     spi_write_byte          ; send big endian bytenum[31:24]
+                lda     FW_ZP_TMPPTR+1
+                tracea
+                jsr     spi_write_byte          ; send big endian bytenum[31:24]
+                lda     FW_ZP_TMPPTR
+                tracea
+                jsr     spi_write_byte          ; send big endian bytenum[31:24]
+                lda     #0                      ; [7:0] always zero
+                tracea
+                jsr     spi_write_byte          ; send big endian bytenum[7:0]
+                bra     .dummycrc7
+
+; SD send command
 ; 6 byte command at FW_ZP_IOPTR
 ; trashes A, X, Y
 ; returns C set if timeout
@@ -295,9 +358,9 @@ sd_send_sd_cmd:
         endif
                 ldx     #6
                 jsr     spi_write_bytes
+        ; FALLS THROUGH
                 ; jmp     sd_wait_result                  ; C=1 on timeout
                 ; rts
-        ; FALLS THROUGH
 
 ; sd_wait_result
 ; wait for non-$FF result
@@ -315,12 +378,36 @@ sd_wait_result:
                 bne     .sd_wait_loop
                 dec     sd_timeout_ctr+1
                 bne     .sd_wait_loop
-                sec
+                sec                     ; always set from cmp #$FF
                 trace   '!'
                 rts
 .sd_ready: ;      clc                   ; always clear from cmp #$FF
                 tracea
 .sd_wait_exit:  rts
+
+; sd_wait_result
+; wait for non-$FF result
+; trashes A, X, Y
+; returns C set if timeout
+sd_wait_done:
+                trace   '|'
+                stz     sd_timeout_ctr
+                lda     #>SD_CMD_RESP_RETRIES
+                sta     sd_timeout_ctr+1
+.sd_wait_loop:  jsr     spi_read_byte
+                cmp     #$FF
+                beq     .sd_ready
+                inc     sd_timeout_ctr
+                bne     .sd_wait_loop
+                dec     sd_timeout_ctr+1
+                bne     .sd_wait_loop
+                sec                     ; always set from cmp #$FF
+                trace   '!'
+                rts
+.sd_ready: ;      clc                   ; always clear from cmp #$FF
+                tracea
+.sd_wait_exit:  rts
+
 
 ; *******************************************************
 ; * Initialized data

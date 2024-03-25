@@ -146,8 +146,8 @@ system_reset:
                 ldx     #>SYSINFO0
                 jsr     PRINT_SZ      ; Print message
 
-                stz     FW_ZP_PTR
-                stz     FW_ZP_PTR+1
+                stz     FW_ZP_TMPPTR
+                stz     FW_ZP_TMPPTR+1
                 ldx     TICK100HZ
 .tickwait       cpx     TICK100HZ
                 beq     .tickwait
@@ -155,18 +155,18 @@ system_reset:
 
 .timeloop
                 jsr     an_rts          ; 12
-                lda     FW_ZP_PTR       ; 3
+                lda     FW_ZP_TMPPTR    ; 3
                 clc                     ; 2
                 adc     #1              ; 2
-                sta     FW_ZP_PTR       ; 3
-                lda     FW_ZP_PTR+1     ; 3
+                sta     FW_ZP_TMPPTR    ; 3
+                lda     FW_ZP_TMPPTR+1  ; 3
                 adc     #0              ; 2
-                sta     FW_ZP_PTR+1     ; 3
+                sta     FW_ZP_TMPPTR+1  ; 3
                 cpx     TICK100HZ       ; 4
                 beq     .timeloop       ; 3 = 37 per iteration
 
                 ldx     #'0'
-                lda     FW_ZP_PTR+1
+                lda     FW_ZP_TMPPTR+1
 .tencnt         cmp     #10
                 bcc     .tensdone
                 inx

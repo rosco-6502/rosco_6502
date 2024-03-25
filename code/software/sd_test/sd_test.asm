@@ -13,6 +13,8 @@
 
         include "defines.asm"
 
+ZP_COUNT        =       USER_ZP_START
+
         if      1
 PRINT           macro   msg
                 lda     #<\msg
@@ -54,17 +56,17 @@ clr_block:      sta     $1000,x
                 dex
                 bne     clr_block
 
-                ; lda     #<$1000
-                ; sta     FW_ZP_PTR
-                ; lda     #>$1000
-                ; sta     FW_ZP_PTR+1
+                lda     #<$1000
+                sta     FW_ZP_TMPPTR
+                lda     #>$1000
+                sta     FW_ZP_TMPPTR+1
 
-                ; lda     #$00
-                ; sta     FW_ZP_COUNT
-                ; lda     #$02
-                ; sta     FW_ZP_COUNT+1
+                lda     #$10
+                sta     ZP_COUNT
+                lda     #$00
+                sta     ZP_COUNT+1
 
-                ; jsr     examine
+                jsr     examine
 ; 00 20 00 00
                 lda     #$00
                 sta     FW_ZP_BLOCKNUM
@@ -75,10 +77,94 @@ clr_block:      sta     $1000,x
                 lda     #$00
                 sta     FW_ZP_BLOCKNUM+3
 
+                lda     #<$1000
+                sta     FW_ZP_IOPTR
+                lda     #>$1000
+                sta     FW_ZP_IOPTR+1
+
+                PRINT   SDREAD
+                jsr     sd_read_block
+                jsr     res_msg
+
+                lda     #<$1000
+                sta     FW_ZP_TMPPTR
+                lda     #>$1000
+                sta     FW_ZP_TMPPTR+1
+
+                lda     #$10
+                sta     ZP_COUNT
+                lda     #$00
+                sta     ZP_COUNT+1
+
+                jsr     examine
+
+                lda     #<$1000
+                sta     FW_ZP_IOPTR
+                lda     #>$1000
+                sta     FW_ZP_IOPTR+1
+
+                lda     #"X"
+                sta     $1000
+                lda     #"a"
+                sta     $1001
+                lda     #"r"
+                sta     $1002
+                lda     #"k"
+                sta     $1003
+                inc     $1004
+
+                PRINT   SDWRITE
+                jsr     sd_write_block
+                jsr     res_msg
+
+                lda     #<$1000
+                sta     FW_ZP_IOPTR
+                lda     #>$1000
+                sta     FW_ZP_IOPTR+1
+
+                PRINT   SDREAD
+                jsr     sd_read_block
+                jsr     res_msg
+
+                lda     #<$1000
+                sta     FW_ZP_TMPPTR
+                lda     #>$1000
+                sta     FW_ZP_TMPPTR+1
+
+                lda     #$10
+                sta     ZP_COUNT
+                lda     #$00
+                sta     ZP_COUNT+1
+
+                jsr     examine
+
+                jmp     .done
+
                 lda     #<128
                 sta     benchcount
                 lda     #>128
                 sta     benchcount+1
+
+                lda     #<12345
+                sta     tempBinary
+                lda     #>12345
+                sta     tempBinary+1
+                jsr     BinaryToDecimal
+                lda     decimalResult+4
+                ora     #"0"
+                jsr     COUT
+                lda     decimalResult+3
+                ora     #"0"
+                jsr     COUT
+                lda     decimalResult+2
+                ora     #"0"
+                jsr     COUT
+                lda     decimalResult+1
+                ora     #"0"
+                jsr     COUT
+                lda     decimalResult+0
+                ora     #"0"
+                jsr     COUT
 
                 sei
                 stz     TICK100HZ
@@ -156,19 +242,55 @@ outbyte:        pha                     ; save a for lsd.
                 adc     #$06            ; add offset for letter.
 .echo:          jmp     COUT
 
+; from https://taywee.github.io/NerdyNights/nerdynights/numbers.html
+BinaryToDecimal:
+                lda     #$00
+                sta     decimalResult+0
+                sta     decimalResult+1
+                sta     decimalResult+2
+                sta     decimalResult+3
+                sta     decimalResult+4
+                ldx     #$10
+BitLoop:
+                asl     tempBinary+0
+                rol     tempBinary+1
+                ldy     decimalResult+0
+                lda     BinTable, y
+                rol     a
+                sta     decimalResult+0
+                ldy     decimalResult+1
+                lda     BinTable, y
+                rol     a
+                sta     decimalResult+1
+                ldy     decimalResult+2
+                lda     BinTable, y
+                rol     a
+                sta     decimalResult+2
+                ldy     decimalResult+3
+                lda     BinTable, y
+                rol     a
+                sta     decimalResult+3
+                rol     decimalResult+4
+                dex
+                bne     BitLoop
+                rts
+BinTable:
+                db      $00, $01, $02, $03, $04, $80, $81, $82, $83, $84
+
+
 EXAMWIDTH       =       16
 
 examine:
-                lda     FW_ZP_PTR+1
+                lda     FW_ZP_TMPPTR+1
                 jsr     outbyte
-                lda     FW_ZP_PTR
+                lda     FW_ZP_TMPPTR
                 jsr     outbyte
                 lda     #':'
                 jsr     COUT
                 lda     #' '
                 jsr     COUT
                 ldy     #0
-.examhex:       lda     (FW_ZP_PTR),y
+.examhex:       lda     (FW_ZP_TMPPTR),y
                 jsr     outbyte
                 lda     #' '
                 jsr     COUT
@@ -176,7 +298,7 @@ examine:
                 cpy     #EXAMWIDTH
                 bne     .examhex
                 ldy     #0
-.examascii:     lda     (FW_ZP_PTR),y	;output characters
+.examascii:     lda     (FW_ZP_TMPPTR),y	;output characters
                 cmp     #' '
                 bcc     .exambad
                 cmp     #$80
@@ -190,21 +312,21 @@ examine:
                 jsr     COUT
                 lda     #$0A
                 jsr     COUT
-                lda     FW_ZP_PTR
+                lda     FW_ZP_TMPPTR
                 clc
                 adc     #EXAMWIDTH
-                sta     FW_ZP_PTR
-                lda     FW_ZP_PTR+1
+                sta     FW_ZP_TMPPTR
+                lda     FW_ZP_TMPPTR+1
                 adc     #0
-                sta     FW_ZP_PTR+1
-                lda     FW_ZP_COUNT
+                sta     FW_ZP_TMPPTR+1
+                lda     ZP_COUNT
                 sec
                 sbc     #EXAMWIDTH
-                sta     FW_ZP_COUNT
-                lda     FW_ZP_COUNT+1
+                sta     ZP_COUNT
+                lda     ZP_COUNT+1
                 sbc     #0
-                sta     FW_ZP_COUNT+1
-                ora     FW_ZP_COUNT
+                sta     ZP_COUNT+1
+                ora     ZP_COUNT
                 bne     examine
                 rts
 
@@ -219,6 +341,7 @@ ERRMSG          asciiz  " ERROR!", $D, $A
 BENCHRES        asciiz  "64KB (128 sectors) 100Hz ticks: "
 SDINIT          asciiz  "sd_init:"
 SDREAD          asciiz  "sd_read_block:"
+SDWRITE         asciiz  "sd_write_block:"
 EXITMSG         ascii   $D, $A, "Exit."
 EOLMSG          asciiz  $D, $A
 
@@ -227,3 +350,5 @@ EOLMSG          asciiz  $D, $A
 ; *******************************************************
                 section  .bss
 benchcount      ds      2
+tempBinary      ds      2
+decimalResult   ds      5
