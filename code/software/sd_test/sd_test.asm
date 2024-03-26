@@ -124,9 +124,9 @@ _start:
                 sta     $1003
                 inc     $1004
 
-                PRINT   SDWRITE
-                jsr     sd_write_block
-                jsr     res_msg
+                ; PRINT   SDWRITE
+                ; jsr     sd_write_block
+                ; jsr     res_msg
 
 ;                PRINT   SDSTAT
 ;                jsr     sd_check_status
@@ -161,7 +161,83 @@ _start:
                 jsr     sd_check_status
                 jsr     res_msg
 
-                jmp     .done
+                PRINT   FAT32INIT
+                jsr     fat32_init
+                jsr     res_msg
+
+                lda     fat32_errorstage
+                jsr     outbyte
+
+                PRINT   FAT32OPENROOT
+                jsr     fat32_openroot
+                jsr     res_msg
+
+                PRINT   FAT32FINDDIRENT
+                ; Find subdirectory by name
+                ldx     #<subdirname
+                ldy     #>subdirname
+                jsr     fat32_finddirent
+                jsr     res_msg
+
+                ; open dir
+                PRINT   FAT32OPENDIRENT
+                jsr     fat32_opendirent
+                jsr     res_msg
+
+                PRINT   FAT32FINDDIRENT
+                ; Find file by name
+                ldx     #<filename
+                ldy     #>filename
+                jsr     fat32_finddirent
+                jsr     res_msg
+
+                ; open file
+                PRINT   FAT32OPENDIRENT
+                jsr     fat32_opendirent
+                jsr     res_msg
+
+                lda     #<$1000
+                sta     fat32_address
+                lda     #>$1000
+                sta     fat32_address+1
+
+                lda     #0
+                tax
+.clrit          sta     $1000,x
+                inx
+                bne     .clrit
+
+                PRINT   FAT32FILEREAD
+                jsr     fat32_file_read
+                jsr     res_msg
+
+                lda     #<$1000
+                sta     FW_ZP_TMPPTR
+                lda     #>$1000
+                sta     FW_ZP_TMPPTR+1
+
+                lda     #$10
+                sta     ZP_COUNT
+                lda     #$00
+                sta     ZP_COUNT+1
+
+                jsr     examine
+
+                ldy     #0
+.printloop      lda     $1000,y
+                beq     .doneprint
+                cmp     #$0A
+                bne     .notlf
+                LDA     #$0d
+                jsr     COUT
+                lda     #$0A
+.notlf          jsr     COUT
+                iny
+                bra     .printloop
+.doneprint
+                jmp     .byebye
+
+; ***
 
                 lda     #<128
                 sta     benchcount
@@ -244,6 +320,7 @@ _start:
                 jsr     outbyte
                 cli
 
+byebye:
                 PRINTR   EXITMSG
 
 res_msg:        bcc     ok_msg
@@ -366,8 +443,17 @@ SDSTAT          asciiz  "sd_status:"
 SDINIT          asciiz  "sd_init:"
 SDREAD          asciiz  "sd_read_block:"
 SDWRITE         asciiz  "sd_write_block:"
+FAT32INIT       asciiz  "fat32_init:"
+FAT32OPENROOT   asciiz  "fat32_openroot:"
+FAT32FINDDIRENT asciiz  "fat32_finddirent:"
+FAT32OPENDIRENT asciiz  "fat32_opendirent:"
+FAT32FILEREAD   asciiz  "fat32_file_read:"
+
 EXITMSG         ascii   $D, $A, "Exit."
 EOLMSG          asciiz  $D, $A
+
+subdirname      asciiz  "FOLDER     "
+filename        asciiz  "FILE       "
 
 ; *******************************************************
 ; * Uninitialized data
