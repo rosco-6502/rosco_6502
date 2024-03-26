@@ -63,6 +63,8 @@ _start:
                 dex
                 bne     .clr_block
 
+        if 0
+
                 lda     #<$1000
                 sta     FW_ZP_TMPPTR
                 lda     #>$1000
@@ -161,6 +163,17 @@ _start:
                 jsr     sd_check_status
                 jsr     res_msg
 
+        endif
+
+                lda     #0
+                tax
+.clrit          sta     $1000,x
+                sta     $1100,x
+                sta     $0400,X
+                sta     $0500,x
+                inx
+                bne     .clrit
+
                 PRINT   FAT32INIT
                 jsr     fat32_init
                 jsr     res_msg
@@ -200,12 +213,6 @@ _start:
                 sta     fat32_address
                 lda     #>$1000
                 sta     fat32_address+1
-
-                lda     #0
-                tax
-.clrit          sta     $1000,x
-                inx
-                bne     .clrit
 
                 PRINT   FAT32FILEREAD
                 jsr     fat32_file_read
@@ -320,7 +327,7 @@ _start:
                 jsr     outbyte
                 cli
 
-byebye:
+.byebye:
                 PRINTR   EXITMSG
 
 res_msg:        bcc     ok_msg

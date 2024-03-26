@@ -53,10 +53,13 @@ fat32_init:
                         ; Initialize the module - read the MBR etc, find the partition,
                         ; and set up the variables ready for navigating the filesystem
 
-                                                                                                                                                                                                                                                                                                ; Read the MBR and extract pertinent information
-
+                                                
                         lda     #0
-                        sta     fat32_errorstage
+                        tax                                                                                                                                                                                                                                                ; Read the MBR and extract pertinent information
+.clrvars                sta     fat32_fatstart,x
+                        inx
+                        cpx     #fat32_bytesremaining+4-fat32_fatstart
+                        bne     .clrvars
 
                         ; Sector 0
                         lda     #0
