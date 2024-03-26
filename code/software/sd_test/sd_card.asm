@@ -16,7 +16,7 @@
 
                 include "defines.asm"
 
-TRACE                   =       0       ; 1 for invasive debug trace prints
+TRACE                   =       1       ; 1 for invasive debug trace prints
 
                 if TRACE
 trace                   macro   char
@@ -57,8 +57,8 @@ tracev                  macro   var
 
 SD_RESET_CYCLES         =       10                      ; reset retry count
 SD_IDLE_RETRIES         =       5                       ; SD card idle retry count
-SD_CMD_RESP_RETRIES     =       1024                    ; number of retries after SD command ()
-SD_WAIT_TIMEOUT         =       4096                    ; SD card wait timeout (check iterations)
+SD_CMD_RESP_RETRIES     =       1024                    ; number of retries after SD command
+SD_WAIT_TIMEOUT         =       4096                    ; SD card wait done timeout (check iterations)
 
 SD_R1_READY_STATE       =       $00
 SD_R1_IDLE_STATE        =       $01
@@ -82,7 +82,10 @@ CRCCHECKYANK            =       1                       ; read CRC and if $FFFF 
                 global  sd_init
 sd_init:
                         trace   'I'
-                        ldx     #OP_SPI_CS|OP_SPI_COPI  ; CS = HI (de-assert)
+                        jsr     sd_check_status         ; check if already initialized
+                        bcs     .doinit                 ; only init if status failed
+                        rts                             ; return (already initialized)
+.doinit                 ldx     #OP_SPI_CS|OP_SPI_COPI  ; CS = HI (de-assert)
                         stx     DUA_OPR_HI
                         trace   '~'
                         lda     #SD_RESET_CYCLES
@@ -172,7 +175,7 @@ sd_init:
 sd_assert               ldx     #OP_SPI_CS              ; CS = LO (assert)
                         stx     DUA_OPR_LO
                         trace   '['
-                        jsr     spi_read_byte
+;;                        jsr     spi_read_byte
                         jsr     sd_wait_ready
                         rts
 
@@ -259,7 +262,7 @@ sd_read_block:
                 global  sd_write_block
 sd_write_block:
                         trace   'W'
-                        lda     #$40|24                 ; cmd24 $51=WRITE_BLOCK
+                        lda     #$40|24                 ; cmd24 $88=WRITE_BLOCK
                         jsr     sd_send_blockcmd        ; send command and blocknum
 
                         jsr     sd_wait_result          ; check response ready
@@ -291,8 +294,8 @@ sd_write_block:
                         cmp     #SD_WRITE_RESPONSE_OK
                         bne     .sd_write_fail
 
-;;                        jsr     sd_wait_ready           ; wait for write to be done
-;;                        bcs     .sd_write_fail
+                        jsr     sd_wait_ready           ; wait for write to be done
+                        bcs     .sd_write_fail
                         jmp     sd_deassert_good
 
 .sd_write_fail          jmp     sd_deassert_fail
@@ -400,7 +403,7 @@ sd_wait_result:
 sd_wait_ready:
                         trace   '|'
                         stz     sd_timeout_ctr
-                        lda     #>SD_CMD_RESP_RETRIES
+                        lda     #>SD_WAIT_TIMEOUT
                         sta     sd_timeout_ctr+1
 .sd_wait_loop           jsr     spi_read_byte
                         cmp     #SD_READY

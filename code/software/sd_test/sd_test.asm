@@ -15,7 +15,7 @@
 
 ZP_COUNT        =       USER_ZP_START
 
-        if      0
+        if      1
 PRINT           macro   msg
                 lda     #<\msg
                 ldx     #>\msg
@@ -46,14 +46,17 @@ _start:
                 PRINT   RUNMSG
 
                 PRINT   SDSTAT
-                jsr     sd_check_status                
+                jsr     sd_check_status
+                php
                 jsr     res_msg
+                plp
+;                bcc     .skip_init
 
                 PRINT   SDINIT
                 jsr     sd_init
                 jsr     res_msg
 
-                lda     #$E3
+.skip_init:     lda     #$E3
                 ldx     #$00
 .clr_block:     sta     $1000,x
                 sta     $1100,x
@@ -103,7 +106,7 @@ _start:
                 jsr     examine
 
                 PRINT   SDSTAT
-                jsr     sd_check_status                
+                jsr     sd_check_status
                 jsr     res_msg
 
                 lda     #<$1000
@@ -126,7 +129,7 @@ _start:
                 jsr     res_msg
 
 ;                PRINT   SDSTAT
-;                jsr     sd_check_status                
+;                jsr     sd_check_status
 ;                jsr     res_msg
 
                 lda     #<$1000
@@ -139,7 +142,7 @@ _start:
                 jsr     res_msg
 
                 PRINT   SDSTAT
-                jsr     sd_check_status                
+                jsr     sd_check_status
                 jsr     res_msg
 
                 lda     #<$1000
@@ -155,7 +158,7 @@ _start:
                 jsr     examine
 
                 PRINT   SDSTAT
-                jsr     sd_check_status                
+                jsr     sd_check_status
                 jsr     res_msg
 
                 jmp     .done
