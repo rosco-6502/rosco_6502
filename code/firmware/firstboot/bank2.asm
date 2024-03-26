@@ -10,7 +10,7 @@
 ;
 ; Main code for ROM bank 2
 ;------------------------------------------------------------
-CUR_ROMBANK     =       2       ; assemble for ROM bank 2
+CUR_ROMBANK             =       2       ; assemble for ROM bank 2
 
 ; *******************************************************
 ; * include system defines
@@ -46,10 +46,10 @@ CUR_ROMBANK     =       2       ; assemble for ROM bank 2
 ; * Bank init/test
 ; *******************************************************
 bank_init:
-                lda     #<EBANK
-                ldx     #>EBANK
-                jsr     PRINT_SZ        ; Print message
-                rts
+                        lda     #<EBANK
+                        ldx     #>EBANK
+                        jsr     PRINT_SZ
+                        rts
 
 ; *******************************************************
 ; * include common routines
@@ -61,4 +61,4 @@ bank_init:
 ; *******************************************************
                 section .bank2.rodata
 
-EBANK           db      $1B, "[0;37m    Bank   #2 ", $1B, "[1;32mpassed", $1B, "[0m (unused)", $D, $A, 0
+EBANK                   db      $1B, "[0;37m    Bank   #2 ", $1B, "[1;32mpassed", $1B, "[0m (unused)", $D, $A, 0

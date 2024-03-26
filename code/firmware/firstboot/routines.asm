@@ -23,55 +23,55 @@
 ; * Blocking output to DUART A. Character in A
 ; *******************************************************
 _uart_a_out:
-                pha                     ; save character
+                        pha                     ; save character
 
-.loop           lda     DUA_SRA         ; load UART A staus
-                and     #4              ; check TXRDY bit
-                beq     .loop           ; loop if not ready (bit clear)
+.loop                   lda     DUA_SRA         ; load UART A staus
+                        and     #4              ; check TXRDY bit
+                        beq     .loop           ; loop if not ready (bit clear)
 
-                pla                     ; restore character
-                sta     DUA_TBA         ; send character to UART B
+                        pla                     ; restore character
+                        sta     DUA_TBA         ; send character to UART B
 
-                rts
+                        rts
 
 ; *******************************************************
 ; * Blocking output to DUART B. Character in A
 ; *******************************************************
 _uart_b_out:
-                pha                     ; save character
+                        pha                     ; save character
 
-.loop           lda     DUA_SRB         ; load UART A staus
-                and     #4              ; check TXRDY bit
-                beq     .loop           ; loop if not ready (bit clear)
+.loop                   lda     DUA_SRB         ; load UART A staus
+                        and     #4              ; check TXRDY bit
+                        beq     .loop           ; loop if not ready (bit clear)
 
-                pla                     ; restore character
-                sta     DUA_TBB         ; send character to UART B
+                        pla                     ; restore character
+                        sta     DUA_TBB         ; send character to UART B
 
-                rts
+                        rts
 
 ; *******************************************************
 ; * Non-blocking getc for DUART A. if C=1 then character in A
 ; *******************************************************
 _uart_a_in:
-                lda     DUA_SRA         ; load UART B status
-                ror                     ; check RXRDY bit (shift into carry)
-                bcc     .done           ; return with C clear if not ready
+                        lda     DUA_SRA         ; load UART B status
+                        ror                     ; check RXRDY bit (shift into carry)
+                        bcc     .done           ; return with C clear if not ready
 
-                lda     DUA_RBA         ; get UART A character
+                        lda     DUA_RBA         ; get UART A character
 
-.done           rts
+.done                   rts
 
 ; *******************************************************
 ; * Non-blocking getc for DUART A. if C=1 then character in A
 ; *******************************************************
 _uart_b_in:
-                lda     DUA_SRB         ; load UART B status
-                ror                     ; check RXRDY bit (shift into carry)
-                bcc     .done           ; return with C clear if not ready
+                        lda     DUA_SRB         ; load UART B status
+                        ror                     ; check RXRDY bit (shift into carry)
+                        bcc     .done           ; return with C clear if not ready
 
-                lda     DUA_RBB         ; get UART B character
+                        lda     DUA_RBB         ; get UART B character
 
-.done           rts
+.done                   rts
 
 ; *******************************************************
 ; * Null-terminated string print
@@ -80,23 +80,23 @@ _uart_b_in:
 ; * Trashes A, X
 ; *******************************************************
 _printsz:
-                phy
-                ldy     FW_ZP_TMPPTR
-                phy
-                ldy     FW_ZP_TMPPTR+1
-                phy
-                sta     FW_ZP_TMPPTR       ; ptr low
-                stx     FW_ZP_TMPPTR+1     ; ptr high
-                ldy     #$00            ; Start at first character
-.printloop:     lda     (FW_ZP_TMPPTR),Y   ; Get character into A
-                beq     .printdone      ; If it's zero, we're done..
-                jsr     COUT            ; otherwise, print it
-                iny                     ; next character
-                bne     .printloop      ; and continue (unless Y wraps)
-.printdone:     ply
-                sty     FW_ZP_TMPPTR+1
-                ply
-                sty     FW_ZP_TMPPTR+1
-                ply
-                rts
+                        phy
+                        ldy     FW_ZP_TMPPTR
+                        phy
+                        ldy     FW_ZP_TMPPTR+1
+                        phy
+                        sta     FW_ZP_TMPPTR       ; ptr low
+                        stx     FW_ZP_TMPPTR+1     ; ptr high
+                        ldy     #$00            ; Start at first character
+.printloop:             lda     (FW_ZP_TMPPTR),Y   ; Get character into A
+                        beq     .printdone      ; If it's zero, we're done..
+                        jsr     COUT            ; otherwise, print it
+                        iny                     ; next character
+                        bne     .printloop      ; and continue (unless Y wraps)
+.printdone:             ply
+                        sty     FW_ZP_TMPPTR+1
+                        ply
+                        sty     FW_ZP_TMPPTR+1
+                        ply
+                        rts
 
