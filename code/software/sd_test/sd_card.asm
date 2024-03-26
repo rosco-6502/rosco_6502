@@ -16,7 +16,7 @@
 
                 include "defines.asm"
 
-TRACE                   =       1       ; 1 for invasive debug trace prints
+TRACE                   =       0       ; 1 for invasive debug trace prints
 
                 if TRACE
 trace                   macro   char
@@ -57,7 +57,7 @@ tracev                  macro   var
 
 SD_RESET_CYCLES         =       10                      ; reset retry count
 SD_IDLE_RETRIES         =       5                       ; SD card idle retry count
-SD_CMD_RESP_RETRIES     =       4096
+SD_CMD_RESP_RETRIES     =       1024                    ; number of retries after SD command ()
 SD_WAIT_TIMEOUT         =       4096                    ; SD card wait timeout (check iterations)
 
 SD_R1_READY_STATE       =       $00
@@ -94,16 +94,16 @@ sd_init:
                         lda     #SD_IDLE_RETRIES
                         sta     sd_idle_retry
                         jsr     sd_assert
-.chk_idle               lda     #<sd_cmd0_go_idle
-                        ldx     #>sd_cmd0_go_idle
+.chk_idle               lda     #<sd_40_cmd0_go_idle
+                        ldx     #>sd_40_cmd0_go_idle
                         jsr     sd_send_sd_cmd          ; send cmd0
                         cmp     #SD_R1_IDLE_STATE
                         beq     .cmd8_if
 .retry_init             dec     sd_idle_retry
                         bne     .chk_idle
                         jmp     sd_deassert_fail
-.cmd8_if                lda     #<sd_cmd8_if_cond
-                        ldx     #>sd_cmd8_if_cond
+.cmd8_if                lda     #<sd_48_cmd8_if_cond
+                        ldx     #>sd_48_cmd8_if_cond
                         jsr     sd_send_sd_cmd          ; send cmd8
                         cmp     #SD_R1_IDLE_STATE
                         bne     .retry_init
@@ -117,13 +117,13 @@ sd_init:
                         jsr     spi_read_byte
                         tracea
                         stz     sd_init_timeout
-.cmd55_app_cmd          lda     #<sd_cmd55_app_cmd
-                        ldx     #>sd_cmd55_app_cmd
+.cmd55_app_cmd          lda     #<sd_77_cmd55_app_cmd
+                        ldx     #>sd_77_cmd55_app_cmd
                         jsr     sd_send_sd_cmd          ; send cmd 55
                         cmp     #SD_R1_IDLE_STATE
                         bne     .retry_init
-.cmd41_op_cond          lda     #<sd_acmd41_op_cond
-                        ldx     #>sd_acmd41_op_cond
+.cmd41_op_cond          lda     #<sd_69_acmd41_op_cond
+                        ldx     #>sd_69_acmd41_op_cond
                         jsr     sd_send_sd_cmd          ; send cmd 41
                         cmp     #SD_R1_READY_STATE
                         beq     .cmd58_ocr
@@ -140,8 +140,8 @@ sd_init:
                         dec
                         bne     .delayloop
                         bra     .cmd55_app_cmd
-.cmd58_ocr              lda     #<sd_cmd58_read_ocr
-                        ldx     #>sd_cmd58_read_ocr
+.cmd58_ocr              lda     #<sd_7A_cmd58_read_ocr
+                        ldx     #>sd_7A_cmd58_read_ocr
                         jsr     sd_send_sd_cmd
                         cmp     #SD_R1_READY_STATE
                         bne     sd_deassert_fail
@@ -163,8 +163,8 @@ sd_init:
                         tracea
                         jsr     spi_read_byte
                         tracea
-.cmd16_blklen           lda     #<sd_cmd16_blocklen
-                        ldx     #>sd_cmd16_blocklen
+.cmd16_blklen           lda     #<sd_50_cmd16_blocklen
+                        ldx     #>sd_50_cmd16_blocklen
                         jsr     sd_send_sd_cmd
                         cmp     #SD_R1_READY_STATE
                         beq     sd_deassert_good
@@ -187,8 +187,8 @@ sd_deassert_fail        sec
 sd_check_status:
                         trace   'S'
                         jsr     sd_assert
-                        lda     #<sd_cmd13_status
-                        ldx     #>sd_cmd13_status
+                        lda     #<sd_4D_cmd13_status
+                        ldx     #>sd_4D_cmd13_status
                         jsr     sd_send_sd_cmd
                         tax                             ; test result
                         bne     sd_deassert_fail
@@ -242,8 +242,8 @@ sd_read_block:
                         bne     .not_FFFF_crc
 
 ; issue BLKSIZE to check if card responding
-                        lda     #<sd_cmd16_blocklen
-                        ldx     #>sd_cmd16_blocklen
+                        lda     #<sd_50_cmd16_blocklen
+                        ldx     #>sd_50_cmd16_blocklen
                         jsr     sd_send_sd_cmd
                         cmp     #SD_R1_READY_STATE
                         beq     .not_FFFF_crc
@@ -420,13 +420,13 @@ sd_wait_ready:
 ; *******************************************************
                 section  .rodata
 
-sd_cmd0_go_idle         db      $40| 0,$00,$00,$00,$00,$95      ; $40=GO_IDLE_STATE
-sd_cmd8_if_cond         db      $40| 8,$00,$00,$01,$aa,$87      ; $48=SEND_IF_COND
-sd_cmd55_app_cmd        db      $40|55,$00,$00,$00,$00,$FF      ; $77=APP_CMD
-sd_acmd41_op_cond       db      $40|41,$40,$00,$00,$00,$FF      ; $69=SD_SEND_OP_COND
-sd_cmd58_read_ocr       db      $40|58,$40,$00,$00,$00,$FF      ; $7A=READ_OCR
-sd_cmd16_blocklen       db      $40|16,$00,$00,$02,$00,$FF      ; $50=SET_BLOCKLEN
-sd_cmd13_status         db      $40|13,$00,$00,$02,$00,$FF      ; $4D=SEND_STATUS
+sd_40_cmd0_go_idle      db      $40| 0,$00,$00,$00,$00,$95      ; $40=GO_IDLE_STATE
+sd_48_cmd8_if_cond      db      $40| 8,$00,$00,$01,$aa,$87      ; $48=SEND_IF_COND
+sd_77_cmd55_app_cmd     db      $40|55,$00,$00,$00,$00,$FF      ; $77=APP_CMD
+sd_69_acmd41_op_cond    db      $40|41,$40,$00,$00,$00,$FF      ; $69=SD_SEND_OP_COND
+sd_7A_cmd58_read_ocr    db      $40|58,$40,$00,$00,$00,$FF      ; $7A=READ_OCR
+sd_50_cmd16_blocklen    db      $40|16,$00,$00,$02,$00,$FF      ; $50=SET_BLOCKLEN
+sd_4D_cmd13_status      db      $40|13,$00,$00,$00,$00,$FF      ; $4D=SEND_STATUS
 
 ; *******************************************************
 ; * Uninitialized data
