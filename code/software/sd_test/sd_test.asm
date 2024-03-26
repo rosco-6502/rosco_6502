@@ -15,7 +15,7 @@
 
 ZP_COUNT        =       USER_ZP_START
 
-        if      1
+        if      0
 PRINT           macro   msg
                 lda     #<\msg
                 ldx     #>\msg
@@ -44,6 +44,10 @@ PRINTR          macro   msg
 
 _start:
                 PRINT   RUNMSG
+
+                PRINT   SDSTAT
+                jsr     sd_check_status                
+                jsr     res_msg
 
                 PRINT   SDINIT
                 jsr     sd_init
@@ -98,6 +102,10 @@ _start:
 
                 jsr     examine
 
+                PRINT   SDSTAT
+                jsr     sd_check_status                
+                jsr     res_msg
+
                 lda     #<$1000
                 sta     FW_ZP_IOPTR
                 lda     #>$1000
@@ -117,6 +125,10 @@ _start:
                 jsr     sd_write_block
                 jsr     res_msg
 
+;                PRINT   SDSTAT
+;                jsr     sd_check_status                
+;                jsr     res_msg
+
                 lda     #<$1000
                 sta     FW_ZP_IOPTR
                 lda     #>$1000
@@ -124,6 +136,10 @@ _start:
 
                 PRINT   SDREAD
                 jsr     sd_read_block
+                jsr     res_msg
+
+                PRINT   SDSTAT
+                jsr     sd_check_status                
                 jsr     res_msg
 
                 lda     #<$1000
@@ -137,6 +153,10 @@ _start:
                 sta     ZP_COUNT+1
 
                 jsr     examine
+
+                PRINT   SDSTAT
+                jsr     sd_check_status                
+                jsr     res_msg
 
                 jmp     .done
 
@@ -339,6 +359,7 @@ RUNMSG          asciiz  "SD Test running.", $D, $A
 OKMSG           asciiz  " OK", $D, $A
 ERRMSG          asciiz  " ERROR!", $D, $A
 BENCHRES        asciiz  "64KB (128 sectors) 100Hz ticks: "
+SDSTAT          asciiz  "sd_status:"
 SDINIT          asciiz  "sd_init:"
 SDREAD          asciiz  "sd_read_block:"
 SDWRITE         asciiz  "sd_write_block:"
