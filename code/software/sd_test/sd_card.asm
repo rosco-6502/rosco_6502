@@ -16,7 +16,7 @@
 
                 include "defines.asm"
 
-TRACE                   =       1       ; 1 for invasive debug trace prints
+TRACE                   =       0       ; 1 for invasive debug trace prints
 
                 if TRACE
 trace                   macro   char
@@ -84,7 +84,8 @@ sd_init:
                         trace   'I'
                         jsr     sd_check_status         ; check if already initialized
                         bcs     .doinit                 ; only init if status failed
-                        rts                             ; return (already initialized)
+                        jsr     sd_assert               ; else, assert
+                        jmp     .cmd58_ocr              ; and read OCR for SDHC flag
 .doinit                 ldx     #OP_SPI_CS|OP_SPI_COPI  ; CS = HI (de-assert)
                         stx     DUA_OPR_HI
                         trace   '~'

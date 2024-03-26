@@ -45,11 +45,11 @@ PRINTR          macro   msg
 _start:
                 PRINT   RUNMSG
 
-                PRINT   SDSTAT
-                jsr     sd_check_status
-                php
-                jsr     res_msg
-                plp
+                ; PRINT   SDSTAT
+                ; jsr     sd_check_status
+                ; php
+                ; jsr     res_msg
+                ; plp
 ;                bcc     .skip_init
 
                 PRINT   SDINIT
@@ -178,12 +178,22 @@ _start:
                 jsr     fat32_init
                 jsr     res_msg
 
-                lda     fat32_errorstage
-                jsr     outbyte
+;                lda     fat32_errorstage
+;                jsr     outbyte
 
                 PRINT   FAT32OPENROOT
                 jsr     fat32_openroot
                 jsr     res_msg
+
+                lda     #'"'
+                jsr     COUT
+                PRINT   subdirname
+                lda     #'"'
+                jsr     COUT
+                lda     #$0D
+                jsr     COUT
+                lda     #$0A
+                jsr     COUT
 
                 PRINT   FAT32FINDDIRENT
                 ; Find subdirectory by name
@@ -197,6 +207,29 @@ _start:
                 jsr     fat32_opendirent
                 jsr     res_msg
 
+                lda     fat32_bytesremaining+3
+                jsr     outbyte
+                lda     fat32_bytesremaining+2
+                jsr     outbyte
+                lda     fat32_bytesremaining+1
+                jsr     outbyte
+                lda     fat32_bytesremaining+0
+                jsr     outbyte
+                lda     #$0D
+                jsr     COUT
+                lda     #$0A
+                jsr     COUT
+
+                lda     #'"'
+                jsr     COUT
+                PRINT   filename
+                lda     #'"'
+                jsr     COUT
+                lda     #$0D
+                jsr     COUT
+                lda     #$0A
+                jsr     COUT
+
                 PRINT   FAT32FINDDIRENT
                 ; Find file by name
                 ldx     #<filename
@@ -209,123 +242,247 @@ _start:
                 jsr     fat32_opendirent
                 jsr     res_msg
 
+                lda     fat32_bytesremaining+3
+                jsr     outbyte
+                lda     fat32_bytesremaining+2
+                jsr     outbyte
+                lda     fat32_bytesremaining+1
+                jsr     outbyte
+                lda     fat32_bytesremaining+0
+                jsr     outbyte
+                lda     #$0D
+                jsr     COUT
+                lda     #$0A
+                jsr     COUT
+
                 lda     #<$1000
                 sta     fat32_address
                 lda     #>$1000
                 sta     fat32_address+1
 
-                PRINT   FAT32FILEREAD
-                jsr     fat32_file_read
-                jsr     res_msg
+;                 PRINT   FAT32FILEREAD
+;                 jsr     fat32_file_read
+;                 jsr     res_msg
 
-                lda     #<$1000
-                sta     FW_ZP_TMPPTR
-                lda     #>$1000
-                sta     FW_ZP_TMPPTR+1
+;                 lda     #<$1000
+;                 sta     FW_ZP_TMPPTR
+;                 lda     #>$1000
+;                 sta     FW_ZP_TMPPTR+1
 
-                lda     #$10
-                sta     ZP_COUNT
-                lda     #$00
-                sta     ZP_COUNT+1
+;                 lda     #$10
+;                 sta     ZP_COUNT
+;                 lda     #$00
+;                 sta     ZP_COUNT+1
 
-                jsr     examine
+;                 jsr     examine
 
-                ldy     #0
-.printloop      lda     $1000,y
-                beq     .doneprint
+;                 ldy     #0
+; .printloop      lda     $1000,y
+;                 beq     .doneprint
+;                 cmp     #$0A
+;                 bne     .notlf
+;                 LDA     #$0d
+;                 jsr     COUT
+;                 lda     #$0A
+; .notlf          jsr     COUT
+;                 iny
+;                 bra     .printloop
+; .doneprint
+
+.printloop      jsr     fat32_file_readbyte
+                bcs     .eof
                 cmp     #$0A
                 bne     .notlf
                 LDA     #$0d
                 jsr     COUT
                 lda     #$0A
 .notlf          jsr     COUT
-                iny
                 bra     .printloop
-.doneprint
-                jmp     .byebye
 
+.eof            
+                PRINT   EOFMSG                
+
+file2:
+
+                PRINT   FAT32OPENROOT
+                jsr     fat32_openroot
+                jsr     res_msg
+
+                PRINT   NAMEMSG
+                PRINT   subdirname2
+                lda     #'"'
+                jsr     COUT
+                lda     #$0D
+                jsr     COUT
+                lda     #$0A
+                jsr     COUT
+
+                PRINT   FAT32FINDDIRENT
+                ; Find subdirectory by name
+                ldx     #<subdirname2
+                ldy     #>subdirname2
+                jsr     fat32_finddirent
+                jsr     res_msg
+
+                ; open dir
+                PRINT   FAT32OPENDIRENT
+                jsr     fat32_opendirent
+                jsr     res_msg
+
+                PRINT   LENMSG
+                lda     fat32_bytesremaining+3
+                jsr     outbyte
+                lda     fat32_bytesremaining+2
+                jsr     outbyte
+                lda     fat32_bytesremaining+1
+                jsr     outbyte
+                lda     fat32_bytesremaining+0
+                jsr     outbyte
+                lda     #$0D
+                jsr     COUT
+                lda     #$0A
+                jsr     COUT
+
+                PRINT   NAMEMSG
+                PRINT   filename2
+                lda     #'"'
+                jsr     COUT
+                lda     #$0D
+                jsr     COUT
+                lda     #$0A
+                jsr     COUT
+
+                PRINT   FAT32FINDDIRENT
+                ; Find file by name
+                ldx     #<filename2
+                ldy     #>filename2
+                jsr     fat32_finddirent
+                jsr     res_msg
+
+                ; open file
+                PRINT   FAT32OPENDIRENT
+                jsr     fat32_opendirent
+                jsr     res_msg
+
+                PRINT   LENMSG
+                lda     fat32_bytesremaining+3
+                jsr     outbyte
+                lda     fat32_bytesremaining+2
+                jsr     outbyte
+                lda     fat32_bytesremaining+1
+                jsr     outbyte
+                lda     fat32_bytesremaining+0
+                jsr     outbyte
+                lda     #$0D
+                jsr     COUT
+                lda     #$0A
+                jsr     COUT
+
+                lda     fat32_bytesremaining+0
+                sta     ZP_COUNT
+                lda     fat32_bytesremaining+1
+                sta     ZP_COUNT+1
+
+                print   FAT32FILEREAD
+
+                lda     #<$8000
+                sta     fat32_address
+                lda     #>$8000
+                sta     fat32_address+1
+
+                jsr     fat32_file_read
+                jsr     res_msg
+
+                lda     #<$8000
+                sta     FW_ZP_TMPPTR
+                lda     #>$8000
+                sta     FW_ZP_TMPPTR+1
+
+                jsr     examine
+
+                jmp     .byebye
 ; ***
 
-                lda     #<128
-                sta     benchcount
-                lda     #>128
-                sta     benchcount+1
+;                 lda     #<128
+;                 sta     benchcount
+;                 lda     #>128
+;                 sta     benchcount+1
 
-                lda     #<12345
-                sta     tempBinary
-                lda     #>12345
-                sta     tempBinary+1
-                jsr     BinaryToDecimal
-                lda     decimalResult+4
-                ora     #"0"
-                jsr     COUT
-                lda     decimalResult+3
-                ora     #"0"
-                jsr     COUT
-                lda     decimalResult+2
-                ora     #"0"
-                jsr     COUT
-                lda     decimalResult+1
-                ora     #"0"
-                jsr     COUT
-                lda     decimalResult+0
-                ora     #"0"
-                jsr     COUT
+;                 lda     #<12345
+;                 sta     tempBinary
+;                 lda     #>12345
+;                 sta     tempBinary+1
+;                 jsr     BinaryToDecimal
+;                 lda     decimalResult+4
+;                 ora     #"0"
+;                 jsr     COUT
+;                 lda     decimalResult+3
+;                 ora     #"0"
+;                 jsr     COUT
+;                 lda     decimalResult+2
+;                 ora     #"0"
+;                 jsr     COUT
+;                 lda     decimalResult+1
+;                 ora     #"0"
+;                 jsr     COUT
+;                 lda     decimalResult+0
+;                 ora     #"0"
+;                 jsr     COUT
 
-                sei
-                stz     TICK100HZ
-                stz     TICK100HZ+1
-                stz     TICK100HZ+2
-                cli
-.loop:
+;                 sei
+;                 stz     TICK100HZ
+;                 stz     TICK100HZ+1
+;                 stz     TICK100HZ+2
+;                 cli
+; .loop:
 
-                ; lda     TICK100HZ
-                ; jsr     outbyte
-                ; lda     #" "
-                ; jsr     COUT
+;                 ; lda     TICK100HZ
+;                 ; jsr     outbyte
+;                 ; lda     #" "
+;                 ; jsr     COUT
 
-                lda     #<$1000
-                sta     FW_ZP_IOPTR
-                lda     #>$1000
-                sta     FW_ZP_IOPTR+1
+;                 lda     #<$1000
+;                 sta     FW_ZP_IOPTR
+;                 lda     #>$1000
+;                 sta     FW_ZP_IOPTR+1
 
-;                PRINT   SDREAD
-                jsr     sd_read_block
-                php
-;                jsr     res_msg
+; ;                PRINT   SDREAD
+;                 jsr     sd_read_block
+;                 php
+; ;                jsr     res_msg
 
-                inc     FW_ZP_BLOCKNUM
-                bne     .secincdone
-                inc     FW_ZP_BLOCKNUM+1
-                bcc     .secincdone
-                inc     FW_ZP_BLOCKNUM+2
-                bne     .secincdone
-                inc     FW_ZP_BLOCKNUM+3
-.secincdone
-                plp
-                bcs     .done
-                jsr     CIN
-                bcs     .done
+;                 inc     FW_ZP_BLOCKNUM
+;                 bne     .secincdone
+;                 inc     FW_ZP_BLOCKNUM+1
+;                 bcc     .secincdone
+;                 inc     FW_ZP_BLOCKNUM+2
+;                 bne     .secincdone
+;                 inc     FW_ZP_BLOCKNUM+3
+; .secincdone
+;                 plp
+;                 bcs     .done
+;                 jsr     CIN
+;                 bcs     .done
 
-                lda     benchcount
-                bne     .declo
-                lda     benchcount+1
-                beq     .done
-                dec     benchcount+1
-.declo          dec     benchcount
-                jmp     .loop
+;                 lda     benchcount
+;                 bne     .declo
+;                 lda     benchcount+1
+;                 beq     .done
+;                 dec     benchcount+1
+; .declo          dec     benchcount
+;                 jmp     .loop
 
-.done:
-                sei
+; .done:
+;                 sei
 
-                PRINT   BENCHRES
-                lda     TICK100HZ+2
-                jsr     outbyte
-                lda     TICK100HZ+1
-                jsr     outbyte
-                lda     TICK100HZ+0
-                jsr     outbyte
-                cli
+;                 PRINT   BENCHRES
+;                 lda     TICK100HZ+2
+;                 jsr     outbyte
+;                 lda     TICK100HZ+1
+;                 jsr     outbyte
+;                 lda     TICK100HZ+0
+;                 jsr     outbyte
+;                 cli
 
 .byebye:
                 PRINTR   EXITMSG
@@ -433,8 +590,7 @@ examine:
                 lda     ZP_COUNT+1
                 sbc     #0
                 sta     ZP_COUNT+1
-                ora     ZP_COUNT
-                bne     examine
+                bpl     examine
                 rts
 
 ; *******************************************************
@@ -455,12 +611,17 @@ FAT32OPENROOT   asciiz  "fat32_openroot:"
 FAT32FINDDIRENT asciiz  "fat32_finddirent:"
 FAT32OPENDIRENT asciiz  "fat32_opendirent:"
 FAT32FILEREAD   asciiz  "fat32_file_read:"
+NAMEMSG         asciiz  "NAME: ",$22
+LENMSG          asciiz  "LENGTH: "
+EOFMSG          asciiz  $D, $A, "<EOF>",$D, $A
 
 EXITMSG         ascii   $D, $A, "Exit."
 EOLMSG          asciiz  $D, $A
 
 subdirname      asciiz  "FOLDER     "
 filename        asciiz  "FILE       "
+subdirname2     asciiz  "ANOTHER_SUB"
+filename2       asciiz  "VECTORS ASM"
 
 ; *******************************************************
 ; * Uninitialized data

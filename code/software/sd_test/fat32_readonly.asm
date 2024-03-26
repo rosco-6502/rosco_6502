@@ -38,6 +38,7 @@ fat32_pendingsectors    = zp_fat32_variables + $0d                        ; 1 by
                 global  fat32_address
 fat32_address           = zp_fat32_variables + $0e                        ; 2 bytes
 fat32_nextcluster       = zp_fat32_variables + $10                        ; 4 bytes
+                global  fat32_bytesremaining
 fat32_bytesremaining    = zp_fat32_variables + $14                        ; 4 bytes
 
                 global  fat32_errorstage
