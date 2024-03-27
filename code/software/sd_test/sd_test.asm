@@ -111,20 +111,20 @@ _start:
                 jsr     sd_check_status
                 jsr     res_msg
 
-                lda     #<$1000
-                sta     FW_ZP_IOPTR
-                lda     #>$1000
-                sta     FW_ZP_IOPTR+1
+                ; lda     #<$1000
+                ; sta     FW_ZP_IOPTR
+                ; lda     #>$1000
+                ; sta     FW_ZP_IOPTR+1
 
-                lda     #"X"
-                sta     $1000
-                lda     #"a"
-                sta     $1001
-                lda     #"r"
-                sta     $1002
-                lda     #"k"
-                sta     $1003
-                inc     $1004
+                ; lda     #"X"
+                ; sta     $1000
+                ; lda     #"a"
+                ; sta     $1001
+                ; lda     #"r"
+                ; sta     $1002
+                ; lda     #"k"
+                ; sta     $1003
+                ; inc     $1004
 
                 ; PRINT   SDWRITE
                 ; jsr     sd_write_block
@@ -185,6 +185,58 @@ _start:
                 jsr     fat32_openroot
                 jsr     res_msg
 
+.showdir        jsr     fat32_readdirent
+                bcs     .donedir
+                bit     #$06            ; skip hidden/system
+                bne     .showdir
+                pha
+                jsr     outbyte
+                pla
+                bit     #$08
+                beq     .notvol
+                PRINT   VOLMSG
+                bra     .prname
+.notvol         bit     #$10
+                beq     .notdir
+                PRINT   DIRMSG
+                bra     .prname
+.notdir         PRINT   FILEMSG
+
+.prname         lda     #" "
+                jsr     COUT
+                ldy     #0
+.showname       lda     (FW_ZP_IOPTR),y
+                jsr     COUT
+                iny
+                cpy     #11
+                bne     .showname
+                lda     #" "
+                jsr     COUT
+
+                ldy     #$1c+3
+                lda     (FW_ZP_IOPTR),y
+                jsr     outbyte
+                ldy     #$1c+2
+                lda     (FW_ZP_IOPTR),y
+                jsr     outbyte
+                ldy     #$1c+1
+                lda     (FW_ZP_IOPTR),y
+                jsr     outbyte
+                ldy     #$1c+0
+                lda     (FW_ZP_IOPTR),y
+                jsr     outbyte
+
+                lda     #$0D
+                jsr     COUT
+                lda     #$0A
+                jsr     COUT
+
+                bra     .showdir
+
+.donedir        PRINT   FAT32OPENROOT
+                jsr     fat32_openroot
+                jsr     res_msg
+
                 lda     #'"'
                 jsr     COUT
                 PRINT   subdirname
@@ -200,7 +252,10 @@ _start:
                 ldx     #<subdirname
                 ldy     #>subdirname
                 jsr     fat32_finddirent
+                php
                 jsr     res_msg
+                plp
+                bcs     .fnf
 
                 ; open dir
                 PRINT   FAT32OPENDIRENT
@@ -235,7 +290,10 @@ _start:
                 ldx     #<filename
                 ldy     #>filename
                 jsr     fat32_finddirent
+                php
                 jsr     res_msg
+                plp
+                bcs     .fnf
 
                 ; open file
                 PRINT   FAT32OPENDIRENT
@@ -301,7 +359,7 @@ _start:
 
 .eof            
                 PRINT   EOFMSG                
-
+.fnf
 file2:
 
                 PRINT   FAT32OPENROOT
@@ -322,7 +380,10 @@ file2:
                 ldx     #<subdirname2
                 ldy     #>subdirname2
                 jsr     fat32_finddirent
+                php
                 jsr     res_msg
+                plp
+                bcs     .fnf2
 
                 ; open dir
                 PRINT   FAT32OPENDIRENT
@@ -357,7 +418,10 @@ file2:
                 ldx     #<filename2
                 ldy     #>filename2
                 jsr     fat32_finddirent
+                php
                 jsr     res_msg
+                plp
+                bcs     .fnf2
 
                 ; open file
                 PRINT   FAT32OPENDIRENT
@@ -383,7 +447,7 @@ file2:
                 lda     fat32_bytesremaining+1
                 sta     ZP_COUNT+1
 
-                print   FAT32FILEREAD
+                PRINT   FAT32FILEREAD
 
                 lda     #<$8000
                 sta     fat32_address
@@ -400,7 +464,7 @@ file2:
 
                 jsr     examine
 
-                jmp     .byebye
+.fnf2           jmp     .byebye
 ; ***
 
 ;                 lda     #<128
@@ -591,7 +655,7 @@ examine:
                 sbc     #0
                 sta     ZP_COUNT+1
                 bpl     examine
-                rts
+far             rts
 
 ; *******************************************************
 ; * Initialized data
@@ -614,6 +678,9 @@ FAT32FILEREAD   asciiz  "fat32_file_read:"
 NAMEMSG         asciiz  "NAME: ",$22
 LENMSG          asciiz  "LENGTH: "
 EOFMSG          asciiz  $D, $A, "<EOF>",$D, $A
+VOLMSG          asciiz  " [VOL]"
+DIRMSG          asciiz  " <DIR>"
+FILEMSG         asciiz  "      "
 
 EXITMSG         ascii   $D, $A, "Exit."
 EOLMSG          asciiz  $D, $A

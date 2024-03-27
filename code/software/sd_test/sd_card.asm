@@ -226,7 +226,7 @@ sd_read_block:
                         bne     sd_deassert_fail
 
                         trace   '#'
-                        jsr     spi_read_page
+                        jsr     spi_read_page           ; read 512 byte block (2 pages)
                         inc     FW_ZP_IOPTR+1
                         jsr     spi_read_page
                         dec     FW_ZP_IOPTR+1

@@ -1,24 +1,26 @@
 ;------------------------------------------------------------
-;                                                                                                                                                                                                                                                                                                                                                ___ ___ ___ ___
-;                        ___ ___ ___ ___ ___                                                                        |                        _| __|                         |__ |
-; |                        _| . |_ -|                        _| . |                                                 | . |__ | | | __|
+;                            ___ ___ ___ ___
+;  ___ ___ ___ ___ ___      |  _| __|   |__ |
+; |  _| . |_ -|  _| . |     | . |__ | | | __|
 ; |_| |___|___|___|___|_____|___|___|___|___|
-;                                                                                                                                                                                                                                                 |_____|                                                Bringup Code
+;                     |_____|    Bringup Code
 ;------------------------------------------------------------
-; Copyright (c)2022-2023 Ross Bamford and contributors
+; Copyright (c)2022-2024 Ross Bamford and contributors
 ; See top-level LICENSE.md for licence information.
 ;
 ; Huge shout-out to the following for helpful reference material:
-; George Foot                                                                                                                         https://github.com/gfoot/sdcard6502
-; PJRC                                                                                                                                                                                                                        https://www.pjrc.com/tech/8051/ide/fat32.html
+; George Foot           https://github.com/gfoot/sdcard6502
+; PJRC                  https://www.pjrc.com/tech/8051/ide/fat32.html
 ;------------------------------------------------------------
 ; vim: set et ts=8 sw=8
 
-                                                                                                                                                                                                include "defines.asm"
+; Original version under permissive Unilicense license from:
+; George Foot https://github.com/gfoot/sdcard6502 - Thanks George!
+; Significantly modified for vasm amd rosco_6502 by Xark
 
-; Original version from:
-; George Foot                                                                                                                         https://github.com/gfoot/sdcard6502
-; Modified for vasm amd rosco_6502 by Xark
+                include "defines.asm"
+
+                section .text
 
 ; FAT32/SD interface library
 ;
@@ -49,14 +51,14 @@ zp_sd_currentsector     = FW_ZP_BLOCKNUM
 zp_sd_address           = FW_ZP_IOPTR
 sd_readsector           = sd_read_block
 
+; Initialize the module - read the MBR etc, find the partition,
+; and set up the variables ready for navigating the filesystem
+; Trashes A, X, Y
+; Returns C=1 on error
                         global  fat32_init
 fat32_init:
-                        ; Initialize the module - read the MBR etc, find the partition,
-                        ; and set up the variables ready for navigating the filesystem
-
-                                                
                         lda     #0
-                        tax                                                                                                                                                                                                                                                ; Read the MBR and extract pertinent information
+                        tax                                                                                                                                                                                                                                               ; Read the MBR and extract pertinent information
 .clrvars                sta     fat32_fatstart,x
                         inx
                         cpx     #fat32_bytesremaining+4-fat32_fatstart
@@ -77,7 +79,7 @@ fat32_init:
 
                         ; Do the read
                         jsr     sd_readsector
-
+                        bcs     .fail
 
                         inc     fat32_errorstage ; stage 1 = boot sector signature check
 
@@ -88,7 +90,6 @@ fat32_init:
                         lda     fat32_readbuffer+511 ; Boot sector signature aa
                         cmp     #$aa
                         bne     .fail
-
 
                         inc     fat32_errorstage ; stage 2 = finding partition
 
@@ -111,11 +112,9 @@ fat32_init:
                         cmp     #.FSTYPE_FAT32
                         beq     .foundpart
 
-.fail
-                        jmp     .error
-
+.fail                   sec
+                        rts
 .foundpart
-
                         ; Read the FAT32 BPB
                         lda     fat32_readbuffer+$1c6,x
                         sta     zp_sd_currentsector
@@ -127,7 +126,7 @@ fat32_init:
                         sta     zp_sd_currentsector+3
 
                         jsr     sd_readsector
-
+                        bcs     .fail
 
                         inc     fat32_errorstage ; stage 3 = BPB signature check
 
@@ -163,11 +162,11 @@ fat32_init:
                         ; Calculate the starting sector of the FAT
                         clc
                         lda     zp_sd_currentsector
-                        adc     fat32_readbuffer+14                                                ; reserved sectors lo
+                        adc     fat32_readbuffer+14             ; reserved sectors lo
                         sta     fat32_fatstart
                         sta     fat32_datastart
                         lda     zp_sd_currentsector+1
-                        adc     fat32_readbuffer+15                                                ; reserved sectors hi
+                        adc     fat32_readbuffer+15             ; reserved sectors hi
                         sta     fat32_fatstart+1
                         sta     fat32_datastart+1
                         lda     zp_sd_currentsector+2
@@ -215,10 +214,6 @@ fat32_init:
                         clc
                         rts
 
-.error
-                        sec
-                        rts
-
 
 fat32_seekcluster:
                         ; Gets ready to read fat32_nextcluster, and advances it according to the FAT
@@ -259,7 +254,10 @@ fat32_seekcluster:
 
                         ; Read the sector from the FAT
                         jsr     sd_readsector
-
+                        bcc     .readok
+                        ; sec
+                        rts
+.readok
                         ; Before using this FAT data, set currentsector ready to read the cluster itself
                         ; We need to multiply the cluster number minus two by the number of sectors per
                         ; cluster, then add the data region start sector
@@ -353,18 +351,17 @@ fat32_seekcluster:
                         ; It's the end of the chain, set the top bits so that we can tell this later on
                         sta     fat32_nextcluster+3
 .notendofchain
-
+                        clc
                         rts
 
-
+; Reads the next sector from a cluster chain into the buffer at fat32_address.
+;
+; Advances the current sector ready for the next read and looks up the next cluster
+; in the chain when necessary.
+;
+; OLD: On return, carry is clear if data was read, or set if the cluster chain has ended.
+; NEW: On return, C set on error.  Z is clear if data was read (BNE), or Z set if the cluster chain has ended (BEQ).
 fat32_readnextsector:
-                        ; Reads the next sector from a cluster chain into the buffer at fat32_address.
-                        ;
-                        ; Advances the current sector ready for the next read and looks up the next cluster
-                        ; in the chain when necessary.
-                        ;
-                        ; On return, carry is clear if data was read, or set if the cluster chain has ended.
-
                         ; Maybe there are pending sectors in the current cluster
                         lda     fat32_pendingsectors
                         bne     .readsector
@@ -375,7 +372,6 @@ fat32_readnextsector:
 
                         ; Prepare to read the next cluster
                         jsr     fat32_seekcluster
-
 .readsector
                         dec     fat32_pendingsectors
 
@@ -387,6 +383,7 @@ fat32_readnextsector:
 
                         ; Read the sector
                         jsr     sd_readsector
+                        bcs     .fail
 
                         ; Advance to next sector
                         inc     zp_sd_currentsector
@@ -398,19 +395,25 @@ fat32_readnextsector:
                         inc     zp_sd_currentsector+3
 .sectorincrementdone
 
-                        ; Success - clear carry and return
-                        clc
+                        ; OLD: Success - clear carry and return
+;                        clc
+                        ; NEW: Success - clear Z and return NE
+                        lda     #$FF
+                        rts
+.endofchain
+                        ; OLD: End of chain - set carry and return
+                        ; sec
+                        ; NEW: End of chain - set Z and return EQ
+                        lda     #$00
                         rts
 
-.endofchain
-                        ; End of chain - set carry and return
-                        sec
+                        ; error - set carry and return
+.fail                   sec
                         rts
 
                 global  fat32_openroot
 fat32_openroot:
                         ; Prepare to read the root directory
-
                         lda     fat32_rootcluster
                         sta     fat32_nextcluster
                         lda     fat32_rootcluster+1
@@ -421,14 +424,14 @@ fat32_openroot:
                         sta     fat32_nextcluster+3
 
                         jsr     fat32_seekcluster
+                        bcs     .fail
 
                         ; Set the pointer to a large value so we always read a sector the first time through
                         lda     #$ff
                         sta     zp_sd_address+1
 
                         clc
-                        rts
-
+.fail                   rts
 
                 global  fat32_opendirent
 fat32_opendirent:
@@ -503,7 +506,12 @@ fat32_readdirent:
                         sta     fat32_address+1
 
                         jsr     fat32_readnextsector
-                        bcc     .gotdata
+; OLD                        bcc     .gotdata
+                
+                        bne     .gotdata
+                        bcc     .endofdirectory
+
+                        ; TODO set error code
 
 .endofdirectory
                         sec
@@ -600,7 +608,9 @@ fat32_file_readbyte:
                         sta     fat32_address+1
 
                         jsr     fat32_readnextsector
-                        bcs     .rts                                                                                                                                                                                                                                                ; this shouldn't happen
+; OLD                        bcs     .rts               ; this shouldn't happen
+                        beq     .rts
+                        bcs     .rts
 
 .gotdata
                         ldy     #0
@@ -647,6 +657,8 @@ fat32_file_read:
 .wholesectorreadloop
                         ; Read a sector to fat32_address
                         jsr     fat32_readnextsector
+                        bcs     .fail
+                        beq     .fail
 
                         ; Advance fat32_address by 512 bytes
                         lda     fat32_address+1
@@ -661,5 +673,7 @@ fat32_file_read:
 
 .done
                         clc
+                        rts
+.fail                   sec
                         rts
 
