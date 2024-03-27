@@ -13,6 +13,7 @@
 
                 include "defines.asm"
 
+                global ZP_COUNT
 ZP_COUNT        =       USER_ZP_START
 
         if      1
@@ -55,6 +56,9 @@ _start:
                 PRINT   SDINIT
                 jsr     sd_init
                 jsr     res_msg
+                bcc     .sdinitgood
+                rts
+.sdinitgood
 
 .skip_init:     lda     #$E3
                 ldx     #$00
@@ -177,6 +181,9 @@ _start:
                 PRINT   FAT32INIT
                 jsr     fat32_init
                 jsr     res_msg
+                bcc     .fatinitgood
+                rts
+.fatinitgood
 
 ;                lda     fat32_errorstage
 ;                jsr     outbyte
@@ -185,69 +192,18 @@ _start:
                 jsr     fat32_openroot
                 jsr     res_msg
 
-.showdir        jsr     fat32_readdirent
-                bcs     .donedir
-                bit     #$06            ; skip hidden/system
-                bne     .showdir
-                pha
-                jsr     outbyte
-                pla
-                bit     #$08
-                beq     .notvol
-                PRINT   VOLMSG
-                bra     .prname
-.notvol         bit     #$10
-                beq     .notdir
-                PRINT   DIRMSG
-                bra     .prname
-.notdir         PRINT   FILEMSG
+                jsr     showdir
 
-.prname         lda     #" "
-                jsr     COUT
-                ldy     #0
-.showname       lda     (FW_ZP_IOPTR),y
-                jsr     COUT
-                iny
-                cpy     #11
-                bne     .showname
-                lda     #" "
-                jsr     COUT
-
-                ldy     #$1c+3
-                lda     (FW_ZP_IOPTR),y
-                jsr     outbyte
-                ldy     #$1c+2
-                lda     (FW_ZP_IOPTR),y
-                jsr     outbyte
-                ldy     #$1c+1
-                lda     (FW_ZP_IOPTR),y
-                jsr     outbyte
-                ldy     #$1c+0
-                lda     (FW_ZP_IOPTR),y
-                jsr     outbyte
-
-                lda     #$0D
-                jsr     COUT
-                lda     #$0A
-                jsr     COUT
-
-                bra     .showdir
-
-.donedir        PRINT   FAT32OPENROOT
+                PRINT   FAT32OPENROOT
                 jsr     fat32_openroot
                 jsr     res_msg
 
+                PRINT   FAT32FINDDIRENT
                 lda     #'"'
                 jsr     COUT
                 PRINT   subdirname
                 lda     #'"'
                 jsr     COUT
-                lda     #$0D
-                jsr     COUT
-                lda     #$0A
-                jsr     COUT
-
-                PRINT   FAT32FINDDIRENT
                 ; Find subdirectory by name
                 ldx     #<subdirname
                 ldy     #>subdirname
@@ -262,30 +218,39 @@ _start:
                 jsr     fat32_opendirent
                 jsr     res_msg
 
-                lda     fat32_bytesremaining+3
-                jsr     outbyte
-                lda     fat32_bytesremaining+2
-                jsr     outbyte
-                lda     fat32_bytesremaining+1
-                jsr     outbyte
-                lda     fat32_bytesremaining+0
-                jsr     outbyte
-                lda     #$0D
-                jsr     COUT
-                lda     #$0A
-                jsr     COUT
+                jsr     showdir
 
+                PRINT   FAT32OPENROOT
+                jsr     fat32_openroot
+                jsr     res_msg
+
+                PRINT   FAT32FINDDIRENT
+                lda     #'"'
+                jsr     COUT
+                PRINT   subdirname
+                lda     #'"'
+                jsr     COUT
+                ; Find subdirectory by name
+                ldx     #<subdirname
+                ldy     #>subdirname
+                jsr     fat32_finddirent
+                php
+                jsr     res_msg
+                plp
+                bcs     .fnf
+
+                PRINT   FAT32OPENDIRENT
+                jsr     fat32_opendirent
+                jsr     res_msg
+
+
+                PRINT   FAT32FINDDIRENT
                 lda     #'"'
                 jsr     COUT
                 PRINT   filename
                 lda     #'"'
                 jsr     COUT
-                lda     #$0D
-                jsr     COUT
-                lda     #$0A
-                jsr     COUT
 
-                PRINT   FAT32FINDDIRENT
                 ; Find file by name
                 ldx     #<filename
                 ldy     #>filename
@@ -300,23 +265,6 @@ _start:
                 jsr     fat32_opendirent
                 jsr     res_msg
 
-                lda     fat32_bytesremaining+3
-                jsr     outbyte
-                lda     fat32_bytesremaining+2
-                jsr     outbyte
-                lda     fat32_bytesremaining+1
-                jsr     outbyte
-                lda     fat32_bytesremaining+0
-                jsr     outbyte
-                lda     #$0D
-                jsr     COUT
-                lda     #$0A
-                jsr     COUT
-
-                lda     #<$1000
-                sta     fat32_address
-                lda     #>$1000
-                sta     fat32_address+1
 
 ;                 PRINT   FAT32FILEREAD
 ;                 jsr     fat32_file_read
@@ -347,6 +295,8 @@ _start:
 ;                 bra     .printloop
 ; .doneprint
 
+                PRINT   DISPFILE
+
 .printloop      jsr     fat32_file_readbyte
                 bcs     .eof
                 cmp     #$0A
@@ -362,6 +312,8 @@ _start:
 .fnf
 file2:
 
+                bra     .byebye
+
                 PRINT   FAT32OPENROOT
                 jsr     fat32_openroot
                 jsr     res_msg
@@ -376,6 +328,11 @@ file2:
                 jsr     COUT
 
                 PRINT   FAT32FINDDIRENT
+                lda     #'"'
+                jsr     COUT
+                PRINT   subdirname2
+                lda     #'"'
+                jsr     COUT
                 ; Find subdirectory by name
                 ldx     #<subdirname2
                 ldy     #>subdirname2
@@ -414,6 +371,11 @@ file2:
                 jsr     COUT
 
                 PRINT   FAT32FINDDIRENT
+                lda     #'"'
+                jsr     COUT
+                PRINT   filename2
+                lda     #'"'
+                jsr     COUT
                 ; Find file by name
                 ldx     #<filename2
                 ldy     #>filename2
@@ -552,11 +514,106 @@ file2:
                 PRINTR   EXITMSG
 
 res_msg:        bcc     ok_msg
-                PRINTR   ERRMSG
-ok_msg:         PRINTR   OKMSG
+                PRINT   ERRMSG
+                sec
+                rts
+ok_msg:         PRINT   OKMSG
+                clc
+                rts
+
+
+showdir         jsr     fat32_readdirent
+                bcs     .donedir
+
+                bit     #$06            ; skip hidden/system
+                bne     showdir
+
+                pha
+                jsr     outbyte
+                pla
+
+                bit     #$08
+                beq     .notvol
+                PRINT   VOLMSG
+                bra     .prsize
+.notvol         bit     #$10
+                beq     .notdir
+                PRINT   DIRMSG
+                bra     .prsize
+.notdir         PRINT   FILEMSG
+
+.prsize         ldy     #$1c+3
+                lda     (FW_ZP_IOPTR),y
+                jsr     outbyte
+                ldy     #$1c+2
+                lda     (FW_ZP_IOPTR),y
+                jsr     outbyte
+                ldy     #$1c+1
+                lda     (FW_ZP_IOPTR),y
+                jsr     outbyte
+                ldy     #$1c+0
+                lda     (FW_ZP_IOPTR),y
+                jsr     outbyte
+.prname
+                lda     #" "
+                jsr     COUT
+
+                ldy     #0
+.showname       lda     (FW_ZP_IOPTR),y
+                jsr     COUT
+                iny
+                cpy     #8
+                bne     .showname
+                lda     #"."
+                jsr     COUT
+.showname2      lda     (FW_ZP_IOPTR),y
+                jsr     COUT
+                iny
+                cpy     #11
+                bne     .showname2
+
+                lda     #" "
+                jsr     COUT
+
+                lda     fat32_lfnbuffer
+                beq     .notlfn
+
+                lda     #$22
+                jsr     COUT
+
+                lda     #<fat32_lfnbuffer
+                ldx     #>fat32_lfnbuffer
+                jsr     PRINT_SZ
+                lda     #$22
+                jsr     COUT
+.notlfn
+                lda     #$0D
+                jsr     COUT
+                lda     #$0A
+                jsr     COUT
+
+                ; lda     #<fat32_lfnbuffer
+                ; sta     FW_ZP_TMPPTR
+                ; lda     #>fat32_lfnbuffer
+                ; sta     FW_ZP_TMPPTR+1
+
+                ; lda     #$00
+                ; sta     ZP_COUNT
+                ; lda     #$01
+                ; sta     ZP_COUNT+1
+
+                ; jsr     examine
+
+                bra     showdir
+
+.donedir        rts
 
                 global  outbyte
-outbyte:        pha                     ; save a for lsd.
+outbyte:        pha
+                jsr     outbyte2
+                pla
+                rts
+outbyte2:       pha                     ; save a for lsd.
                 lsr
                 lsr
                 lsr                     ; msd to lsd position.
@@ -607,7 +664,7 @@ BinTable:
 
 
 EXAMWIDTH       =       16
-
+        global  examine
 examine:
                 lda     FW_ZP_TMPPTR+1
                 jsr     outbyte
@@ -654,7 +711,8 @@ examine:
                 lda     ZP_COUNT+1
                 sbc     #0
                 sta     ZP_COUNT+1
-                bpl     examine
+                ora     ZP_COUNT
+                bne     examine
 far             rts
 
 ; *******************************************************
@@ -675,18 +733,20 @@ FAT32OPENROOT   asciiz  "fat32_openroot:"
 FAT32FINDDIRENT asciiz  "fat32_finddirent:"
 FAT32OPENDIRENT asciiz  "fat32_opendirent:"
 FAT32FILEREAD   asciiz  "fat32_file_read:"
+DISPFILE        asciiz  "Display text file:", $D,$A,$D,$A
 NAMEMSG         asciiz  "NAME: ",$22
 LENMSG          asciiz  "LENGTH: "
-EOFMSG          asciiz  $D, $A, "<EOF>",$D, $A
-VOLMSG          asciiz  " [VOL]"
-DIRMSG          asciiz  " <DIR>"
-FILEMSG         asciiz  "      "
+EOFMSG          asciiz  "<EOF>",$D, $A
+VOLMSG          asciiz  " [VOL] "
+DIRMSG          asciiz  " <DIR> "
+FILEMSG         asciiz  "       "
 
 EXITMSG         ascii   $D, $A, "Exit."
 EOLMSG          asciiz  $D, $A
 
-subdirname      asciiz  "FOLDER     "
-filename        asciiz  "FILE       "
+;subdirname      asciiz  "ADAFR~53   "
+subdirname      asciiz  "Adafruit_ILI9341"
+filename        asciiz  "library.properties"
 subdirname2     asciiz  "ANOTHER_SUB"
 filename2       asciiz  "VECTORS ASM"
 

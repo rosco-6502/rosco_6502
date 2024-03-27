@@ -80,6 +80,8 @@ BANK_ROM_M              =       $30             ; mask for ROM bank bits in BANK
 ; * bios memory definitions
 ; *******************************************************
 
+USER_ZP_START           =       $10
+INPUTBUF                =       $200
                 dsect                   ; define symbols only
 
                 org     $0000           ; zero page
@@ -97,11 +99,7 @@ FW_ZP_IOLEN             ds      2               ; firmware IO buffer length
 FW_ZP_BLOCKNUM          ds      4               ; firmware IO block/sector number
 FW_ZP_rsvd              ds      2               ; reserved
 
-                assert  *==$0010        ; user ZP should start at $0010
-USER_ZP_START           ds      0
-
-                org     $0200           ; input buffer page
-INPUTBUF                ds      256             ; 256 byte input buffer (or user buffer)
+                assert  *==USER_ZP_START        ; user ZP should start at $0010
 
                 org     $0300           ; system global page
 
@@ -116,7 +114,6 @@ TICK100HZ               ds      3               ; free incrementing 24-bit 100Hz
                 assert  *<=$0380         ; all firmware use should end before $0380
 
                 dend
-
 
                 ifnd    CUR_ROMBANK     ; if not building for ROM, include rtable symbols
                 dsect

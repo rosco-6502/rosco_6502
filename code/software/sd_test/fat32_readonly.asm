@@ -26,26 +26,34 @@
 ;
 ; This module requires some RAM workspace to be defined elsewhere:
 ;
-; fat32_workspace                                                - a large page-aligned 512-byte workspace
+; fat32_workspace    - a large page-aligned 512-byte workspace
 ; zp_fat32_variables - 24 bytes of zero-page storage for variables etc
 
-fat32_readbuffer        = $0400;
-zp_fat32_variables      = USER_ZP_START+$10
 
-fat32_fatstart          = zp_fat32_variables + $00                        ; 4 bytes
-fat32_datastart         = zp_fat32_variables + $04                        ; 4 bytes
-fat32_rootcluster       = zp_fat32_variables + $08                        ; 4 bytes
-fat32_sectorspercluster = zp_fat32_variables + $0c                        ; 1 byte
-fat32_pendingsectors    = zp_fat32_variables + $0d                        ; 1 byte
                 global  fat32_address
-fat32_address           = zp_fat32_variables + $0e                        ; 2 bytes
-fat32_nextcluster       = zp_fat32_variables + $10                        ; 4 bytes
                 global  fat32_bytesremaining
-fat32_bytesremaining    = zp_fat32_variables + $14                        ; 4 bytes
-
                 global  fat32_errorstage
-fat32_errorstage        = fat32_bytesremaining                        ; only used during initializatio
-fat32_filenamepointer   = fat32_bytesremaining                        ; only used when searching for a file
+
+                global  fat32_lfnbuffer
+
+fat32_readbuffer        = $0400
+fat32_lfnbuffer         = $0200
+
+                dsect
+                        org     USER_ZP_START+$10
+
+fat32_fatstart          ds      4
+fat32_datastart         ds      4
+fat32_rootcluster       ds      4
+fat32_sectorspercluster ds      1
+fat32_pendingsectors    ds      1
+fat32_address           ds      2
+fat32_nextcluster       ds      4
+fat32_bytesremaining    ds      4
+fat32_filenamepointer   =       fat32_bytesremaining    ; only used when searching for a file
+fat32_filename_lfn_idx  =       fat32_bytesremaining+2    ; only used when searching for a file
+fat32_errorstage        ds      1
+                dend
 
 zp_sd_currentsector     = FW_ZP_BLOCKNUM
 zp_sd_address           = FW_ZP_IOPTR
@@ -55,14 +63,12 @@ sd_readsector           = sd_read_block
 ; and set up the variables ready for navigating the filesystem
 ; Trashes A, X, Y
 ; Returns C=1 on error
-                        global  fat32_init
+                global  fat32_init
 fat32_init:
-                        lda     #0
-                        tax                                                                                                                                                                                                                                               ; Read the MBR and extract pertinent information
-.clrvars                sta     fat32_fatstart,x
-                        inx
-                        cpx     #fat32_bytesremaining+4-fat32_fatstart
-                        bne     .clrvars
+                        ldx     #fat32_errorstage-fat32_fatstart
+.clrvars                stz     fat32_fatstart,x
+                        dex
+                        bpl     .clrvars
 
                         ; Sector 0
                         lda     #0
@@ -112,7 +118,9 @@ fat32_init:
                         cmp     #.FSTYPE_FAT32
                         beq     .foundpart
 
-.fail                   sec
+.fail                   lda     fat32_errorstage
+                        jsr     outbyte
+                        sec
                         rts
 .foundpart
                         ; Read the FAT32 BPB
@@ -411,6 +419,9 @@ fat32_readnextsector:
 .fail                   sec
                         rts
 
+; Prepare to read from root directory
+;
+; Point zp_sd_address at the dirent
                 global  fat32_openroot
 fat32_openroot:
                         ; Prepare to read the root directory
@@ -433,11 +444,11 @@ fat32_openroot:
                         clc
 .fail                   rts
 
+; Prepare to read from a file or directory based on a dirent
+;
+; Point zp_sd_address at the dirent
                 global  fat32_opendirent
 fat32_opendirent:
-                        ; Prepare to read from a file or directory based on a dirent
-                        ;
-                        ; Point zp_sd_address at the dirent
 
                         ; Remember file size in bytes remaining
                         ldy     #28
@@ -476,16 +487,17 @@ fat32_opendirent:
                         clc
                         rts
 
+; Read a directory entry from the open directory
+;
+; On exit the carry is set if there were no more directory entries.
+;
+; Otherwise, A is set to the file's attribute byte and
+; zp_sd_address points at the returned directory entry.
+; LFNs and empty entries are ignored automatically.
                 global fat32_readdirent
 fat32_readdirent:
-                        ; Read a directory entry from the open directory
-                        ;
-                        ; On exit the carry is set if there were no more directory entries.
-                        ;
-                        ; Otherwise, A is set to the file's attribute byte and
-                        ; zp_sd_address points at the returned directory entry.
-                        ; LFNs and empty entries are ignored automatically.
-
+                        stz     fat32_lfnbuffer ; no LFN
+.readnext
                         ; Increment pointer by 32 to point to next entry
                         clc
                         lda     zp_sd_address
@@ -495,7 +507,7 @@ fat32_readdirent:
                         adc     #0
                         sta     zp_sd_address+1
 
-                        ; If it's not at the end of the buffer, we have data already
+                        ; If it's not past the end of the buffer, we have data already
                         cmp     #>(fat32_readbuffer+$200)
                         bcc     .gotdata
 
@@ -519,8 +531,7 @@ fat32_readdirent:
 
 .gotdata
                         ; Check first character
-                        ldy     #0
-                        lda     (zp_sd_address),y
+                        lda     (zp_sd_address)
 
                         ; End of directory => abort
                         beq     .endofdirectory
@@ -534,17 +545,62 @@ fat32_readdirent:
                         lda     (zp_sd_address),y
                         and     #$3f
                         cmp     #$0f ; LFN => start again
-                        beq     fat32_readdirent
+                        bne     .notlfn
 
-                        ; Yield this result
+                        lda     (zp_sd_address)         ; get LFN index/flag
+                        bit     #$40                    ; new entry?
+                        beq     .copylfn                ; branch if not
+
+                        ldx     #0
+.clrlfn                 stz     fat32_lfnbuffer,x       ; fresh lfn
+                        dex
+                        bne     .clrlfn
+
+.copylfn                and     #$1f                    ; mask for 32 LFN entries
+                        beq     fat32_readdirent        ; index should not be zero, zero lfn keep reading
+                        dec                             ; zero based idx
+                        tax                             ; save in x
+                        asl                             ; * 2
+                        asl                             ; * 4
+                        sta     fat32_filename_lfn_idx  ; save * 4
+                        asl                             ; * 8
+                        clc
+                        adc     fat32_filename_lfn_idx  ; add for * 12
+                        sta     fat32_filename_lfn_idx  ; save * 12
+                        bcs     .readnext               ; skip entry if starts > 256 chars
+                        txa
+                        adc     fat32_filename_lfn_idx  ; add for * 13
+                        bcs     .readnext               ; skip entry if starts > 256 chars
+                        tax                             ; x = LFN index
+                        ldy     #1                      ; y = dirent byte
+.lfnloop                cpy     #$0b
+                        beq     .skip2byte
+                        cpy     #$0d
+                        beq     .skip1byte
+                        cpy     #$1a
+                        beq     .skip2byte
+                        lda     (zp_sd_address),y
+                        cmp     #$FF                    ; convert 0xFF to 0x00
+                        bne     .notpad
+                        lda     #$00
+.notpad                 sta     fat32_lfnbuffer,x
+                        inx
+.skip2byte              iny
+.skip1byte              iny
+                        cpy     #$20
+                        beq     .lfncopydone
+                        cpx     #$ff
+                        bne     .lfnloop
+.lfncopydone            bra     .readnext
+
+.notlfn                 ; Yield this result
                         clc
                         rts
 
+; Finds a particular directory entry. X,Y point to the 11-character filename to seek.
+; The directory should already be open for iteration.
                 global  fat32_finddirent
 fat32_finddirent:
-                        ; Finds a particular directory entry.                        X,Y point to the 11-character filename to seek.
-                        ; The directory should already be open for iteration.
-
                         ; Form ZP pointer to user's filename
                         stx     fat32_filenamepointer
                         sty     fat32_filenamepointer+1
@@ -552,27 +608,39 @@ fat32_finddirent:
                         ; Iterate until name is found or end of directory
 .direntloop
                         jsr     fat32_readdirent
-                        ldy     #10
-                        bcc     .comparenameloop
+                        bcc     .comparename
+
                         rts     ; with carry set
 
-.comparenameloop
-                        lda     (zp_sd_address),y
+.comparename            ;bra     .compareshort
+                        lda     fat32_lfnbuffer
+                        beq     .compareshort
+
+                        ldy     #0
+.comparelong            lda     fat32_lfnbuffer,y
+                        cmp     (fat32_filenamepointer),y
+                        bne     .direntloop ; no match
+                        tax
+                        beq     .foundit
+                        iny
+                        bne     .comparelong
+                        bra     .foundit
+
+.compareshort           ldy     #11-1
+.comparenameloop        lda     (zp_sd_address),y
                         cmp     (fat32_filenamepointer),y
                         bne     .direntloop ; no match
                         dey     
                         bpl     .comparenameloop
 
-                        ; Found it
-                        clc
+.foundit                clc
                         rts
 
+; Read a byte from an open file
+;
+; The byte is returned in A with C clear; or if end-of-file was reached, C is set instead
                 global fat32_file_readbyte
 fat32_file_readbyte:
-                        ; Read a byte from an open file
-                        ;
-                        ; The byte is returned in A with C clear; or if end-of-file was reached, C is set instead
-
                         sec
 
                         ; Is there any data to read at all?
@@ -611,7 +679,6 @@ fat32_file_readbyte:
 ; OLD                        bcs     .rts               ; this shouldn't happen
                         beq     .rts
                         bcs     .rts
-
 .gotdata
                         ldy     #0
                         lda     (zp_sd_address),y
@@ -623,29 +690,26 @@ fat32_file_readbyte:
                         inc     zp_sd_address+2
                         bne     .rts
                         inc     zp_sd_address+3
-
 .rts
                         rts
 
-
+; Read a whole file into memory. It's assumed the file has just been opened
+; and no data has been read yet.
+;
+; Also we read whole sectors, so data in the target region beyond the end of the
+; file may get overwritten, up to the next 512-byte boundary.
+;
+; And we don't properly support 64k+ files, as it's unnecessary complication given
+; the 6502's small address space
                 global  fat32_file_read
 fat32_file_read:
-                        ; Read a whole file into memory.                        It's assumed the file has just been opened
-                        ; and no data has been read yet.
-                        ;
-                        ; Also we read whole sectors, so data in the target region beyond the end of the
-                        ; file may get overwritten, up to the next 512-byte boundary.
-                        ;
-                        ; And we don't properly support 64k+ files, as it's unnecessary complication given
-                        ; the 6502's small address space
-
                         ; Round the size up to the next whole sector
                         lda     fat32_bytesremaining
-                        cmp     #1                                                                                                                                                                                                                                                                        ; set carry if bottom 8 bits not zero
+                        cmp     #1                      ; set carry if bottom 8 bits not zero
                         lda     fat32_bytesremaining+1
-                        adc     #0                                                                                                                                                                                                                                                                        ; add carry, if any
-                        lsr                                                                                                                                                                                                                                                                                                     ; divide by 2
-                        adc     #0                                                                                                                                                                                                                                                                        ; round up
+                        adc     #0                      ; add carry, if any
+                        lsr                             ; divide by 2
+                        adc     #0                      ; round up
 
                         ; No data?
                         beq     .done
@@ -662,15 +726,14 @@ fat32_file_read:
 
                         ; Advance fat32_address by 512 bytes
                         lda     fat32_address+1
-                        adc     #2                                                                                                                                                                                                                                                                        ; carry already clear
+                        adc     #2                      ; carry already clear
                         sta     fat32_address+1
 
-                        ldx     fat32_bytesremaining                                                ; note - actually loads sectors remaining
+                        ldx     fat32_bytesremaining    ; note - actually loads sectors remaining
                         dex
-                        stx     fat32_bytesremaining                                                ; note - actually stores sectors remaining
+                        stx     fat32_bytesremaining    ; note - actually stores sectors remaining
 
                         bne     .wholesectorreadloop
-
 .done
                         clc
                         rts
