@@ -540,6 +540,23 @@ fat32_readdirent:
                         cmp     #$e5
                         beq     fat32_readdirent
 
+                if 0
+
+                        lda     #<$0020
+                        sta     ZP_COUNT
+                        lda     #>$0020
+                        sta     ZP_COUNT+1
+                        lda     zp_sd_address
+                        sta     FW_ZP_TMPPTR
+                        lda     zp_sd_address+1
+                        sta     FW_ZP_TMPPTR+1
+                        jsr     examine
+                        lda     #$0d
+                        jsr     COUT
+                        lda     #$0a
+                        jsr     COUT
+
+                endif
                         ; Check attributes
                         ldy     #11
                         lda     (zp_sd_address),y

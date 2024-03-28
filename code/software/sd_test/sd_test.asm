@@ -13,9 +13,6 @@
 
                 include "defines.asm"
 
-                global ZP_COUNT
-ZP_COUNT        =       USER_ZP_START
-
         if      1
 PRINT           macro   msg
                 lda     #<\msg
@@ -36,6 +33,15 @@ PRINTR          macro   msg
                 endm
         endif
 
+                global ZP_COUNT
+
+        dsect
+                org     USER_ZP_START
+ZP_COUNT        ds      2
+print_dec_value ds      4
+        dend
+
+
 ; *******************************************************
 ; * Entry point for RAM code
 ; *******************************************************
@@ -46,13 +52,6 @@ PRINTR          macro   msg
 _start:
                 PRINT   RUNMSG
 
-                ; PRINT   SDSTAT
-                ; jsr     sd_check_status
-                ; php
-                ; jsr     res_msg
-                ; plp
-;                bcc     .skip_init
-
                 PRINT   SDINIT
                 jsr     sd_init
                 jsr     res_msg
@@ -60,133 +59,15 @@ _start:
                 rts
 .sdinitgood
 
-.skip_init:     lda     #$E3
-                ldx     #$00
-.clr_block:     sta     $1000,x
-                sta     $1100,x
-                dex
-                bne     .clr_block
-
-        if 0
-
-                lda     #<$1000
-                sta     FW_ZP_TMPPTR
-                lda     #>$1000
-                sta     FW_ZP_TMPPTR+1
-
-                lda     #$10
-                sta     ZP_COUNT
-                lda     #$00
-                sta     ZP_COUNT+1
-
-                jsr     examine
-; 00 20 00 00
-                lda     #$00
-                sta     FW_ZP_BLOCKNUM
-                lda     #$10
-                sta     FW_ZP_BLOCKNUM+1
-                lda     #$00
-                sta     FW_ZP_BLOCKNUM+2
-                lda     #$00
-                sta     FW_ZP_BLOCKNUM+3
-
-                lda     #<$1000
-                sta     FW_ZP_IOPTR
-                lda     #>$1000
-                sta     FW_ZP_IOPTR+1
-
-                PRINT   SDREAD
-                jsr     sd_read_block
-                jsr     res_msg
-
-                lda     #<$1000
-                sta     FW_ZP_TMPPTR
-                lda     #>$1000
-                sta     FW_ZP_TMPPTR+1
-
-                lda     #$10
-                sta     ZP_COUNT
-                lda     #$00
-                sta     ZP_COUNT+1
-
-                jsr     examine
-
-                PRINT   SDSTAT
-                jsr     sd_check_status
-                jsr     res_msg
-
-                ; lda     #<$1000
-                ; sta     FW_ZP_IOPTR
-                ; lda     #>$1000
-                ; sta     FW_ZP_IOPTR+1
-
-                ; lda     #"X"
-                ; sta     $1000
-                ; lda     #"a"
-                ; sta     $1001
-                ; lda     #"r"
-                ; sta     $1002
-                ; lda     #"k"
-                ; sta     $1003
-                ; inc     $1004
-
-                ; PRINT   SDWRITE
-                ; jsr     sd_write_block
-                ; jsr     res_msg
-
-;                PRINT   SDSTAT
-;                jsr     sd_check_status
-;                jsr     res_msg
-
-                lda     #<$1000
-                sta     FW_ZP_IOPTR
-                lda     #>$1000
-                sta     FW_ZP_IOPTR+1
-
-                PRINT   SDREAD
-                jsr     sd_read_block
-                jsr     res_msg
-
-                PRINT   SDSTAT
-                jsr     sd_check_status
-                jsr     res_msg
-
-                lda     #<$1000
-                sta     FW_ZP_TMPPTR
-                lda     #>$1000
-                sta     FW_ZP_TMPPTR+1
-
-                lda     #$10
-                sta     ZP_COUNT
-                lda     #$00
-                sta     ZP_COUNT+1
-
-                jsr     examine
-
-                PRINT   SDSTAT
-                jsr     sd_check_status
-                jsr     res_msg
-
-        endif
-
-                lda     #0
-                tax
-.clrit          sta     $1000,x
-                sta     $1100,x
-                sta     $0400,X
-                sta     $0500,x
-                inx
-                bne     .clrit
-
                 PRINT   FAT32INIT
                 jsr     fat32_init
                 jsr     res_msg
                 bcc     .fatinitgood
+                lda     fat32_errorstage
+                jsr     outbyte
                 rts
 .fatinitgood
 
-;                lda     fat32_errorstage
-;                jsr     outbyte
 
                 PRINT   FAT32OPENROOT
                 jsr     fat32_openroot
@@ -307,8 +188,8 @@ _start:
 .notlf          jsr     COUT
                 bra     .printloop
 
-.eof            
-                PRINT   EOFMSG                
+.eof
+                PRINT   EOFMSG
 .fnf
 file2:
 
@@ -542,7 +423,9 @@ showdir         jsr     fat32_readdirent
                 bra     .prsize
 .notdir         PRINT   FILEMSG
 
-.prsize         ldy     #$1c+3
+.prsize
+        if 0
+                ldy     #$1c+3
                 lda     (FW_ZP_IOPTR),y
                 jsr     outbyte
                 ldy     #$1c+2
@@ -554,6 +437,26 @@ showdir         jsr     fat32_readdirent
                 ldy     #$1c+0
                 lda     (FW_ZP_IOPTR),y
                 jsr     outbyte
+        else
+                ldy     #$1c+3
+                lda     (FW_ZP_IOPTR),y
+                sta     print_dec_value+3
+                ldy     #$1c+2
+                lda     (FW_ZP_IOPTR),y
+                sta     print_dec_value+2
+                ldy     #$1c+1
+                lda     (FW_ZP_IOPTR),y
+                sta     print_dec_value+1
+                ldy     #$1c+0
+                lda     (FW_ZP_IOPTR),y
+                sta     print_dec_value+0
+
+                lda     #10
+                sta     print_dec_width
+                lda     #" "
+                sta     print_dec_pad
+                jsr     print_dec
+        endif
 .prname
                 lda     #" "
                 jsr     COUT
@@ -664,6 +567,49 @@ an_rts:                rts
 BinTable:
                 db      $00, $01, $02, $03, $04, $80, $81, $82, $83, $84
 
+; print_dec - print 32 bit number in decimal (with optional width padding)
+;             based on very clever code from https://stardot.org.uk/forums/viewtopic.php?p=369724&sid=e71c30225371c64770ce43d15dea57f0#p369724
+; print_dec_value - 32-bit number to print (will be destroyed)
+; print_dec_pad - set to 0 for no leading padding or set to pad char (e.g., "0" or  " ")
+; print_dec_width - set padded width (will be exceeded if number doesn't fit)
+;
+                global  print_dec
+print_dec:
+                lda     #$0
+                tay
+.calcloop       sta     print_dec_temp,y
+                iny
+                clv
+                lda     #0
+                ldx     #31
+.loop           cmp     #5
+                bcc     .skip
+                sbc     #5+128
+                sec
+.skip           rol     print_dec_value
+                rol     print_dec_value+1
+                rol     print_dec_value+2
+                rol     print_dec_value+3
+                rol
+                dex
+                bpl     .loop
+                bvs     .calcloop
+                sta     print_dec_temp,y
+                tya
+                tax
+                lda     print_dec_pad
+                beq     .printloop2
+.printloop0     cpx     print_dec_width
+                bge     .printloop2
+                jsr     COUT
+                inx
+                bra     .printloop0
+.printloop2     lda     print_dec_temp,y
+                eor     #"0"
+                jsr     COUT
+                dey
+                bne    .printloop2
+                rts
 
 EXAMWIDTH       =       16
         global  examine
@@ -752,6 +698,9 @@ filename        asciiz  "library.properties"
 subdirname2     asciiz  "ANOTHER_SUB"
 filename2       asciiz  "VECTORS ASM"
 
+print_dec_pad   db      0
+print_dec_width db      8
+
 ; *******************************************************
 ; * Uninitialized data
 ; *******************************************************
@@ -760,3 +709,4 @@ benchcount      ds      2
 tempBinary      ds      2
 decimalResult   ds      5
 dummy           ds      1
+print_dec_temp        ds      10
