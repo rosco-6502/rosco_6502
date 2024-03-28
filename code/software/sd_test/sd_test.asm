@@ -694,7 +694,8 @@ EOLMSG          asciiz  $D, $A
 
 ;subdirname      asciiz  "ADAFR~53   "
 subdirname      asciiz  "Adafruit_ILI9341"
-filename        asciiz  "LiBrArY.PrOpErTiEs"
+;filename        asciiz  "LiBrArY.PrOpErTiEs"
+filename        asciiz  "readme.md"
 subdirname2     asciiz  "ANOTHER_SUB"
 filename2       asciiz  "VECTORS ASM"
 
