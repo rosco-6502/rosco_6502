@@ -42,6 +42,11 @@ LF                      =       $0A                     ; Line Feed
 ESC                     =       $1B                     ; ESC key
 
 WOZMON:
+                        LDA     #<MONMSG
+                        LDY     #>MONMSG
+                        JSR     SHWMSG                  ; Show Welcome
+                        STZ     XAML
+                        STZ     XAMH
                         LDA     #$00
                         TAX
                         TAY
@@ -54,10 +59,28 @@ SOFTRESET:
                         PHA
                         CLD                             ; Clear decimal arithmetic mode.
                         CLI
-                        LDA     #<MONMSG
-                        LDY     #>MONMSG
-                        JSR     SHWMSG                  ; Show Welcome
+                        LDA     BANK_SET
+                        STA     CRCCHECK
+                        TSX
 BRKCONT:
+                        JSR     CRLF
+                        LDA     XAMH
+                        JSR     PRBYTE
+                        LDA     XAML
+                        JSR     PRBYTE
+                        LDA     #':'
+                        JSR     ECHO
+                        LDA     #'B'
+                        JSR     PRREGNAME
+                        LDA     CRCCHECK                ; saved BANK
+                        JSR     PRBYTE
+                        LDA     #'S'
+                        JSR     PRREGNAME
+                        TXA
+                        TXA
+                        CLC
+                        ADC     #4                      ; skip A X Y P
+                        JSR     PRBYTE
                         LDA     #'A'
                         JSR     PRREGNAME
                         PLA
@@ -101,8 +124,12 @@ NOTCR:                  CMP     #BS                     ; Backspace?
                         BEQ     BACKSPACE               ; Yes.
                         INY                             ; Advance text index.
                         BPL     NEXTCHAR                ; Auto ESC if > 127.
-ESCAPE:                 LDA     #'?'                    ; "?".
+ESCAPE:                 LDA     #'\'                    ; "\".
                         JSR     ECHO                    ; Output it.
+                        BRA     GETLINE
+ERROR:                  LDA     #<HELPMSG
+                        LDY     #>HELPMSG
+                        JSR     SHWMSG                  ; Show help message
 GETLINE:                JSR     CRLF
                         JSR     CRLF
                         LDA     #'\'                    ; "\".
@@ -172,7 +199,7 @@ HEXSHIFT:               ASL                             ; Hex digit left, MSB to
 NOTHEX:                 CPY     YSAV                    ; Check if L, H empty (no hex digits).
                         BNE     NOESCAPE                ; Branch out of range, had to improvise...
 ;                        JSR     CRLF
-                        JMP     ESCAPE                  ; Yes, generate ESC sequence
+                        JMP     ERROR                   ; Yes, generate ESC sequence
 
 RUN:                    JSR     CRLF
                         JSR     ACTRUN                  ; JSR to the Address we want to run
@@ -186,7 +213,7 @@ ACTRUN:                 LDA     REGP
                         JMP     (XAML)                  ; Run at current XAM index
 
 LOADINT:                JSR     LOADINTEL               ; Load the Intel code
-                        JMP     GETLINE                 ; When returned from the program, reset EWOZ
+                        JMP     SOFTRESET               ; When returned from the program, reset EWOZ
 
 NOESCAPE:               BIT     MODE                    ; Test MODE byte.
                         BVC     NOTSTOR                 ; B6=0 STOR, 1 for XAM and BLOCK XAM
@@ -259,23 +286,14 @@ WOZHITBRK:
                         LDA     $105,X                  ; return address L
                         SEC
                         SBC     #2
-                        STA     STL
+                        STA     XAML
                         LDA     $106,X                  ; return address H
                         BCS     NOBRKDECHI
                         DEC
-NOBRKDECHI:             JSR     PRBYTE
-                        LDA     STL
-                        JSR     PRBYTE
-                        LDA     #'B'
-                        JSR     PRREGNAME
-                        LDA     CRCCHECK                ; saved BANK
-                        JSR     PRBYTE
-                        LDA     #'S'
-                        JSR     PRREGNAME
-                        TXA
-                        CLC
-                        ADC     #6                      ; skip A X Y P RL RH to point at BRK
-                        JSR     PRBYTE
+NOBRKDECHI:             STA     XAMH
+                        INX
+                        INX     ; skip RL RH to point at BRK
+
                         JMP     BRKCONT
 
 PRREGNAME:              PHA
@@ -378,8 +396,8 @@ BADCRC:                 LDA     #'X'                    ; Flag CRC error
                         JSR     ECHO                    ; Print it to indicate activity
                         JMP     INTELLINE               ; Process next line
 INTELDONE:
-                        LDA     #<TRDONMSG              ; Load Done Message
-                        LDY     #>TRDONMSG
+                        LDA     #<TRDONEMSG             ; Load Done Message
+                        LDY     #>TRDONEMSG
                         JSR     SHWMSG                  ; Show Done
 
                         LDA     CRCCHECK                ; Test if everything is OK
@@ -440,11 +458,16 @@ SHWMSG1:                LDA     (L),Y
 .DONE                   RTS
 
 ;-------------------------------------------------------------------------
-FLAGNAMES               ascii   "CZIDB1VN"
-MONMSG                  asciiz  $0D, "rosco_6502 EWozMon:"
-BRKMSG                  asciiz  $0D, $0D, $07, "BRK @"
-TRBEGMSG                asciiz  $0D, "Start Intel hex file import:", $0D
-TRDONMSG                asciiz  $0D, "Done, hex import"
-TROKMSG                 asciiz  "ed OK.", $0D, "Start:"
-TROKMSG2                asciiz  " Bytes:"
-TRBADMSG                asciiz  " had checksum ERRORs!", $07, $0D
+FLAGNAMES               db      "CZIDB1VN"
+MONMSG                  db      $0D, "rosco_6502 EWozMon", $0D, 0
+BRKMSG                  db      $0D, $0D, $07, "BRK @", 0
+TRBEGMSG                db      $0D, "Start Intel hex file load:", $0D, 0
+TRDONEMSG               db      $0D, "Load ", 0
+TRBADMSG                db      "failed with checksum error!", $07, $0D, 0
+TROKMSG                 db      "successful. Start:", 0
+TROKMSG2                db      " Bytes:", 0
+HELPMSG                 db      "?", $0D
+                        db      "L                Load Intel hex", $0D
+                        db      "#### [.####]     Examine addr",$0D
+                        db      "####:## [## ...] Modify addr",$0D
+                        db      "####R            Run addr (with AXYP at 20.23)", 0

@@ -1,6 +1,6 @@
 VASM=vasm6502_oldstyle
 VLINK=vlink
-ASFLAGS=-c02 -Fvobj -quiet 
+ASFLAGS=-quiet -wdc02 -opt-branch -Fvobj
 LDFLAGS=-brawbin1
 DA65=da65
 
