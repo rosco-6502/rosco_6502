@@ -441,13 +441,13 @@ showdir         jsr     fat32_readdirent
                 ldy     #$1c+3
                 lda     (FW_ZP_IOPTR),y
                 sta     print_dec_value+3
-                ldy     #$1c+2
+                dey
                 lda     (FW_ZP_IOPTR),y
                 sta     print_dec_value+2
-                ldy     #$1c+1
+                dey
                 lda     (FW_ZP_IOPTR),y
                 sta     print_dec_value+1
-                ldy     #$1c+0
+                dey
                 lda     (FW_ZP_IOPTR),y
                 sta     print_dec_value+0
 
@@ -460,7 +460,7 @@ showdir         jsr     fat32_readdirent
 .prname
                 lda     #" "
                 jsr     COUT
-
+        if 0    ; SFN
                 ldy     #0
 .showname       lda     (FW_ZP_IOPTR),y
                 jsr     COUT
@@ -474,7 +474,7 @@ showdir         jsr     fat32_readdirent
                 iny
                 cpy     #11
                 bne     .showname2
-
+        endif
                 lda     #" "
                 jsr     COUT
 
@@ -694,7 +694,7 @@ EOLMSG          asciiz  $D, $A
 
 ;subdirname      asciiz  "ADAFR~53   "
 subdirname      asciiz  "Adafruit_ILI9341"
-filename        asciiz  "library.properties"
+filename        asciiz  "LiBrArY.PrOpErTiEs"
 subdirname2     asciiz  "ANOTHER_SUB"
 filename2       asciiz  "VECTORS ASM"
 

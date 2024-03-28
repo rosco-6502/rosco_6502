@@ -540,8 +540,11 @@ fat32_readdirent:
                         cmp     #$e5
                         beq     fat32_readdirent
 
-                if 0
-
+                if 0    ; dump raw dirent
+                        lda     #$0d
+                        jsr     COUT
+                        lda     #$0a
+                        jsr     COUT
                         lda     #<$0020
                         sta     ZP_COUNT
                         lda     #>$0020
@@ -551,10 +554,6 @@ fat32_readdirent:
                         lda     zp_sd_address+1
                         sta     FW_ZP_TMPPTR+1
                         jsr     examine
-                        lda     #$0d
-                        jsr     COUT
-                        lda     #$0a
-                        jsr     COUT
 
                 endif
                         ; Check attributes
@@ -562,7 +561,7 @@ fat32_readdirent:
                         lda     (zp_sd_address),y
                         and     #$3f
                         cmp     #$0f ; LFN => start again
-                        bne     .notlfn
+                        bne     .returnent
 
                         lda     (zp_sd_address)         ; get LFN index/flag
                         bit     #$40                    ; new entry?
@@ -610,8 +609,56 @@ fat32_readdirent:
                         bne     .lfnloop
 .lfncopydone            bra     .readnext
 
-.notlfn                 ; Yield this result
-                        clc
+.returnent
+                if 1    ; create LFN from SFN
+                        ldy     fat32_lfnbuffer         ; already have LFN for this entry?
+                        bne     .haslfn                 ; branch if yes
+                        pha                             ; save attributes
+                        ldy     #$0c                    ; see https://en.wikipedia.org/wiki/Design_of_the_FAT_file_system#VFAT_long_file_names
+                        lda     (zp_sd_address),y       ; dirent[$0C] has SFN case flags [5]=ext lowercase, [4]=base lowercase
+                        asl                             ; shift so N=lower ext flag, V=lower ext flag for BIT test
+                        asl
+                        asl
+                        sta     FW_ZP_IOTEMP
+                        ldx     #0
+                        ldy     #0
+.makelfnbase            lda     (zp_sd_address),y
+                        iny
+                        cmp     #' '
+                        beq     .donebase
+                        bit     FW_ZP_IOTEMP
+                        bvc     .nobaselower
+                        jsr     tolower
+.nobaselower            sta     fat32_lfnbuffer,x
+                        inx
+                        cpy     #8
+                        bne     .makelfnbase
+.donebase               pla
+                        cmp     #$08                    ; if volume, don't add '.'
+                        pha
+                        beq     .makelfnext
+                        ldy     #8
+                        lda     (zp_sd_address),y
+                        cmp     #' '
+                        beq     .donelfn
+                        lda     #'.'
+                        sta     fat32_lfnbuffer,x
+                        inx
+.makelfnext             lda     (zp_sd_address),y
+                        iny
+                        cmp     #' '
+                        beq     .donelfn
+                        bit     FW_ZP_IOTEMP
+                        bpl     .noextlower
+                        jsr     tolower
+.noextlower             sta     fat32_lfnbuffer,x
+                        inx
+                        cpy     #8+3
+                        bne     .makelfnext
+.donelfn                stz     fat32_lfnbuffer,x
+                        pla                             ; reload attribute
+                endif
+.haslfn                 clc
                         rts
 
 ; Finds a particular directory entry. X,Y point to the 11-character filename to seek.
@@ -635,8 +682,12 @@ fat32_finddirent:
 
                         ldy     #0
 .comparelong            lda     fat32_lfnbuffer,y
-                        cmp     (fat32_filenamepointer),y
-                        bne     .direntloop ; no match
+                        jsr     tolower
+                        sta     FW_ZP_IOTEMP
+                        lda     (fat32_filenamepointer),y
+                        jsr     tolower
+                        cmp     FW_ZP_IOTEMP
+                        bne     .direntloop     ; no match
                         tax
                         beq     .foundit
                         iny
@@ -645,13 +696,26 @@ fat32_finddirent:
 
 .compareshort           ldy     #11-1
 .comparenameloop        lda     (zp_sd_address),y
-                        cmp     (fat32_filenamepointer),y
-                        bne     .direntloop ; no match
+                        jsr     tolower
+                        sta     FW_ZP_IOTEMP
+                        lda     (fat32_filenamepointer),y
+                        jsr     tolower
+                        cmp     FW_ZP_IOTEMP
+                        bne     .direntloop     ; no match
                         dey     
                         bpl     .comparenameloop
 
 .foundit                clc
                         rts
+
+; conver US ASCII uppercase to lowercase
+tolower                 cmp     #'A'
+                        bcc     .noconvert
+                        cmp     #'Z'+1
+                        bcs     .noconvert
+                        clc
+                        adc     #$20
+.noconvert              rts
 
 ; Read a byte from an open file
 ;
