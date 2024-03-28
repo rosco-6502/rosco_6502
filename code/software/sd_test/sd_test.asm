@@ -609,9 +609,11 @@ showdir         jsr     fat32_readdirent
 .donedir        rts
 
                 global  outbyte
-outbyte:        pha
+outbyte:        php
+                pha
                 jsr     outbyte2
                 pla
+                plp
                 rts
 outbyte2:       pha                     ; save a for lsd.
                 lsr

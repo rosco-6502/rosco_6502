@@ -84,8 +84,7 @@ sd_init:
                         trace   'I'
                         jsr     sd_check_status         ; check if already initialized
                         bcs     .doinit                 ; only init if status failed
-                        jsr     sd_assert               ; else, assert
-                        jmp     .cmd58_ocr              ; and read OCR for SDHC flag
+                        rts
 .doinit                 ldx     #OP_SPI_CS|OP_SPI_COPI  ; CS = HI (de-assert)
                         stx     DUA_OPR_HI
                         trace   '~'
@@ -130,7 +129,7 @@ sd_init:
                         ldx     #>sd_69_acmd41_op_cond
                         jsr     sd_send_sd_cmd          ; send cmd 41
                         cmp     #SD_R1_READY_STATE
-                        beq     .cmd58_ocr
+                        beq     .cmd16_blklen
                         cmp     #SD_R1_IDLE_STATE
                         bne     .retry_init
                         inc     sd_init_timeout
@@ -144,34 +143,12 @@ sd_init:
                         dec
                         bne     .delayloop
                         bra     .cmd55_app_cmd
-.cmd58_ocr              lda     #<sd_7A_cmd58_read_ocr
-                        ldx     #>sd_7A_cmd58_read_ocr
-                        jsr     sd_send_sd_cmd
-                        cmp     #SD_R1_READY_STATE
-                        bne     sd_deassert_fail
-                        trace   ':'
-                        jsr     spi_read_byte
-                        tracea
-                        sta     sd_sdhc_flag            ; save, bit 6 = SDHC flag
-                if TRACE
-                        and     #$40
-                        cmp     #$40
-                        lda     #"+"
-                        bcs     .has_sdhc
-                        lda     #"-"
-.has_sdhc               jsr     COUT
-                endif
-                        jsr     spi_read_byte
-                        tracea
-                        jsr     spi_read_byte
-                        tracea
-                        jsr     spi_read_byte
-                        tracea
 .cmd16_blklen           lda     #<sd_50_cmd16_blocklen
                         ldx     #>sd_50_cmd16_blocklen
                         jsr     sd_send_sd_cmd
                         cmp     #SD_R1_READY_STATE
-                        beq     sd_deassert_good
+                        bne     sd_deassert_fail
+                        jmp     sd_check_status2
 
 sd_assert               ldx     #OP_SPI_CS              ; CS = LO (assert)
                         stx     DUA_OPR_LO
@@ -186,20 +163,41 @@ sd_deassert_fail        sec
 
 ; sd_check_status - check if SD card is present, initialized and ready
 ; trashes A, X, Y
-; returns C set if SD not present, initialized or other error
+; returns C set if SD not present, not initialized or other error
                 global  sd_check_status
 sd_check_status:
                         trace   'S'
                         jsr     sd_assert
-                        lda     #<sd_4D_cmd13_status
-                        ldx     #>sd_4D_cmd13_status
+sd_check_status2:       lda     #<sd_7A_cmd58_read_ocr
+                        ldx     #>sd_7A_cmd58_read_ocr
                         jsr     sd_send_sd_cmd
                         tax                             ; test result
                         bne     sd_deassert_fail
+                        trace   ':'
                         jsr     spi_read_byte
                         tracea
-                        ; tax                             ; test result
-                        bne     sd_deassert_fail
+                        sta     sd_sdhc_flag            ; save, bit 6 = SDHC flag
+                        sta     FW_ZP_IOTEMP            ; save for all-zeros check
+                if TRACE
+                        and     #$40
+                        cmp     #$40
+                        lda     #"+"                    ; + for SDHC
+                        bcs     .has_sdhc
+                        lda     #"-"                    ; - for SD (shifts blocknum << 9)
+.has_sdhc               jsr     COUT
+                endif
+                        jsr     spi_read_byte
+                        tracea
+                        ora     FW_ZP_IOTEMP
+                        sta     FW_ZP_IOTEMP
+                        jsr     spi_read_byte
+                        tracea
+                        ora     FW_ZP_IOTEMP
+                        sta     FW_ZP_IOTEMP
+                        jsr     spi_read_byte
+                        tracea
+                        ora     FW_ZP_IOTEMP            ; test result for all zero response (no pull-up on SD CIPO)
+                        beq     sd_deassert_fail
 sd_deassert_good        clc
                         trace   '^'
 sd_deassert             ldx     #OP_SPI_CS|OP_SPI_COPI ; CS,COPI = HI (de-assert)
@@ -430,7 +428,6 @@ sd_77_cmd55_app_cmd     db      $40|55,$00,$00,$00,$00,$FF      ; $77=APP_CMD
 sd_69_acmd41_op_cond    db      $40|41,$40,$00,$00,$00,$FF      ; $69=SD_SEND_OP_COND
 sd_7A_cmd58_read_ocr    db      $40|58,$40,$00,$00,$00,$FF      ; $7A=READ_OCR
 sd_50_cmd16_blocklen    db      $40|16,$00,$00,$02,$00,$FF      ; $50=SET_BLOCKLEN
-sd_4D_cmd13_status      db      $40|13,$00,$00,$00,$00,$FF      ; $4D=SEND_STATUS
 
 ; *******************************************************
 ; * Uninitialized data
