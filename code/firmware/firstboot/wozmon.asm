@@ -468,6 +468,6 @@ TROKMSG                 db      "successful. Start:", 0
 TROKMSG2                db      " Bytes:", 0
 HELPMSG                 db      "?", $0D
                         db      "L                Load Intel hex", $0D
-                        db      "#### [.####]     Examine addr",$0D
-                        db      "####:## [## ...] Modify addr",$0D
+                        db      "#### [.####]     Examine mem",$0D
+                        db      "####:## [## ...] Modify mem",$0D
                         db      "####R            Run addr (with AXYP at 20.23)", 0
