@@ -91,9 +91,9 @@ system_reset:
                         lda     #$05                    ; Enable TX/RX port B
                         sta     DUA_CRB
 
-                        stz     DUA_OPCR                ; set OP to normal outputs (red LED on)
+                        stz     DUA_OPCR                ; set OP to normal outputs
 
-                        lda     #OP_LED_R
+                        lda     #OP_LED_R|OP_LED_G
                         sta     DUA_OPR_S               ; flash red LED
 
                         ; Set up timer tick
@@ -127,7 +127,7 @@ system_reset:
                         sta     USER_TICK
                         stz     USER_TICK+1
                         stz     USER_TICK+2
-                        lda     #BLINKCOUNT             ; set initial tick count
+                        lda     #$80|BLINKCOUNT             ; set initial tick count
                         sta     BLINKCNT
                         stz     BLINKCNT
                         stz     TICK100HZ               ; clear timer
