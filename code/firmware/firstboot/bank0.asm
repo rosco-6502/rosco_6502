@@ -92,6 +92,7 @@ system_reset:
                         sta     DUA_CRB
 
                         stz     DUA_OPCR                ; set OP to normal outputs (red LED on)
+
                         lda     #OP_LED_R
                         sta     DUA_OPR_S               ; flash red LED
 
@@ -133,49 +134,17 @@ system_reset:
                         stz     TICK100HZ+1
                         stz     TICK100HZ+2
 
+                        cli                             ; Enable interrupts
+
                         ; Do the banner
                         lda     #<SZ_BANNER0
                         ldx     #>SZ_BANNER0
                         jsr     PRINT_SZ
 
-; this snippet from http://forum.6502.org/viewtopic.php?t=485#p55512 (and comes from WDC manual)
-; CHECK PROCESSOR TYPE
-; MINUS = 6502
-; CARRY CLEAR = 65C02
-; CARRY SET = 65816
-.cpucheck
-                        sed                     ; Trick with decimal mode used
-                        lda     #$99            ; set negative flag
-                        clc
-                        adc     #$01            ; add 1 to get new accum value of 0
-                        bmi     .donecheck      ; branch if 0 does not clear negative flag: 6502
-                        ; else 65C02 or 65816 if neg flag cleared by decimal-mode arith
-                        clc
-                        db      $FB ; 65816 XCE ; OK to execute unimplemented C02 opcodes
-                        bcc     .donecheck      ; branch if didn’t do anything:65C02
-                        db      $FB ; 65816 XCE ; switch back to emulation mode
-                        sec                     ; set carry
-.donecheck              cld                     ; binary
-
-                        bpl     .cmos65
-                        lda     #<M6502
-                        ldx     #>M6502
-                        bra     .syscont
-.cmos65                 bcc     .isw65c02s
-                        lda     #<W65C816S
-                        ldx     #>W65C816S
-                        bra     .syscont
-.isw65c02s              lda     #<W65C02S
-                        ldx     #>W65C02S
-.syscont                jsr     PRINT_SZ
                         ; print system info
                         lda     #<SYSINFO0
                         ldx     #>SYSINFO0
                         jsr     PRINT_SZ
-
-                        lda     #OP_LED_R
-                        sta     DUA_OPR_C               ; red LED off
-                        cli                             ; Enable interrupts
 
                         stz     FW_ZP_TMPPTR
                         stz     FW_ZP_TMPPTR+1
@@ -214,6 +183,9 @@ system_reset:
                         lda     #<SYSINFO1
                         ldx     #>SYSINFO1
                         jsr     PRINT_SZ
+
+                        lda     #OP_LED_R
+                        sta     DUA_OPR_C               ; red LED off
 
                         ; check if 8KB or 32KB (8KBx4 banks) of ROM
                         lda     #$80|(3<<BANK_ROM_B)
@@ -335,13 +307,10 @@ SZ_BANNER2              db      " ___ ___ ___ ___ ___      |  _| __|   |__ |", $
 SZ_BANNER3              db      "|  _| . |_ -|  _| . |     | . |__ | | | __|", $D, $A
 SZ_BANNER4              db      "|_| |___|___|___|___|_____|___|___|___|___|", $D, $A
 SZ_BANNER5              db      "                    |_____|", $1B, "[1;37m System ", $1B, "[1;30m0.02.DEV", $1B, "[0m", $D, $A, $D, $A, 0
-M6502                   db      "6502", 0
-W65C02S                 db      "W65C02S", 0
-W65C816S                db      "W65C816S", 0
-SYSINFO0                db      " CPU @ ", 0
+SYSINFO0                db      "W65C02S CPU @ ", 0
 SYSINFO1                db      "MHz with 16KB+16x32KB RAM and ", 0
 SYSINFO2                db      "x8KB ROM", $D, $A, 0
-BCFAILED                db      $1B, "[0;37mRAM Banks 0-F ", $1B, "[1;31mfailed", $1B, "[0m", $D, $A, 0
-BCPASSED                db      $1B, "[0;37mRAM Banks 0-F ", $1B, "[1;32mpassed", $1B, "[0m", $D, $A, 0
-EBANK                   db      $1B, "[0;37mROM Bank   #0 ", $1B, "[1;32mpassed", $1B, "[0m (BIOS+Monitor)", $D, $A, 0
-PBANK                   db      $1B, "[0;37mMemory checks ", $1B, "[1;32mpassed", $1B, "[0m", $D, $A, 0
+BCFAILED                db      $1B, "[0;37mRAM Banks 0-15 ", $1B, "[1;31mfailed", $1B, "[0m", $D, $A, 0
+BCPASSED                db      $1B, "[0;37mRAM Banks 0-15 ", $1B, "[1;32mpassed", $1B, "[0m", $D, $A, 0
+EBANK                   db      $1B, "[0;37mROM Bank    #0 ", $1B, "[1;32mpassed", $1B, "[0m (BIOS+Monitor)", $D, $A, 0
+PBANK                   db      $1B, "[0;37mMemory checks: ", $1B, "[1;32mpassed", $1B, "[0m", $D, $A, 0

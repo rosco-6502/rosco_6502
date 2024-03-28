@@ -62,4 +62,4 @@ bank_init:
 ; *******************************************************
                 section .bank3.rodata
 
-EBANK                   db      $1B, "[0;37m    Bank   #3 ", $1B, "[1;32mpassed", $1B, "[0m (unused)", $D, $A, 0
+EBANK                   db      $1B, "[0;37m    Bank    #3 ", $1B, "[1;32mpassed", $1B, "[0m (unused)", $D, $A, 0
