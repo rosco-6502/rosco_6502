@@ -108,7 +108,7 @@ COUT                    ds      3               ; JMP to current char output (ou
 CIN                     ds      3               ; JMP to current char input (C set when char returned in A)
 
 USER_TICK               ds      3               ; 100 Hz user routine (JMP or RTS)
-TICKCNT                 ds      1               ; LED tick count (high bit is LED state)
+BLINKCNT                 ds      1              ; LED tick count (high bit is LED state)
 TICK100HZ               ds      3               ; free incrementing 24-bit 100Hz counter (L/M/H)
 
                 assert  *<=$0380         ; all firmware use should end before $0380

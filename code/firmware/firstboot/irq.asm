@@ -34,7 +34,7 @@ irq_handler:
                         and     #$10                    ; check "fake" B status bit (only in P pushed on stack)
                         bne     brk_handler             ; if B = 1, call BRK handler (EWozMon)
 
-                        ldx     TICKCNT                 ; Get tick count
+                        ldx     BLINKCNT                ; Get tick count
                         dex                             ; Decrement it
                         txa                             ; copy new count to A
                         asl                             ; shift out high bit
@@ -51,7 +51,7 @@ irq_handler:
 .turnon                 ldx     #$80|BLINKCOUNT         ; Reset tick count OR'd with on flag
                         sta     DUA_OPR_S               ; Send command
 
-.done                   stx     TICKCNT                 ; Store X as the new tick count
+.done                   stx     BLINKCNT                ; Store X as the new tick count
 
                         inc     TICK100HZ
                         bne     .nohitick
