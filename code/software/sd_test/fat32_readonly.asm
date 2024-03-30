@@ -32,12 +32,21 @@
 
                 global  fat32_address
                 global  fat32_bytesremaining
-                global  fat32_errorstage
+                global  fat32_errorcode
 
                 global  fat32_lfnbuffer
 
-fat32_readbuffer        = $0400
-fat32_lfnbuffer         = $0200
+fat32_readbuffer        =       $0400
+fat32_lfnbuffer         =       $0200
+
+FAT32_NO_ERR            =       0
+FAT32_MBR_ERR           =       1       ; $55AA boot signature check
+FAT32_PARTITION_ERR     =       2       ; FAT32 LBA partition not found
+FAT32_FSBPB_ERR         =       3       ; FAT32 BPB signature check
+FAT32_FSROOT_ERR        =       3       ; FAT32 RootEntCnt check
+FAT32_FSTOTSEC_ERR      =       3       ; FAT32 TotalSec16 check
+FAT32_FSSECSIZE_ERR     =       3       ; FAT32 sector size == 512 check
+FAT32_MEDIA_ERR         =       16
 
                 dsect
                         org     USER_ZP_START+$10
@@ -52,7 +61,7 @@ fat32_nextcluster       ds      4
 fat32_bytesremaining    ds      4
 fat32_filenamepointer   =       fat32_bytesremaining    ; only used when searching for a file
 fat32_filename_lfn_idx  =       fat32_bytesremaining+2    ; only used when searching for a file
-fat32_errorstage        ds      1
+fat32_errorcode         ds      1
                 dend
 
 zp_sd_currentsector     = FW_ZP_BLOCKNUM
@@ -65,7 +74,7 @@ sd_readsector           = sd_read_block
 ; Returns C=1 on error
                 global  fat32_init
 fat32_init:
-                        ldx     #fat32_errorstage-fat32_fatstart
+                        ldx     #fat32_errorcode-fat32_fatstart
 .clrvars                stz     fat32_fatstart,x
                         dex
                         bpl     .clrvars
@@ -85,9 +94,12 @@ fat32_init:
 
                         ; Do the read
                         jsr     sd_readsector
-                        bcs     .fail
+                        bcc     .readokay
+.mediaerr               lda     #FAT32_MEDIA_ERR
+                        sta     fat32_errorcode
+                        bra     .fail
 
-                        inc     fat32_errorstage ; stage 1 = boot sector signature check
+.readokay               inc     fat32_errorcode ; stage 1 = FAT32_MBR_ERR boot sector signature check
 
                         ; Check some things
                         lda     fat32_readbuffer+510 ; Boot sector signature 55
@@ -97,30 +109,28 @@ fat32_init:
                         cmp     #$aa
                         bne     .fail
 
-                        inc     fat32_errorstage ; stage 2 = finding partition
+                        inc     fat32_errorcode ; stage 2 = FAT32_PARTITION_ERR find FAT32 LBA partition
 
                         ; Find a FAT32 partition
-.FSTYPE_FAT32 = 12
+.FSTYPE_FAT32LBA = 12
                         ldx     #0
                         lda     fat32_readbuffer+$1c2,x
-                        cmp     #.FSTYPE_FAT32
+                        cmp     #.FSTYPE_FAT32LBA
                         beq     .foundpart
                         ldx     #16
                         lda     fat32_readbuffer+$1c2,x
-                        cmp     #.FSTYPE_FAT32
+                        cmp     #.FSTYPE_FAT32LBA
                         beq     .foundpart
                         ldx     #32
                         lda     fat32_readbuffer+$1c2,x
-                        cmp     #.FSTYPE_FAT32
+                        cmp     #.FSTYPE_FAT32LBA
                         beq     .foundpart
                         ldx     #48
                         lda     fat32_readbuffer+$1c2,x
-                        cmp     #.FSTYPE_FAT32
+                        cmp     #.FSTYPE_FAT32LBA
                         beq     .foundpart
 
-.fail                   lda     fat32_errorstage
-                        jsr     outbyte
-                        sec
+.fail                   sec
                         rts
 .foundpart
                         ; Read the FAT32 BPB
@@ -134,9 +144,9 @@ fat32_init:
                         sta     zp_sd_currentsector+3
 
                         jsr     sd_readsector
-                        bcs     .fail
+                        bcs     .mediaerr
 
-                        inc     fat32_errorstage ; stage 3 = BPB signature check
+                        inc     fat32_errorcode ; stage 3 = FAT32_FILESYS_ERR BPB signature check
 
                         ; Check some things
                         lda     fat32_readbuffer+510 ; BPB sector signature 55
@@ -146,19 +156,19 @@ fat32_init:
                         cmp     #$aa
                         bne     .fail
 
-                        inc     fat32_errorstage ; stage 4 = RootEntCnt check
+                        inc     fat32_errorcode ; stage 4 = FAT32_FSROOT_ERR RootEntCnt check
 
                         lda     fat32_readbuffer+17 ; RootEntCnt should be 0 for FAT32
                         ora     fat32_readbuffer+18
                         bne     .fail
 
-                        inc     fat32_errorstage ; stage 5 = TotSec16 check
+                        inc     fat32_errorcode ; stage 5 = FAT32_FSTOTSEC_ERR TotSec16 check
 
                         lda     fat32_readbuffer+19 ; TotSec16 should be 0 for FAT32
                         ora     fat32_readbuffer+20
                         bne     .fail
 
-                        inc     fat32_errorstage ; stage 6 = SectorsPerCluster check
+                        inc     fat32_errorcode ; stage 6 = FAT32_FSSECSIZE_ERR SectorsPerCluster check
 
                         ; Check bytes per filesystem sector, it should be 512 for any SD card that supports FAT32
                         lda     fat32_readbuffer+11 ; low byte should be zero
@@ -222,9 +232,11 @@ fat32_init:
                         clc
                         rts
 
-
+; fat32_seekcluster
+;
+; Gets ready to read fat32_nextcluster, and advances it according to the FAT
 fat32_seekcluster:
-                        ; Gets ready to read fat32_nextcluster, and advances it according to the FAT
+                        stz     fat32_errorcode
 
                         ; FAT sector = (cluster*4) / 512 = (cluster*2) / 256
                         lda     fat32_nextcluster
@@ -264,6 +276,8 @@ fat32_seekcluster:
                         jsr     sd_readsector
                         bcc     .readok
                         ; sec
+                        lda     #FAT32_MEDIA_ERR
+                        sta     fat32_errorcode
                         rts
 .readok
                         ; Before using this FAT data, set currentsector ready to read the cluster itself
@@ -370,6 +384,8 @@ fat32_seekcluster:
 ; OLD: On return, carry is clear if data was read, or set if the cluster chain has ended.
 ; NEW: On return, C set on error.  Z is clear if data was read (BNE), or Z set if the cluster chain has ended (BEQ).
 fat32_readnextsector:
+                        stz     fat32_errorcode
+
                         ; Maybe there are pending sectors in the current cluster
                         lda     fat32_pendingsectors
                         bne     .readsector
@@ -391,10 +407,14 @@ fat32_readnextsector:
 
                         ; Read the sector
                         jsr     sd_readsector
-                        bcs     .fail
+                        bcc     .readokay
+
+                        lda     #FAT32_MEDIA_ERR
+                        sta     fat32_errorcode
+                        bra     .fail
 
                         ; Advance to next sector
-                        inc     zp_sd_currentsector
+.readokay               inc     zp_sd_currentsector
                         bne     .sectorincrementdone
                         inc     zp_sd_currentsector+1
                         bne     .sectorincrementdone
@@ -402,21 +422,22 @@ fat32_readnextsector:
                         bne     .sectorincrementdone
                         inc     zp_sd_currentsector+3
 .sectorincrementdone
-
                         ; OLD: Success - clear carry and return
-;                        clc
                         ; NEW: Success - clear Z and return NE
                         lda     #$FF
+                        clc
+                        rts
+
+                        ; error - set carry and return (also EQ for end of chain)
+.fail                   lda     #$00
+                        sec
                         rts
 .endofchain
                         ; OLD: End of chain - set carry and return
                         ; sec
                         ; NEW: End of chain - set Z and return EQ
                         lda     #$00
-                        rts
-
-                        ; error - set carry and return
-.fail                   sec
+                        clc
                         rts
 
 ; Prepare to read from root directory
@@ -444,11 +465,23 @@ fat32_openroot:
                         clc
 .fail                   rts
 
+; convert US ASCII uppercase in A to lowercase
+;
+tolower                 cmp     #'A'
+                        bcc     .noconvert
+                        cmp     #'Z'+1
+                        bcs     .noconvert
+                        clc
+                        adc     #$20
+.noconvert              rts
+
+
 ; Prepare to read from a file or directory based on a dirent
 ;
 ; Point zp_sd_address at the dirent
                 global  fat32_opendirent
 fat32_opendirent:
+                        stz     fat32_errorcode
 
                         ; Remember file size in bytes remaining
                         ldy     #28
@@ -479,24 +512,21 @@ fat32_opendirent:
                         sta     fat32_nextcluster+3
 
                         jsr     fat32_seekcluster
-
                         ; Set the pointer to a large value so we always read a sector the first time through
                         lda     #$ff
                         sta     zp_sd_address+1
-
-                        clc
                         rts
 
 ; Read a directory entry from the open directory
 ;
-; On exit the carry is set if there were no more directory entries.
+; OLD: On exit the carry is set if there were no more directory entries.
 ;
-; Otherwise, A is set to the file's attribute byte and
+; A is set to the file's attribute byte or $FF if no more entries, C set if error
 ; zp_sd_address points at the returned directory entry.
 ; LFNs and empty entries are ignored automatically.
                 global fat32_readdirent
 fat32_readdirent:
-                        stz     fat32_lfnbuffer ; no LFN
+                        stz     fat32_lfnbuffer ; clear LFN
 .readnext
                         ; Increment pointer by 32 to point to next entry
                         clc
@@ -518,17 +548,11 @@ fat32_readdirent:
                         sta     fat32_address+1
 
                         jsr     fat32_readnextsector
-; OLD                        bcc     .gotdata
-                
                         bne     .gotdata
-                        bcc     .endofdirectory
-
-                        ; TODO set error code
-
+                        ; return end of dir (but C may be set if error)
 .endofdirectory
-                        sec
+                        lda     #$FF
                         rts
-
 .gotdata
                         ; Check first character
                         lda     (zp_sd_address)
@@ -538,7 +562,7 @@ fat32_readdirent:
 
                         ; Empty entry => start again
                         cmp     #$e5
-                        beq     fat32_readdirent
+                        beq     .readnext
 
                 if 0    ; dump raw dirent
                         lda     #$0d
@@ -656,18 +680,20 @@ fat32_readdirent:
                         cpy     #8+3
                         bne     .makelfnext
 .donelfn                stz     fat32_lfnbuffer,x
-                        pla                             ; reload attribute
+                        pla                             ; reload attribute for return
                 endif
 .haslfn                 clc
                         rts
 
-; Finds a particular directory entry. X,Y point to the 11-character filename to seek.
+; Finds a particular directory entry. A,X point to the 11-character filename to seek.
 ; The directory should already be open for iteration.
                 global  fat32_finddirent
 fat32_finddirent:
+                        stz     fat32_errorcode
+
                         ; Form ZP pointer to user's filename
-                        stx     fat32_filenamepointer
-                        sty     fat32_filenamepointer+1
+                        sta     fat32_filenamepointer
+                        stx     fat32_filenamepointer+1
 
                         ; Iterate until name is found or end of directory
 .direntloop
@@ -708,14 +734,10 @@ fat32_finddirent:
 .foundit                clc
                         rts
 
-; conver US ASCII uppercase to lowercase
-tolower                 cmp     #'A'
-                        bcc     .noconvert
-                        cmp     #'Z'+1
-                        bcs     .noconvert
-                        clc
-                        adc     #$20
-.noconvert              rts
+; traverse a file path and open dirent
+;
+
+
 
 ; Read a byte from an open file
 ;

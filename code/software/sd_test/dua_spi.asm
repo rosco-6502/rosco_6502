@@ -62,7 +62,7 @@ spi_write_byte2:         ; if X already loaded
                         stx     DUA_OPR_LO              ;  4    SCK LO
                         asl                             ;  2    shift MSB to carry
                         bcc     .bit7c                  ; 2/3
-.bit7:                  sty     DUA_OPR_HI              ;  4    COPI HI
+.bit7s:                 sty     DUA_OPR_HI              ;  4    COPI HI
                         stx     DUA_OPR_HI              ;  4    SCK HI
 
                         asl                             ;  2    shift MSB to carry

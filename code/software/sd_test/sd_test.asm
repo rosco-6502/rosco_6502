@@ -63,7 +63,7 @@ _start:
                 jsr     fat32_init
                 jsr     res_msg
                 bcc     .fatinitgood
-                lda     fat32_errorstage
+                lda     fat32_errorcode
                 jsr     outbyte
                 rts
 .fatinitgood
@@ -86,8 +86,8 @@ _start:
                 lda     #'"'
                 jsr     COUT
                 ; Find subdirectory by name
-                ldx     #<subdirname
-                ldy     #>subdirname
+                lda     #<subdirname
+                ldx     #>subdirname
                 jsr     fat32_finddirent
                 php
                 jsr     res_msg
@@ -112,8 +112,8 @@ _start:
                 lda     #'"'
                 jsr     COUT
                 ; Find subdirectory by name
-                ldx     #<subdirname
-                ldy     #>subdirname
+                lda     #<subdirname
+                ldx     #>subdirname
                 jsr     fat32_finddirent
                 php
                 jsr     res_msg
@@ -133,8 +133,8 @@ _start:
                 jsr     COUT
 
                 ; Find file by name
-                ldx     #<filename
-                ldy     #>filename
+                lda     #<filename
+                ldx     #>filename
                 jsr     fat32_finddirent
                 php
                 jsr     res_msg
@@ -215,8 +215,8 @@ file2:
                 lda     #'"'
                 jsr     COUT
                 ; Find subdirectory by name
-                ldx     #<subdirname2
-                ldy     #>subdirname2
+                lda     #<subdirname2
+                ldx     #>subdirname2
                 jsr     fat32_finddirent
                 php
                 jsr     res_msg
@@ -258,8 +258,8 @@ file2:
                 lda     #'"'
                 jsr     COUT
                 ; Find file by name
-                ldx     #<filename2
-                ldy     #>filename2
+                lda     #<filename2
+                ldx     #>filename2
                 jsr     fat32_finddirent
                 php
                 jsr     res_msg
@@ -404,7 +404,12 @@ ok_msg:         PRINT   OKMSG
 
 
 showdir         jsr     fat32_readdirent
-                bcs     .donedir
+                bcc     .noerror
+
+                PRINT   ERRMSG;
+                bra     .donedir
+
+.noerror        beq     .donedir
 
                 bit     #$06            ; skip hidden/system
                 bne     showdir
