@@ -176,22 +176,24 @@ _start:
 ;                 bra     .printloop
 ; .doneprint
 
-                PRINT   DISPFILE
-
-.printloop      jsr     fat32_file_readbyte
-                bcs     .eof
-                cmp     #$0A
-                bne     .notlf
-                LDA     #$0d
-                jsr     COUT
-                lda     #$0A
-.notlf          jsr     COUT
-                bra     .printloop
-
-.eof
-                PRINT   EOFMSG
+                jsr     showfile
 .fnf
 file2:
+
+                PRINT   FAT32OPENPATH
+                PRINT   testpath
+                lda     #$0D
+                jsr     COUT
+                lda     #$0A
+                jsr     COUT
+
+                lda     #<testpath
+                ldx     #>testpath
+                jsr     fat32_openpath
+                bcs     .byebye
+
+;                jsr     showfile
+                jsr     showdir
 
                 bra     .byebye
 
@@ -402,6 +404,20 @@ ok_msg:         PRINT   OKMSG
                 clc
                 rts
 
+showfile
+                PRINT   DISPFILE
+
+.printloop      jsr     fat32_file_readbyte
+                bcs     .eof
+                cmp     #$0A
+                bne     .notlf
+                LDA     #$0d
+                jsr     COUT
+                lda     #$0A
+.notlf          jsr     COUT
+                bra     .printloop
+.eof            PRINT   EOFMSG
+                rts
 
 showdir         jsr     fat32_readdirent
                 bcc     .noerror
@@ -409,7 +425,8 @@ showdir         jsr     fat32_readdirent
                 PRINT   ERRMSG;
                 bra     .donedir
 
-.noerror        beq     .donedir
+.noerror        cmp     #$ff
+                beq     .donedir
 
                 bit     #$06            ; skip hidden/system
                 bne     showdir
@@ -465,7 +482,9 @@ showdir         jsr     fat32_readdirent
 .prname
                 lda     #" "
                 jsr     COUT
-        if 0    ; SFN
+        if 1    ; SFN
+                lda     #'"'
+                jsr     COUT
                 ldy     #0
 .showname       lda     (FW_ZP_IOPTR),y
                 jsr     COUT
@@ -479,6 +498,8 @@ showdir         jsr     fat32_readdirent
                 iny
                 cpy     #11
                 bne     .showname2
+                lda     #'"'
+                jsr     COUT
         endif
                 lda     #" "
                 jsr     COUT
@@ -685,6 +706,7 @@ FAT32INIT       asciiz  "fat32_init:"
 FAT32OPENROOT   asciiz  "fat32_openroot:"
 FAT32FINDDIRENT asciiz  "fat32_finddirent:"
 FAT32OPENDIRENT asciiz  "fat32_opendirent:"
+FAT32OPENPATH   asciiz  "fat32_openpath:"
 FAT32FILEREAD   asciiz  "fat32_file_read:"
 DISPFILE        asciiz  "Display text file:", $D,$A,$D,$A
 NAMEMSG         asciiz  "NAME: ",$22
@@ -703,6 +725,7 @@ subdirname      asciiz  "Adafruit_ILI9341"
 filename        asciiz  "readme.md"
 subdirname2     asciiz  "ANOTHER_SUB"
 filename2       asciiz  "VECTORS ASM"
+testpath        asciiz  "/Adafruit_ILI9341/examples/graphicstest"       ;///graphicstest.ino"
 
 print_dec_pad   db      0
 print_dec_width db      8

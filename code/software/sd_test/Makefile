@@ -1,6 +1,6 @@
 VASM=vasm6502_oldstyle
 VLINK=vlink
-ASFLAGS=-quiet -wdc02 -opt-branch -Fvobj -I../../firmware/firstboot
+ASFLAGS=-quiet -wdc02 -opt-branch -esc -Fvobj -I../../firmware/firstboot
 LDFLAGS=-e_start -bihex
 
 LOADADDR := 0x4000

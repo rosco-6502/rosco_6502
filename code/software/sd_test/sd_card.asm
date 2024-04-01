@@ -17,6 +17,7 @@
                 include "defines.asm"
 
 TRACE                   =       0       ; 1 for invasive debug trace prints
+REDLED                  =       1
 
                 if TRACE
 trace                   macro   char
@@ -152,6 +153,10 @@ sd_init:
 
 sd_assert               ldx     #OP_SPI_CS              ; CS = LO (assert)
                         stx     DUA_OPR_LO
+                if REDLED
+                        ldx     #OP_LED_R
+                        stx     DUA_OPR_S
+                endif
                         trace   '['
 ;;                        jsr     spi_read_byte
                         jsr     sd_wait_ready
@@ -202,6 +207,10 @@ sd_deassert_good        clc
                         trace   '^'
 sd_deassert             ldx     #OP_SPI_CS|OP_SPI_COPI ; CS,COPI = HI (de-assert)
                         stx     DUA_OPR_HI
+                if REDLED
+                        ldx     #OP_LED_R
+                        stx     DUA_OPR_C
+                endif
                         trace   ']'
                         rts
 

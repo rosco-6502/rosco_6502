@@ -20,6 +20,58 @@
 
                 include "defines.asm"
 
+TRACE                   =       0       ; 1 for invasive debug trace prints
+
+                if TRACE
+tprint                  macro   str
+                        section .rodata
+.trstr\@                db      \str,0
+                        section .text
+                        php
+                        pha
+                        phx
+                        lda     #<.trstr\@
+                        ldx     #>.trstr\@
+                        jsr     PRINT_SZ
+                        plx
+                        pla
+                        plp
+                        endm
+tprintv                 macro   value
+                        php
+                        pha
+                        lda     \value
+                        jsr     outbyte
+                        lda     #'}'
+                        jsr     COUT
+                        pla
+                        plp
+                        endm
+tprintv32               macro   value
+                        php
+                        pha
+                        lda     \value+3
+                        jsr     outbyte
+                        lda     \value+2
+                        jsr     outbyte
+                        lda     \value+1
+                        jsr     outbyte
+                        lda     \value+0
+                        jsr     outbyte
+                        lda     #' '
+                        jsr     COUT
+                        pla
+                        plp
+                        endm
+                else
+tprint                  macro   str
+                        endm
+tprintv                 macro   value
+                        endm
+tprintv32               macro   value
+                        endm
+                endif
+
                 section .text
 
 ; FAT32/SD interface library
@@ -36,8 +88,9 @@
 
                 global  fat32_lfnbuffer
 
-fat32_readbuffer        =       $0400
-fat32_lfnbuffer         =       $0200
+fat32_readbuffer        =       $0400   ; 512 bytes (sector buffer)
+fat32_lfnbuffer         =       $0600   ; 256 bytes (used with LFN)
+fat32_lfnbuffer2        =       $0200   ; 256 bytes (only used with openpath)
 
 FAT32_NO_ERR            =       0
 FAT32_MBR_ERR           =       1       ; $55AA boot signature check
@@ -46,7 +99,9 @@ FAT32_FSBPB_ERR         =       3       ; FAT32 BPB signature check
 FAT32_FSROOT_ERR        =       3       ; FAT32 RootEntCnt check
 FAT32_FSTOTSEC_ERR      =       3       ; FAT32 TotalSec16 check
 FAT32_FSSECSIZE_ERR     =       3       ; FAT32 sector size == 512 check
-FAT32_MEDIA_ERR         =       16
+FAT32_MEDIA_ERR         =       16      ; read error on media
+FAT32_PATHLENGTH_ERR    =       17      ; path > 255 char
+FAT32_NOTFOUND_ERR      =       18      ; path > 255 char
 
                 dsect
                         org     USER_ZP_START+$10
@@ -59,8 +114,9 @@ fat32_pendingsectors    ds      1
 fat32_address           ds      2
 fat32_nextcluster       ds      4
 fat32_bytesremaining    ds      4
-fat32_filenamepointer   =       fat32_bytesremaining    ; only used when searching for a file
-fat32_filename_lfn_idx  =       fat32_bytesremaining+2    ; only used when searching for a file
+fat32_filenamepointer   ds      2
+fat32_userfilename      ds      2
+fat32_filename_lfn_idx  ds      1
 fat32_errorcode         ds      1
                 dend
 
@@ -74,6 +130,7 @@ sd_readsector           = sd_read_block
 ; Returns C=1 on error
                 global  fat32_init
 fat32_init:
+                tprint  "{fat32_init:"
                         ldx     #fat32_errorcode-fat32_fatstart
 .clrvars                stz     fat32_fatstart,x
                         dex
@@ -130,7 +187,10 @@ fat32_init:
                         cmp     #.FSTYPE_FAT32LBA
                         beq     .foundpart
 
-.fail                   sec
+.fail
+           tprint "Err="
+           tprintv fat32_errorcode
+                        sec
                         rts
 .foundpart
                         ; Read the FAT32 BPB
@@ -198,8 +258,8 @@ fat32_init:
 
                         ; Calculate the starting sector of the data area
                         ldx     fat32_readbuffer+16                         ; number of FATs
-.skipfatsloop   
-                        clc     
+.skipfatsloop
+                        clc
                         lda     fat32_datastart
                         adc     fat32_readbuffer+36 ; fatsize 0
                         sta     fat32_datastart
@@ -212,7 +272,7 @@ fat32_init:
                         lda     fat32_datastart+3
                         adc     fat32_readbuffer+39 ; fatsize 3
                         sta     fat32_datastart+3
-                        dex     
+                        dex
                         bne     .skipfatsloop
 
                         ; Sectors-per-cluster is a power of two from 1 to 128
@@ -229,6 +289,7 @@ fat32_init:
                         lda     fat32_readbuffer+47
                         sta     fat32_rootcluster+3
 
+                tprint  "OK}"
                         clc
                         rts
 
@@ -236,19 +297,21 @@ fat32_init:
 ;
 ; Gets ready to read fat32_nextcluster, and advances it according to the FAT
 fat32_seekcluster:
+                tprint  "{fat32_seekcluster:"
+                tprintv32 fat32_nextcluster
                         stz     fat32_errorcode
 
                         ; FAT sector = (cluster*4) / 512 = (cluster*2) / 256
                         lda     fat32_nextcluster
-                        asl     
+                        asl
                         lda     fat32_nextcluster+1
-                        rol     
+                        rol
                         sta     zp_sd_currentsector
                         lda     fat32_nextcluster+2
-                        rol     
+                        rol
                         sta     zp_sd_currentsector+1
                         lda     fat32_nextcluster+3
-                        rol     
+                        rol
                         sta     zp_sd_currentsector+2
                         ; note: cluster numbers never have the top bit set, so no carry can occur
 
@@ -278,6 +341,8 @@ fat32_seekcluster:
                         ; sec
                         lda     #FAT32_MEDIA_ERR
                         sta     fat32_errorcode
+           tprint "Err="
+           tprintv fat32_errorcode
                         rts
 .readok
                         ; Before using this FAT data, set currentsector ready to read the cluster itself
@@ -355,7 +420,7 @@ fat32_seekcluster:
                         iny
                         lda     (zp_sd_address),y
                         sta     fat32_nextcluster+2
-                        iny     
+                        iny
                         lda     (zp_sd_address),y
                         and     #$0f
                         sta     fat32_nextcluster+3
@@ -373,6 +438,7 @@ fat32_seekcluster:
                         ; It's the end of the chain, set the top bits so that we can tell this later on
                         sta     fat32_nextcluster+3
 .notendofchain
+           tprint "OK}"
                         clc
                         rts
 
@@ -384,6 +450,7 @@ fat32_seekcluster:
 ; OLD: On return, carry is clear if data was read, or set if the cluster chain has ended.
 ; NEW: On return, C set on error.  Z is clear if data was read (BNE), or Z set if the cluster chain has ended (BEQ).
 fat32_readnextsector:
+                tprint  "{fat32_readnextsector:"
                         stz     fat32_errorcode
 
                         ; Maybe there are pending sectors in the current cluster
@@ -405,6 +472,8 @@ fat32_readnextsector:
                         lda     fat32_address+1
                         sta     zp_sd_address+1
 
+                tprintv32 zp_sd_currentsector
+
                         ; Read the sector
                         jsr     sd_readsector
                         bcc     .readokay
@@ -424,18 +493,26 @@ fat32_readnextsector:
 .sectorincrementdone
                         ; OLD: Success - clear carry and return
                         ; NEW: Success - clear Z and return NE
+           tprint "more-OK}"
+
                         lda     #$FF
                         clc
                         rts
 
                         ; error - set carry and return (also EQ for end of chain)
-.fail                   lda     #$00
+.fail
+           tprint "Err="
+           tprintv fat32_errorcode
+
+                        lda     #$00
                         sec
                         rts
 .endofchain
                         ; OLD: End of chain - set carry and return
                         ; sec
                         ; NEW: End of chain - set Z and return EQ
+           tprint "done-OK}"
+
                         lda     #$00
                         clc
                         rts
@@ -445,6 +522,7 @@ fat32_readnextsector:
 ; Point zp_sd_address at the dirent
                 global  fat32_openroot
 fat32_openroot:
+                tprint  "{fat32_openroot:"
                         ; Prepare to read the root directory
                         lda     fat32_rootcluster
                         sta     fat32_nextcluster
@@ -462,8 +540,16 @@ fat32_openroot:
                         lda     #$ff
                         sta     zp_sd_address+1
 
+                tprint  "OK}"
+
                         clc
-.fail                   rts
+                        rts
+.fail
+           tprint "Err="
+           tprintv fat32_errorcode
+
+                        sec
+                        rts
 
 ; convert US ASCII uppercase in A to lowercase
 ;
@@ -471,8 +557,7 @@ tolower                 cmp     #'A'
                         bcc     .noconvert
                         cmp     #'Z'+1
                         bcs     .noconvert
-                        clc
-                        adc     #$20
+                        ora     #$20
 .noconvert              rts
 
 
@@ -487,27 +572,30 @@ fat32_opendirent:
                         ldy     #28
                         lda     (zp_sd_address),y
                         sta     fat32_bytesremaining
-                        iny     
+                        iny
                         lda     (zp_sd_address),y
                         sta     fat32_bytesremaining+1
-                        iny     
+                        iny
                         lda     (zp_sd_address),y
                         sta     fat32_bytesremaining+2
-                        iny     
+                        iny
                         lda     (zp_sd_address),y
                         sta     fat32_bytesremaining+3
+
+                tprint  "{fat32_opendirent:"
+                tprintv32 fat32_bytesremaining
 
                         ; Seek to first cluster
                         ldy     #26
                         lda     (zp_sd_address),y
                         sta     fat32_nextcluster
-                        iny     
+                        iny
                         lda     (zp_sd_address),y
                         sta     fat32_nextcluster+1
                         ldy     #20
                         lda     (zp_sd_address),y
                         sta     fat32_nextcluster+2
-                        iny     
+                        iny
                         lda     (zp_sd_address),y
                         sta     fat32_nextcluster+3
 
@@ -515,6 +603,17 @@ fat32_opendirent:
                         ; Set the pointer to a large value so we always read a sector the first time through
                         lda     #$ff
                         sta     zp_sd_address+1
+
+                        bcs     .fail
+
+                tprint  "OK}"
+                        clc
+                        rts
+
+.fail
+           tprint "Err="
+           tprintv fat32_errorcode
+                        sec
                         rts
 
 ; Read a directory entry from the open directory
@@ -526,6 +625,7 @@ fat32_opendirent:
 ; LFNs and empty entries are ignored automatically.
                 global fat32_readdirent
 fat32_readdirent:
+                tprint  "{fat32_readdirent:"
                         stz     fat32_lfnbuffer ; clear LFN
 .readnext
                         ; Increment pointer by 32 to point to next entry
@@ -548,11 +648,14 @@ fat32_readdirent:
                         sta     fat32_address+1
 
                         jsr     fat32_readnextsector
+                        bcs     .fail
                         bne     .gotdata
                         ; return end of dir (but C may be set if error)
 .endofdirectory
+                tprint  "EOD-"
+
                         lda     #$FF
-                        rts
+                        bra     .done
 .gotdata
                         ; Check first character
                         lda     (zp_sd_address)
@@ -636,7 +739,7 @@ fat32_readdirent:
 .returnent
                 if 1    ; create LFN from SFN
                         ldy     fat32_lfnbuffer         ; already have LFN for this entry?
-                        bne     .haslfn                 ; branch if yes
+                        bne     .done                   ; branch if yes
                         pha                             ; save attributes
                         ldy     #$0c                    ; see https://en.wikipedia.org/wiki/Design_of_the_FAT_file_system#VFAT_long_file_names
                         lda     (zp_sd_address),y       ; dirent[$0C] has SFN case flags [5]=ext lowercase, [4]=base lowercase
@@ -682,10 +785,21 @@ fat32_readdirent:
 .donelfn                stz     fat32_lfnbuffer,x
                         pla                             ; reload attribute for return
                 endif
-.haslfn                 clc
+.done
+                tprint  "OK="
+                if TRACE
+                        sta     FW_ZP_IOTEMP
+                tprintv FW_ZP_IOTEMP
+                endif
+                        clc
+                        rts
+.fail
+                tprint  "Err="
+                tprintv fat32_errorcode
+                        sec
                         rts
 
-; Finds a particular directory entry. A,X point to the 11-character filename to seek.
+; Finds a particular directory entry. A,X point to the NUL terminated filename to seek.
 ; The directory should already be open for iteration.
                 global  fat32_finddirent
 fat32_finddirent:
@@ -695,17 +809,32 @@ fat32_finddirent:
                         sta     fat32_filenamepointer
                         stx     fat32_filenamepointer+1
 
+                tprint  "{fat32_finddirent:"
+                if TRACE
+                        jsr     PRINT_SZ
+                        lda     #' '
+                        jsr     COUT
+                endif
+
                         ; Iterate until name is found or end of directory
 .direntloop
                         jsr     fat32_readdirent
-                        bcc     .comparename
+                        bcs     .fail
+                        cmp     #$FF
+                        bne     .comparename
 
+                        lda     #FAT32_NOTFOUND_ERR
+                        sta     fat32_errorcode
+.fail
+                tprint  "Err="
+                tprintv fat32_errorcode
+                        sec
                         rts     ; with carry set
 
 .comparename            ;bra     .compareshort
                         lda     fat32_lfnbuffer
                         beq     .compareshort
-
+; case insensitive LFN compare
                         ldy     #0
 .comparelong            lda     fat32_lfnbuffer,y
                         jsr     tolower
@@ -715,11 +844,12 @@ fat32_finddirent:
                         cmp     FW_ZP_IOTEMP
                         bne     .direntloop     ; no match
                         tax
-                        beq     .foundit
+                        beq     .foundit        ; it was NUL
                         iny
                         bne     .comparelong
-                        bra     .foundit
+                        bra     .foundit        ; 256 matches, assueme truncated match
 
+; case insensitive SFN compare (base padded to 8 and ext to 3 with ' ', e.g, "README  MD ")
 .compareshort           ldy     #11-1
 .comparenameloop        lda     (zp_sd_address),y
                         jsr     tolower
@@ -728,15 +858,70 @@ fat32_finddirent:
                         jsr     tolower
                         cmp     FW_ZP_IOTEMP
                         bne     .direntloop     ; no match
-                        dey     
+                        dey
                         bpl     .comparenameloop
 
-.foundit                clc
+.foundit
+                tprint  "OK}"
+                        clc
                         rts
 
-; traverse a file path and open dirent
+; traverse a file path and open final dirent
 ;
+                global  fat32_openpath
+fat32_openpath
+                        stz     fat32_errorcode
 
+                        ; Form ZP pointer to user's filename
+                        sta     fat32_userfilename
+                        stx     fat32_userfilename+1
+
+                        ldy     #0                      ; zero index for source path
+.pathpart               ldx     #0                      ; zero index for path component
+.pathcharloop           lda     (fat32_userfilename),y  ; get next path char
+                        beq     .openpath               ; end of string, open path
+                        iny                             ; inc source index
+                        cmp     #'/'                    ; is path separator?
+                        beq     .openpath               ; branch if yes
+                        sta     fat32_lfnbuffer2,x      ; store path char into component
+                        inx                             ; increment component index
+                        tya                             ; test source index
+                        bne     .pathcharloop           ; if not wrapped, loop
+                        lda     #FAT32_PATHLENGTH_ERR   ; source path too long
+                        sta     fat32_errorcode         ; set error code
+                        bra     .fail                   ; fail return
+
+.openpath               stz     fat32_lfnbuffer2,x      ; NUL terminal path component
+                        phy                             ; save source index on stack
+                        cpy     #1                      ; initial slash?
+                        bne     .notroot                ; branch if not
+                tprint  ":"
+                        jsr     fat32_openroot          ; read root
+                        bra     .popcheckfail           ; pop source index and check error
+.notroot
+                tprint  "/"
+                        clc                             ; clear error
+                        lda     fat32_lfnbuffer2        ; is this empty component?
+                        beq     .popcheckfail           ; branch if yes (ignore)
+                if TRACE
+                        lda     #<fat32_lfnbuffer2
+                        ldx     #>fat32_lfnbuffer2
+                        jsr     PRINT_SZ
+                tprint  "\r\n"
+                endif
+                        lda     #<fat32_lfnbuffer2      ; find path component in current dirent
+                        ldx     #>fat32_lfnbuffer2
+                        jsr     fat32_finddirent
+                        bcs     .popcheckfail
+                        jsr     fat32_opendirent
+.popcheckfail           ply
+                        bcs     .fail
+                        lda     (fat32_userfilename),y
+                        bne     .pathpart
+.done                   clc
+                        rts
+.fail                   sec
+                        rts
 
 
 ; Read a byte from an open file
@@ -744,14 +929,12 @@ fat32_finddirent:
 ; The byte is returned in A with C clear; or if end-of-file was reached, C is set instead
                 global fat32_file_readbyte
 fat32_file_readbyte:
-                        sec
-
                         ; Is there any data to read at all?
                         lda     fat32_bytesremaining
                         ora     fat32_bytesremaining+1
                         ora     fat32_bytesremaining+2
                         ora     fat32_bytesremaining+3
-                        beq     .rts
+                        beq     .fail
 
                         ; Decrement the remaining byte count
                         lda     fat32_bytesremaining
@@ -779,21 +962,23 @@ fat32_file_readbyte:
                         sta     fat32_address+1
 
                         jsr     fat32_readnextsector
-; OLD                        bcs     .rts               ; this shouldn't happen
-                        beq     .rts
-                        bcs     .rts
+                        bcs     .fail
+                        beq     .done
 .gotdata
-                        ldy     #0
-                        lda     (zp_sd_address),y
+                        lda     (zp_sd_address)
 
                         inc     zp_sd_address
-                        bne     .rts
+                        bne     .done
                         inc     zp_sd_address+1
-                        bne     .rts
+                        bne     .done
                         inc     zp_sd_address+2
-                        bne     .rts
+                        bne     .done
                         inc     zp_sd_address+3
-.rts
+.done
+                        clc
+                        rts
+.fail
+                        sec
                         rts
 
 ; Read a whole file into memory. It's assumed the file has just been opened
