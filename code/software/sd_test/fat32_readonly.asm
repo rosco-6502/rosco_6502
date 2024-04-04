@@ -168,23 +168,32 @@ fat32_init:
 
                         inc     fat32_errorcode ; stage 2 = FAT32_PARTITION_ERR find FAT32 LBA partition
 
-                        ; Find a FAT32 partition
-.FSTYPE_FAT32LBA = 12
+                        ; Find a FAT32 partition (type $0B or $0C)
+.FSTYPE_FAT32_1 = $0B
+.FSTYPE_FAT32_2 = $0C
                         ldx     #0
                         lda     fat32_readbuffer+$1c2,x
-                        cmp     #.FSTYPE_FAT32LBA
+                        cmp     #.FSTYPE_FAT32_1
+                        beq     .foundpart
+                        cmp     #.FSTYPE_FAT32_2
                         beq     .foundpart
                         ldx     #16
                         lda     fat32_readbuffer+$1c2,x
-                        cmp     #.FSTYPE_FAT32LBA
+                        cmp     #.FSTYPE_FAT32_1
+                        beq     .foundpart
+                        cmp     #.FSTYPE_FAT32_2
                         beq     .foundpart
                         ldx     #32
                         lda     fat32_readbuffer+$1c2,x
-                        cmp     #.FSTYPE_FAT32LBA
+                        cmp     #.FSTYPE_FAT32_1
+                        beq     .foundpart
+                        cmp     #.FSTYPE_FAT32_2
                         beq     .foundpart
                         ldx     #48
                         lda     fat32_readbuffer+$1c2,x
-                        cmp     #.FSTYPE_FAT32LBA
+                        cmp     #.FSTYPE_FAT32_1
+                        beq     .foundpart
+                        cmp     #.FSTYPE_FAT32_2
                         beq     .foundpart
 
 .fail
@@ -987,10 +996,12 @@ fat32_file_readbyte:
 ; Also we read whole sectors, so data in the target region beyond the end of the
 ; file may get overwritten, up to the next 512-byte boundary.
 ;
-; And we don't properly support 64k+ files, as it's unnecessary complication given
-; the 6502's small address space
+; supports incrementing rosco_6502 RAM bank at $C000, but must load at address divisible by $0200
+;
                 global  fat32_file_read
 fat32_file_read:
+                        lda     BANK_SET
+                        pha
                         ; Round the size up to the next whole sector
                         lda     fat32_bytesremaining
                         cmp     #1                      ; set carry if bottom 8 bits not zero
@@ -1016,15 +1027,24 @@ fat32_file_read:
                         lda     fat32_address+1
                         adc     #2                      ; carry already clear
                         sta     fat32_address+1
+                        cmp     #>(BANK_RAM_AD+BANK_RAM_SZ)
+                        blt     .notnextbank
+                        lda     BANK_SET
+                        and     #BANK_RAM_M
+                        cmp     #BANK_RAM_M
+                        beq     .fail                   ; already in last RAM bank, so quit with error
+                        inc     BANK_SET
+                        lda     #>BANK_RAM_AD
+                        sta     fat32_address+1
 
-                        ldx     fat32_bytesremaining    ; note - actually loads sectors remaining
-                        dex
-                        stx     fat32_bytesremaining    ; note - actually stores sectors remaining
-
+.notnextbank            dec     fat32_bytesremaining    ; note - actually loads sectors remaining
                         bne     .wholesectorreadloop
 .done
                         clc
+                        pla
+                        sta     BANK_SET
                         rts
 .fail                   sec
+                        pla
+                        sta     BANK_SET
                         rts
-
