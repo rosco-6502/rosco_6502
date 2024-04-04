@@ -68,7 +68,7 @@ BANK_ROM_SZ             =       $2000           ; 8K ROM bank size
 BLINKCOUNT              =       50              ; interrupt count between LED toggles
 INPUTLEN                =       240             ; 240 bytes in $0200 input buffer
 
-RAM_BANKS               =       16              ; number of RAM banks ($4000-$8000)
+RAM_BANKS               =       16              ; number of RAM banks ($4000-$BFFF)
 BANK_RAM_B              =       0               ; shift for RAM bank bits in BANK_SET
 BANK_RAM_M              =       $0F             ; mask for RAM bank bits in BANK_SET
 
