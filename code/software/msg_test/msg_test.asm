@@ -68,5 +68,8 @@ outbyte:        pha                     ; save a for lsd.
                 section  .rodata
 
 RUNMSG          asciiz  "Message Test Running.", $D, $A
+
+                incbin  "/Users/kenj/Dev/Rosco_Dev/rosco_6502/code/firmware/firstboot/wozmon.asm"
+
 EXITMSG         ascii   $D, $A, "Exit."
 EOLMSG          asciiz  $D, $A

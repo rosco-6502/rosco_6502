@@ -3,7 +3,7 @@ VLINK=vlink
 ASFLAGS=-quiet -wdc02 -opt-branch -Fvobj -I../../firmware/firstboot
 LDFLAGS=-e_start -bihex
 
-LOADADDR := 0x8000
+LOADADDR := 0x4000
 
 TARGET := $(shell basename $(CURDIR))
 SOURCES := $(wildcard *.asm)
