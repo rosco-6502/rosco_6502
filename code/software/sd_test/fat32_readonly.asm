@@ -1002,26 +1002,31 @@ fat32_file_readbyte:
 fat32_file_read:
                         lda     BANK_SET
                         pha
-                        ; Round the size up to the next whole sector
-                        lda     fat32_bytesremaining
-                        cmp     #1                      ; set carry if bottom 8 bits not zero
-                        lda     fat32_bytesremaining+1
-                        adc     #0                      ; add carry, if any
-                        lsr                             ; divide by 2
-                        adc     #0                      ; round up
 
+                        ; add $01ff to round up number of sectors
+                        lda     fat32_bytesremaining
+                        clc
+                        adc     #$FF
+                        sta     fat32_bytesremaining
+                        lda     fat32_bytesremaining+1
+                        adc     #1
+                        sta     fat32_bytesremaining+1
+                        lda     fat32_bytesremaining+2
+                        adc     #0
+                        sta     fat32_bytesremaining+2
+
+.sectorreadloop
+                        ; check if 24-bit count zero (ignoring low byte)
+                        lda     fat32_bytesremaining+2
+                        ora     fat32_bytesremaining+1
                         ; No data?
                         beq     .done
 
-                        ; Store sector count - not a byte count any more
-                        sta     fat32_bytesremaining
-
-                        ; Read entire sectors to the user-supplied buffer
-.wholesectorreadloop
+.readsector             ; Read entire sectors to the user-supplied buffer
                         ; Read a sector to fat32_address
                         jsr     fat32_readnextsector
                         bcs     .fail
-                        beq     .fail
+                        beq     .done
 
                         ; Advance fat32_address by 512 bytes
                         lda     fat32_address+1
@@ -1037,8 +1042,14 @@ fat32_file_read:
                         lda     #>BANK_RAM_AD
                         sta     fat32_address+1
 
-.notnextbank            dec     fat32_bytesremaining    ; note - actually loads sectors remaining
-                        bne     .wholesectorreadloop
+.notnextbank            lda     fat32_bytesremaining+1  ; subtract $0200 (sector size)
+                        sec
+                        sbc     #$02
+                        sta     fat32_bytesremaining+1
+                        lda     fat32_bytesremaining+2
+                        sbc     #$00
+                        sta     fat32_bytesremaining+2
+                        bcs     .sectorreadloop         ; loop until underflow
 .done
                         clc
                         pla
