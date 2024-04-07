@@ -1,8 +1,6 @@
 **/*.o
 **/*.bin
 **/*.rom
-**/*.L68
-**/*.S68
 **/*.zip
 **/*.lst
 **/*.dis
@@ -20,4 +18,5 @@
 **/*.sch-bak
 **/*.kicad_pcb-bak
 **/fp-info-cache
+**/*.code-workspace
 .vscode/*
