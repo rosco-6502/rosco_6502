@@ -96,9 +96,9 @@ FAT32_NO_ERR            =       0
 FAT32_MBR_ERR           =       1       ; $55AA boot signature check
 FAT32_PARTITION_ERR     =       2       ; FAT32 LBA partition not found
 FAT32_FSBPB_ERR         =       3       ; FAT32 BPB signature check
-FAT32_FSROOT_ERR        =       3       ; FAT32 RootEntCnt check
-FAT32_FSTOTSEC_ERR      =       3       ; FAT32 TotalSec16 check
-FAT32_FSSECSIZE_ERR     =       3       ; FAT32 sector size == 512 check
+FAT32_FSROOT_ERR        =       4       ; FAT32 RootEntCnt check
+FAT32_FSTOTSEC_ERR      =       5       ; FAT32 TotalSec16 check
+FAT32_FSSECSIZE_ERR     =       6       ; FAT32 sector size == 512 check
 FAT32_MEDIA_ERR         =       16      ; read error on media
 FAT32_PATHLENGTH_ERR    =       17      ; path > 255 char
 FAT32_NOTFOUND_ERR      =       18      ; path > 255 char
