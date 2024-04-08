@@ -18,39 +18,32 @@
 ;
 ; romvec <routine>[,<destaddr>]
 .macro          romvec routine, destaddr
-                .assert .ident(.sprintf("R_%s", .string(routine)))=((*-ROMTABLE)/3), error, .sprintf("R_%d", ((*-ROMTABLE)/3))
+                .assert (routine-ROMFUNC)=(*-ROMTABLE), error, .sprintf("%s not #%d", .string(routine), (routine-ROMFUNC)/3)
                 .if CUR_ROMBANK=0
                         .global  routine
                 .endif
                 .if .PARAMCOUNT=2
-routine:                jmp     destaddr
+                        jmp     destaddr
                 .else
-routine:                jmp     .ident(.sprintf("_%s", .string(routine)))
+                        jmp     .ident(.sprintf("_%s", .string(routine)))
                 .endif
-                .endmacro
-
-.macro          stub routine
-                .assert .ident(.sprintf("R_%s", .string(routine)))=((*-ROMTABLE)/3), error, .sprintf("R_%d", ((*-ROMTABLE)/3))
-routine:                sec
-                        rts
-                        nop
                 .endmacro
 
 ROMTABLE:
                         romvec  UART_A_SEND
                         romvec  UART_A_RECV
                         romvec  UART_A_STAT
-                        stub    UART_A_CTRL
+                        romvec  UART_A_CTRL,_STUB
                         romvec  UART_B_SEND
                         romvec  UART_B_RECV
                         romvec  UART_B_STAT
-                        stub    UART_B_CTRL
+                        romvec  UART_B_CTRL,_STUB
                         romvec  PRINT       
                         romvec  PRINTLN     
-                        stub    READLINE    
+                        romvec  READLINE,_STUB
                         romvec  PRBYTE      
                         romvec  PRDEC32     
                         romvec  VT_CLRSCR   
                         romvec  VT_MOVEXY   
                         romvec  VT_SETCURSOR
-                        stub    ROMBANKFUNC 
+                        romvec  ROMINITFUNC 

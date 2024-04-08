@@ -21,14 +21,10 @@
 ; call ROM0 function using thunk function (13 bytes overhead)
 .macro          r0call  routine
 .ident(.sprintf("_%s", .string(routine))):
-                        ldy     BANK_SET
-                        sty     THUNK_ROM0_MODBANK
-                        ldy     #.ident(.sprintf("R_%s", .string(routine)))*3
+                        ldy     #<routine
                         sty     THUNK_ROM0_MODRTBL
                         jmp     THUNK_ROM0
 .endmacro
-
-; NOTE: To save size, UART A and B could be combined (with index)
 
 ; *******************************************************
 ; * Blocking output to DUART A. Character in A
@@ -42,7 +38,7 @@ _UART_A_SEND:
 
                         pla                     ; restore character
                         sta     DUA_TBA         ; send character to UART A
-                        rts
+_STUB:                  rts
 
 ; *******************************************************
 ; * Blocking output to DUART B. Character in A
@@ -138,12 +134,16 @@ _PRINTLN:
                         lda     #$0A
                         jmp     PRINTCHAR
 
+; routines below here are only in ROM0
+
         .if CUR_ROMBANK<>0
 ; call ROM0 thunk for these routines (if not in ROM0)
+                r0call  READLINE
                 r0call  PRBYTE
                 r0call  PRDEC32
                 r0call  VT_CLRSCR
                 r0call  VT_MOVEXY
+                r0call  VT_SETCURSOR
         .else
 
 ; PRBYTE - Print A as two digit hex

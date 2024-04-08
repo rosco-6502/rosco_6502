@@ -53,14 +53,22 @@ CUR_ROMBANK     =       0       ; assemble for ROM bank 0
 ;
 ; called on system RESET
 ;
+                .import __FW_VARSTART__
+                .import __FW_VARSIZE__
+                .import __VECINIT_LOAD__
+                .import __VECINIT_RUN__
+                .import __VECINIT_SIZE__
+                .import __THUNKINIT_LOAD__
+                .import __THUNKINIT_RUN__
+                .import __THUNKINIT_SIZE__
+
                 .global system_reset
 system_reset:
                         sei
                         cld
                         ldx     #$ff
                         txs
-                        stz     BANK_SET
-              
+
                         ; Init DUART A
                         lda     #$a0                    ; Enable extended TX rates
                         sta     DUA_CRA
@@ -115,30 +123,29 @@ system_reset:
                         lda     #$08                    ; Unmask counter interrupt
                         sta     DUA_IMR
 
-                        ; ; set bios I/O vectors
-                        ; lda     #$4C                    ; JMP opcode
-                        ; sta     COUT
-                        ; sta     CIN
-                        ; lda     #<UART_A_OUT
-                        ; sta     COUT+1
-                        ; lda     #>UART_A_OUT
-                        ; sta     COUT+2
-                        ; lda     #<UART_A_IN
-                        ; sta     CIN+1
-                        ; lda     #>UART_A_IN
-                        ; sta     CIN+2
+                        ; setup low RAM vectors and thunks
 
-                        ; ; set bios time variables
-                        ; lda     #$60                    ; RTS opcode
-                        ; sta     USER_TICK
-                        ; stz     USER_TICK+1
-                        ; stz     USER_TICK+2
-                        ; lda     #$80|BLINKCOUNT             ; set initial tick count
-                        ; sta     BLINKCNT
-                        ; stz     BLINKCNT
-                        ; stz     TICK100HZ               ; clear timer
-                        ; stz     TICK100HZ+1
-                        ; stz     TICK100HZ+2
+                        ldx     #$00
+@clearvar:              stz     __FW_VARSTART__,x
+                        inx
+                        bne     @clearvar
+
+;                        ldx     #0
+@vecinit:               lda     __VECINIT_LOAD__,x
+                        sta     __VECINIT_RUN__,x
+                        inx
+                        cpx     #<__VECINIT_SIZE__
+                        bne     @vecinit
+
+                        ldx     #0
+@thunkinit:             lda     __THUNKINIT_LOAD__,x
+                        sta     __THUNKINIT_RUN__,x
+                        inx
+                        cpx     #<__THUNKINIT_SIZE__
+                        bne     @thunkinit
+
+                        lda     #$80|BLINKCOUNT         ; set initial tick count
+                        sta     BLINKCNT
 
                         cli                             ; Enable interrupts
 
@@ -172,6 +179,7 @@ system_reset:
 
                         ldx     #'0'
                         lda     FW_ZP_TMPPTR+1
+                        sta     CPUMHZ
 @tencnt:                cmp     #10
                         bcc     @tensdone
                         inx
@@ -195,11 +203,10 @@ system_reset:
 
                         ; check if 8KB or 32KB (8KBx4 banks) of ROM
                         lda     #$80|(3<<BANK_ROM_B)
-                        tay
-                        jsr     init_rom_bank
+                        ldx     #0
+                        jsr     ROMINITFUNC             ; expected to fail on r4
                         lda     #'1'
-                        bcc     @smallrom
-                        cpy     #3<<BANK_ROM_B
+                        cpx     #3<<BANK_ROM_B          ; was ROM 3 mapped?
                         bne     @smallrom
                         lda     #'4'
 @smallrom:              jsr     PRINTCHAR
@@ -213,7 +220,8 @@ system_reset:
 
                         ; do ROM bank init
                         lda     #0<<BANK_ROM_B
-@romloop:               jsr     init_rom_bank           ; X = bank << ROM_BANK_B
+@romloop:               ldx     #0                      ; X passed to bank_init (0 = init)
+                        jsr     ROMINITFUNC             ; A = bank << ROM_BANK_B
                         clc
                         adc     #1<<BANK_ROM_B
                         cmp     #ROM_BANKS<<BANK_ROM_B
@@ -236,7 +244,7 @@ system_reset:
                         ; start in EWozMon
                         jmp     WOZMON
 
-                        rts
+                        ; rts
                         
 
 ; *******************************************************
@@ -307,7 +315,6 @@ bankcheck:
 ; * RAM data to be copied to low-RAM
 ; *******************************************************
 
-                .segment "FWDATA"
                 .include "ramtable.s"
 
 ; *******************************************************

@@ -14,13 +14,33 @@
 ; an appropriate section that's used in the link script.
 ;------------------------------------------------------------
 
+; ROM bank test/init, call with A=ROM bank ($00, $10, $20, $30), X=arg
+; Y trashed, returns C=1 if bank was not present (small ROM), value in X
+_ROMINITFUNC:
+                        pha
+                        ldy     BANK_SET
+                        phy
+                        sta     BANK_SET
+                        cmp     #CUR_ROMBANK<<BANK_ROM_B
+                        beq     @bankmatch
+                        ldx     #CUR_ROMBANK<<BANK_ROM_B
+                        sec
+                        bra     @done
+@bankmatch:             jsr     bank_init
+                        clc
+@done:                  ply
+                        sty     BANK_SET
+                        pla
+                        rts
+
 reset_handler:
-                        stz     BANK_SET                ; set bank 0
+                        stz     BANK_SET
         .if CUR_ROMBANK=0
                         jmp     system_reset            ; call bank 0 system_reset
         .else
-                        jmp     reset_handler           ; should never be executed
+                        jmp     *                       ; should never be executed
         .endif
+
 
 ; *******************************************************
 ; Timer tick IRQ handler; Driven by DUART timer
@@ -67,7 +87,7 @@ irq_handler:
                         pla
                         plx
                         ply
-nmi_handler:                                            ; use RTI as NOP NMI handler
+nmi_handler:
                         rti
 
 ; called from IRQ, transfers to EWozMon (only in bank 0), X has S
@@ -79,24 +99,5 @@ brk_handler:
         .if CUR_ROMBANK=0
                         jmp     WOZHITBRK               ; call bank 0 EWozMon
         .else
-                        jmp     reset_handler           ; should never be executed
+                        jmp     *                       ; should never be executed
         .endif
-
-; ROM bank test/init, call with A=ROM bank ($00, $10, $20, $30)
-; X, Y trashed, returns C=1 if bank in Y not present (small ROM)
-init_rom_bank:
-                        pha
-                        ldx     BANK_SET
-                        phx
-                        sta     BANK_SET
-                        cmp     #CUR_ROMBANK<<BANK_ROM_B
-                        beq     @bankmatch
-                        ldy     #CUR_ROMBANK<<BANK_ROM_B
-                        sec
-                        bra     @done
-@bankmatch:             jsr     bank_init
-                        clc
-@done:                  plx
-                        stx     BANK_SET
-                        pla
-                        rts

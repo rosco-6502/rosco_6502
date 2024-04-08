@@ -9,28 +9,29 @@
 ; https://gist.github.com/robinharris/b529a24f39bcbd53f1e21775e24d0b9e
 
 ; Page 0 Variables
-REGA                    =       $20                     ; A reg value (R or BRK)
-REGX                    =       $21                     ; X reg value (R or BRK)
-REGY                    =       $22                     ; Y reg value (R or BRK)
-REGP                    =       $23                     ; P reg value (R or BRK)
+REGA                    =       $30                     ; A reg value (R or BRK)
+REGX                    =       $31                     ; X reg value (R or BRK)
+REGY                    =       $32                     ; Y reg value (R or BRK)
+REGP                    =       $33                     ; P reg value (R or BRK)
 
-XAML                    =       $24                     ; Last "opened" location Low
-XAMH                    =       $25                     ; Last "opened" location High
-STL                     =       $26                     ; Store address Low
-STH                     =       $27                     ; Store address High
-L                       =       $28                     ; Hex value parsing Low
-H                       =       $29                     ; Hex value parsing High
-YSAV                    =       $2A                     ; Used to see if hex value is given
-MODE                    =       $2B                     ; $00=XAM, $7F=STOR, $AE=BLOCK XAM
-COUNTER                 =       $2C                     ; Intel hex bytes per line counter
-CRC                     =       $2D                     ; Intel hex CRC value
-CRCCHECK                =       $2E                     ; CRC fail flag, also used for current BRK bank
-BYTESL                  =       $2F                     ; Intel hex byte count low
-BYTESH                  =       $30                     ; Intel hex byte count high
+XAML                    =       $34                     ; Last "opened" location Low
+XAMH                    =       $35                     ; Last "opened" location High
+STL                     =       $36                     ; Store address Low
+STH                     =       $37                     ; Store address High
+L                       =       $38                     ; Hex value parsing Low
+H                       =       $39                     ; Hex value parsing High
+;YSAV                    =       $3A                     ; Used to see if hex value is given
+MODE                    =       $3A                     ; $00=XAM, $7F=STOR, $AE=BLOCK XAM
+COUNTER                 =       $3B                     ; Intel hex bytes per line counter
+CRC                     =       $3C                     ; Intel hex CRC value
+CRCCHECK                =       $3D                     ; CRC fail flag, also used for current BRK bank
+YSAV                    =       $3D                     ; Used to see if hex value is given
+BYTESL                  =       $3E                     ; Intel hex byte count low
+BYTESH                  =       $3F                     ; Intel hex byte count high
 
 ; Other Variables
 
-IN                      =       INPUTBUF                ;  Input buffer to $0200
+IN                      =       INPUTBUF                ;  Input buffer to $0300
 
 ;-------------------------------------------------------------------------
 ;  Constants
@@ -256,15 +257,15 @@ XAMNEXT:                STZ     MODE                    ; 0->MODE (XAM mode).
 MOD8CHK:                LDA     XAML                    ; Check low-order ‘examine index’ byte
                         AND     #$07                    ;  For MOD 8=0
                         BPL     NXTPRNT                 ; Always taken.
-        .if 0                        
-_PRBYTE:                 PHA                             ; Save A for LSD.
+        .if 0
+_PRBYTE:                  PHA                             ; Save A for LSD.
                         LSR
                         LSR
                         LSR                             ; MSD to LSD position.
                         LSR
-                        JSR     PRHEX                   ; Output hex digit.
+                        JSR     PRHEXDIG                ; Output hex digit.
                         PLA                             ; Restore A.
-PRHEX:                  AND     #$0F                    ; Mask LSD for hex print.
+PRHEXDIG:               AND     #$0F                    ; Mask LSD for hex print.
                         ORA     #'0'                    ; Add "0".
                         CMP     #$3A                    ; Digit?
                         BCC     ECHO                    ; Yes, output it.

@@ -70,83 +70,83 @@ BANK_RSVD               =       $01             ; -/- reserved future banking re
 
 ; XR68C681 DUART registers
 DUART_BASE              =       $C000
-DUA_MR1A                =       DUART_BASE+$0           ; R/W   A mode reg
-DUA_MR2A                =       DUART_BASE+$0           ; R/W   A mode reg
-DUA_SRA                 =       DUART_BASE+$1           ; R     A status reg
-DUA_CSRA                =       DUART_BASE+$1           ; W     A clock select reg
-DUA_MISR                =       DUART_BASE+$2           ; R     A masked intr. status
-DUA_CRA                 =       DUART_BASE+$2           ; W     A command reg
-DUA_RBA                 =       DUART_BASE+$3           ; R     A Rx holding reg (aka RHRA)
-DUA_TBA                 =       DUART_BASE+$3           ; W     A Tx holding reg (aka THRA)
-DUA_IPCR                =       DUART_BASE+$4           ; R     input port change reg
-DUA_ACR                 =       DUART_BASE+$4           ; W     aux. control reg
-DUA_ISR                 =       DUART_BASE+$5           ; R     intr. status reg
-DUA_IMR                 =       DUART_BASE+$5           ; W     intr. mask reg
-DUA_CTU                 =       DUART_BASE+$6           ; R/W   counter/timer upper reg
-DUA_CTL                 =       DUART_BASE+$7           ; R/W   counter/timer lower reg
-DUA_MR1B                =       DUART_BASE+$8           ; R/W   B mode reg        
-DUA_MR2B                =       DUART_BASE+$8           ; R/W   B mode reg
-DUA_SRB                 =       DUART_BASE+$9           ; R     B status reg
-DUA_CSRB                =       DUART_BASE+$9           ; W     B clock select reg
-; reserved              =       DUART_BASE+$A           ; R     (reserved)
-DUA_CRB                 =       DUART_BASE+$A           ; W     B command reg
-DUA_RBB                 =       DUART_BASE+$B           ; R     B Rx holding reg (aka RHRB)
-DUA_TBB                 =       DUART_BASE+$B           ; W     B Tx holding reg (aka THRB)
-DUA_IVR                 =       DUART_BASE+$C           ; R/W   intr. vector reg
-DUA_IP                  =       DUART_BASE+$D           ; R     input port reg
-DUA_OPCR                =       DUART_BASE+$D           ; W     output port reg
-DUA_STARTC              =       DUART_BASE+$E           ; R     start counter/timer
-DUA_OPR_S               =       DUART_BASE+$E           ; W     set output OPRn bits (OPn pin=LO)
-DUA_OPR_LO              =       DUART_BASE+$E           ; W     set output OPRn pins LO (set OPRn bits)
-DUA_STOPC               =       DUART_BASE+$F           ; R     stop counter/timer reg
-DUA_OPR_C               =       DUART_BASE+$F           ; W     clear output OPRn bits (OPn pin=HI)
-DUA_OPR_HI              =       DUART_BASE+$F           ; W     set output OPRn pins HI (clears OPRn bits)
+DUA_MR1A                =       DUART_BASE+$0   ; R/W   A mode reg
+DUA_MR2A                =       DUART_BASE+$0   ; R/W   A mode reg
+DUA_SRA                 =       DUART_BASE+$1   ; R     A status reg
+DUA_CSRA                =       DUART_BASE+$1   ; W     A clock select reg
+DUA_MISR                =       DUART_BASE+$2   ; R     A masked intr. status
+DUA_CRA                 =       DUART_BASE+$2   ; W     A command reg
+DUA_RBA                 =       DUART_BASE+$3   ; R     A Rx holding reg (aka RHRA)
+DUA_TBA                 =       DUART_BASE+$3   ; W     A Tx holding reg (aka THRA)
+DUA_IPCR                =       DUART_BASE+$4   ; R     input port change reg
+DUA_ACR                 =       DUART_BASE+$4   ; W     aux. control reg
+DUA_ISR                 =       DUART_BASE+$5   ; R     intr. status reg
+DUA_IMR                 =       DUART_BASE+$5   ; W     intr. mask reg
+DUA_CTU                 =       DUART_BASE+$6   ; R/W   counter/timer upper reg
+DUA_CTL                 =       DUART_BASE+$7   ; R/W   counter/timer lower reg
+DUA_MR1B                =       DUART_BASE+$8   ; R/W   B mode reg        
+DUA_MR2B                =       DUART_BASE+$8   ; R/W   B mode reg
+DUA_SRB                 =       DUART_BASE+$9   ; R     B status reg
+DUA_CSRB                =       DUART_BASE+$9   ; W     B clock select reg
+; reserved              =       DUART_BASE+$A   ; R     (reserved)
+DUA_CRB                 =       DUART_BASE+$A   ; W     B command reg
+DUA_RBB                 =       DUART_BASE+$B   ; R     B Rx holding reg (aka RHRB)
+DUA_TBB                 =       DUART_BASE+$B   ; W     B Tx holding reg (aka THRB)
+DUA_IVR                 =       DUART_BASE+$C   ; R/W   intr. vector reg
+DUA_IP                  =       DUART_BASE+$D   ; R     input port reg
+DUA_OPCR                =       DUART_BASE+$D   ; W     output port reg
+DUA_STARTC              =       DUART_BASE+$E   ; R     start counter/timer
+DUA_OPR_S               =       DUART_BASE+$E   ; W     set output OPRn bits (OPn pin=LO)
+DUA_OPR_LO              =       DUART_BASE+$E   ; W     set output OPRn pins LO (set OPRn bits)
+DUA_STOPC               =       DUART_BASE+$F   ; R     stop counter/timer reg
+DUA_OPR_C               =       DUART_BASE+$F   ; W     clear output OPRn bits (OPn pin=HI)
+DUA_OPR_HI              =       DUART_BASE+$F   ; W     set output OPRn pins HI (clears OPRn bits)
 
 ; DUART SRA/SRB status register bits
-DUA_SR_RXRDY            =       $01                     ; receiver ready
-DUA_SR_FFULL            =       $02                     ; FIFO full
-DUA_SR_TXRDY            =       $04                     ; transmitter ready
-DUA_SR_TXEMT            =       $08                     ; transmitter empty
-DUA_SR_OVERR            =       $10                     ; overrun error
-DUA_SR_PAERR            =       $20                     ; parity error
-DUA_SR_FRERR            =       $40                     ; framing error
-DUA_SR_BREAK            =       $80                     ; received break
+DUA_SR_RXRDY            =       $01             ; receiver ready
+DUA_SR_FFULL            =       $02             ; FIFO full
+DUA_SR_TXRDY            =       $04             ; transmitter ready
+DUA_SR_TXEMT            =       $08             ; transmitter empty
+DUA_SR_OVERR            =       $10             ; overrun error
+DUA_SR_PAERR            =       $20             ; parity error
+DUA_SR_FRERR            =       $40             ; framing error
+DUA_SR_BREAK            =       $80             ; received break
 
 ; DUART OP output bit usage constants
-OP_RTSA                 =       $01                     ; OP output UART A RTS
-OP_RTSB                 =       $02                     ; OP output UART B RTS
-OP_SPI_CS               =       $04                     ; OP output SPI CS 1
-OP_LED_R                =       $08                     ; OP output RED LED (active LO)
-OP_SPI_SCK              =       $10                     ; OP output SPI SCK
-OP_LED_G                =       $20                     ; OP output GREEN LED (active LO)
-OP_SPI_COPI             =       $40                     ; OP output SPI COPI
-OP_SPI_CS2              =       $80                     ; OP output SPI CS 2
+OP_RTSB                 =       $02             ; OP output UART B RTS
+OP_RTSA                 =       $01             ; OP output UART A RTS
+OP_SPI_CS               =       $04             ; OP output SPI CS 1
+OP_LED_R                =       $08             ; OP output RED LED (active LO)
+OP_SPI_SCK              =       $10             ; OP output SPI SCK
+OP_LED_G                =       $20             ; OP output GREEN LED (active LO)
+OP_SPI_COPI             =       $40             ; OP output SPI COPI
+OP_SPI_CS2              =       $80             ; OP output SPI CS 2
 ; DUART IP input bit usage constants
-IP_CTSA                 =       $01                     ; IP input UART A CTS
-IP_CTSB                 =       $02                     ; IP input UART B CTS
-IP_SPI_CIPO             =       $04                     ; IP input SPI CIPO
+IP_CTSA                 =       $01             ; IP input UART A CTS
+IP_CTSB                 =       $02             ; IP input UART B CTS
+IP_SPI_CIPO             =       $04             ; IP input SPI CIPO
 
 ; *******************************************************
 ; * bios memory definitions
 ; *******************************************************
 
-; BIOS firmware zero-page addresses                     ; 16 bytes firmware general zero-page
+; BIOS firmware zero-page addresses             ; 16 bytes firmware general zero-page
 FW_ZP_START             =       $02
 
-FW_ZP_TMPPTR            =       FW_ZP_START             ; 2 bytes firmware ZP temp pointer
+FW_ZP_TMPPTR            =       FW_ZP_START     ; 2 bytes firmware ZP temp pointer
 FW_ZP_TMPPTR_L          =       FW_ZP_TMPPTR
 FW_ZP_TMPPTR_H          =       FW_ZP_TMPPTR+1
-FW_ZP_BANKTEMP          =       FW_ZP_START+$02         ; 1 byte temp used when setting BANK_SET
-FW_ZP_BANKSAVE          =       FW_ZP_START+$03         ; 1 byte firmware thunk previous BANK_SET
-FW_ZP_IOTEMP            =       FW_ZP_START+$04         ; 1 byte firmware IO temp
-FW_ZP_IOPTR             =       FW_ZP_START+$05         ; 2 bytes firmware IO buffer pointer
+FW_ZP_BANKTEMP          =       FW_ZP_TMPPTR+2  ; 1 byte temp used when setting BANK_SET
+FW_ZP_BANKSAVE          =       FW_ZP_BANKTEMP+1; 1 byte firmware thunk previous BANK_SET
+FW_ZP_IOTEMP            =       FW_ZP_BANKSAVE+1; 1 byte firmware IO temp
+FW_ZP_IOPTR             =       FW_ZP_IOTEMP+1  ; 2 bytes firmware IO buffer pointer
 FW_ZP_IOPTR_L           =       FW_ZP_IOPTR
 FW_ZP_IOPTR_H           =       FW_ZP_IOPTR+1
-FW_ZP_IOBYTE            =       FW_ZP_START+$07         ; 1 byte firmware IO read byte
-FW_ZP_IOLEN             =       FW_ZP_START+$08         ; 2 bytes firmware IO buffer length
+FW_ZP_IOBYTE            =       FW_ZP_IOPTR+2           ; 1 byte firmware IO read byte
+FW_ZP_IOLEN             =       FW_ZP_IOBYTE+1          ; 2 bytes firmware IO buffer length
 FW_ZP_IOLEN_L           =       FW_ZP_IOLEN
 FW_ZP_IOLEN_H           =       FW_ZP_IOLEN+1
-FW_ZP_BLOCKNUM          =       FW_ZP_START+$0A         ; 4 bytes ($c-$f) 32-bit IO block number
+FW_ZP_BLOCKNUM          =       FW_ZP_IOLEN+2           ; 4 bytes ($c-$f) 32-bit IO block number
 FW_ZP_BLOCKNUM0         =       FW_ZP_BLOCKNUM          ; LSB [ 7: 0]
 FW_ZP_BLOCKNUM1         =       FW_ZP_BLOCKNUM+1        ;     [15: 8]
 FW_ZP_BLOCKNUM2         =       FW_ZP_BLOCKNUM+2        ;     [23:16]
@@ -157,29 +157,57 @@ MON_ZP_START            =       $30                     ; 16 bytes monitor zero-
 USER_ZP_START           =       $40                     ; 192 bytes zero-page unused by firmware
 
 ; BIOS firmware low-RAM addresses
-TICK100HZ               =       $0200                   ; 3 bytes $0200-$0202 free incrementing 24-bit 100Hz counter (L/M/H)
+FW_RAM_START            =       $0200
+
+TICK100HZ               =       FW_RAM_START            ; 3 bytes $0200-$0202 free incrementing 24-bit 100Hz counter (L/M/H)
 TICK100HZ_L             =       TICK100HZ
 TICK100HZ_M             =       TICK100HZ+1
 TICK100HZ_H             =       TICK100HZ+2
-BLINKCNT                =       $0203                   ; 1 byte LED heartbeat tick count (high bit is current LED state)
-DWORD_VAL               =       $0204                   ; 4 byte 32-bit value
+BLINKCNT                =       TICK100HZ+3             ; 1 byte LED heartbeat tick count (high bit is current LED state)
+CPUMHZ                  =       BLINKCNT+1              ; CPU MHz from boot test
+DWORD_VAL               =       CPUMHZ+1                ; 4 byte 32-bit value
 DWORD_VAL0              =       DWORD_VAL
 DWORD_VAL1              =       DWORD_VAL+1
 DWORD_VAL2              =       DWORD_VAL+2
 DWORD_VAL3              =       DWORD_VAL+3
-PRDEC_WIDTH             =       $0208                   ; 1 byte minimum PRDEC32 width
-PRDEC_PAD               =       $0209                   ; 1 byte PRDEC32 leading pad character (or 0 for no padding)
+PRDEC_WIDTH             =       DWORD_VAL+4             ; 1 byte minimum PRDEC32 width
+PRDEC_PAD               =       PRDEC_WIDTH+1           ; 1 byte PRDEC32 leading pad character (or 0 for no padding)
 ;                       =       $020A
 ;                       =       $020B
 ;                       =       $020C
 ;                       =       $020D
 ;                       =       $020E
 ;                       =       $020F
-TEMPBUF16               =       $0210                   ; 16 byte temp formatting buffer (PRDEC32)
+TEMPBUF16               =       FW_RAM_START+$10        ; 16 byte temp formatting buffer (PRDEC32)
 
 
 ; BIOS firmware RAM jump-table
-RAMVECTBL               =       $0220                   ; BIOS RAM vectors, 3 bytes per routine
+RAMVECT                 =       $0220                   ; BIOS RAM vectors, 3 bytes per routine
+
+; BIOS low-RAM vector index numbers with JMP at RAMVECTBL+(3*index) per routine (up to 32)
+PRINTCHAR               =        0*3+RAMVECT            ; console output
+INPUTCHAR               =        1*3+RAMVECT            ; console input, waits for character, returns A=char
+CHECKINPUT              =        2*3+RAMVECT            ; console check input, returns C=1 if char ready
+CLRSCR                  =        3*3+RAMVECT            ; current user output screen (default UART assumes VT100)
+MOVEXY                  =        4*3+RAMVECT            ; move current output screen cursor A=V, X=H (default UART assumes VT100)
+SETCURSOR               =        5*3+RAMVECT            ; hide/show output screen cursor (default UART assumes VT100)
+USER_TICK               =        6*3+RAMVECT            ; called every ~100Hz timer tick (1st slot)
+NMI_INTR                =        7*3+RAMVECT            ; user NMI interrupt
+CD_CTRL                 =        8*3+RAMVECT            ; char device control/init, A=char, X=device (0=UART A, 1=UART B)
+CD_SENDCHAR             =        9*3+RAMVECT            ; char device output, A=char
+CD_RECVCHAR             =       10*3+RAMVECT            ; char device wait for input
+CD_CHECKCHAR            =       11*3+RAMVECT            ; char device check input
+BD_CTRL                 =       12*3+RAMVECT            ; block device control/init (default SD card)
+BD_STATUS               =       13*3+RAMVECT            ; block device status (default SD card)
+BD_READ                 =       14*3+RAMVECT            ; block device read block (default SD card)
+BD_WRITE                =       15*3+RAMVECT            ; block device write block (default SD card)
+FS_CTRL                 =       16*3+RAMVECT            ; filesystem control/init
+FS_OPEN                 =       17*3+RAMVECT            ; filesystem open file or directory
+FS_READ                 =       18*3+RAMVECT            ; filesystem read from file (or directory)
+FS_READDIRENT           =       19*3+RAMVECT            ; filesystem read next directory entry from directory
+FS_SEEK                 =       20*3+RAMVECT            ; TODO: filesystem seek in file (or directory)
+FS_WRITE                =       21*3+RAMVECT            ; TODO: filesystem write to file (or directory)
+FS_CLOSE                =       22*3+RAMVECT            ; TODO: filesystem close file or directory
 
 ; BIOS firmware low-RAM buffers
 INPUTBUF                =       $0300                   ; 256 byte line input/scratch buffer
@@ -191,60 +219,27 @@ FILESYSBUF_SIZE         =       $0200
 FILENAMEBUF             =       $0700                   ; 256 byte file name buffer (for LFN support)
 FILENAMEBUF_SIZE        =       $0100
 
-; BIOS firmware ROM jump-table
-ROMVECTBL               =       BANK_ROM_ADDR           ; BIOS ROM vectors, 3 bytes per routine
-
 ; *******************************************************
 ; * firmware BIOS routine and vector numbers
 ; *******************************************************
+; BIOS firmware ROM jump-table
+ROMFUNC                 =       BANK_ROM_ADDR           ; BIOS ROM functions, 3 bytes per routine
 
 ; BIOS ROM routine index numbers with JMP at ROMVECTBL+(3*index) per routine
-R_UART_A_SEND           =       0               ; blocking output to UART A, A=char (A X Y preserved)
-R_UART_A_RECV           =       1               ; blocking input from UART A, A=char (X Y preserved)
-R_UART_A_STAT           =       2               ; status from UART A, returns C=1 if Rx ready, A=$01 if Tx full
-R_UART_A_CTRL           =       3               ; TODO: UART A control/init
-R_UART_B_SEND           =       4               ; blocking output to UART B, A=char (A X Y preserved)
-R_UART_B_RECV           =       5               ; blocking input from UART B, A=char (X Y preserved)
-R_UART_B_STAT           =       6               ; status from UART B, returns C=1 if Rx ready, A=$01 if Tx full
-R_UART_B_CTRL           =       7               ; TODO: UART B control/init
-R_PRINT                 =       8               ; print string to V_PRINTCHAR, A/X (l/h)=string ending with 0
-R_PRINTLN               =       9               ; print string to V_PRINTCHAR with EOL, A/X (l/h)=string ending with 0
-R_READLINE              =       10              ; input line from V_INPUTCHAR, A/X (l/h)=string, Y=max len, returns Y=len
-R_PRBYTE                =       11              ; print A as 2 digit hex number
-R_PRDEC32               =       12              ; print DWORD_VAL as 32-bit unsigned decimal (PRDEC_WIDTH=width, PRDEC_PAD=pad)
-R_VT_CLRSCR             =       13              ; print to V_PRINTCHAR VT100 clear screen code
-R_VT_MOVEXY             =       14              ; print to V_PRINTCHAR VT100 move cursor to X, Y position (1 based, 0=unchanged)
-R_VT_SETCURSOR          =       15              ; print to V_PRINTCHAR VT100 cursor to 0=hidden, non-zero visible
-R_ROMBANKFUNC           =       16              ; call generic ROM bank (A/X (l/h)=function addr, Y=bank)
-
-; BIOS low-RAM vector index numbers with JMP at RAMVECTBL+(3*index) per routine (up to 32)
-V_PRINTCHAR             =       0               ; console output
-V_INPUTCHAR             =       1               ; console input, waits for character, returns A=char
-V_CHECKINPUT            =       2               ; console check input, returns C=1 if char ready
-V_CLRSCR                =       3               ; current user output screen (default UART assumes VT100)
-V_MOVEXY                =       4               ; move current output screen cursor A=V, X=H (default UART assumes VT100)
-V_SETCURSOR             =       5               ; hide/show output screen cursor (default UART assumes VT100)
-V_USER_TICK             =       6              ; called every ~100Hz timer tick (1st slot)
-V_CD_CTRL               =       7              ; char device control/init, A=char, X=device (0=UART A, 1=UART B)
-V_CD_SENDCHAR           =       8              ; char device output, A=char
-V_CD_RECVCHAR           =       9              ; char device wait for input
-V_CD_CHECKCHAR          =       10              ; char device check input
-V_BD_CTRL               =       11              ; block device control/init (default SD card)
-V_BD_STATUS             =       12              ; block device status (default SD card)
-V_BD_READ               =       13              ; block device read block (default SD card)
-V_BD_WRITE              =       14              ; block device write block (default SD card)
-V_FS_CTRL               =       15              ; filesystem control/init
-V_FS_OPEN               =       16              ; filesystem open file or directory
-V_FS_READ               =       17              ; filesystem read from file (or directory)
-V_FS_READDIRENT         =       18              ; filesystem read next directory entry from directory
-V_FS_SEEK               =       19              ; TODO: filesystem seek in file (or directory)
-V_FS_WRITE              =       20              ; TODO: filesystem write to file (or directory)
-V_FS_CLOSE              =       21              ; TODO: filesystem close file or directory
-                                                ; vectors 21-31 available
-
-; V_IRQIVEC		=	6		; IRQ interrupt vector (1st slot)
-; V_IRQVEC_2		=	7		; IRQ interrupt vector (2nd slot)
-; V_IRQVEC_3		=	8		; IRQ interrupt vector (3rd slot)
-; V_NMIVEC		=	9		; NMI interrupt vector (1st slot)
-; V_NMIVEC_2		=	10		; NMI interrupt vector (2nd slot)
-; V_NMIVEC_3		=	11		; NMI interrupt vector (3rd slot)
+UART_A_SEND             =        0*3+ROMFUNC            ; blocking output to UART A, A=char (A X Y preserved)
+UART_A_RECV             =        1*3+ROMFUNC            ; blocking input from UART A, A=char (X Y preserved)
+UART_A_STAT             =        2*3+ROMFUNC            ; status from UART A, returns C=1 if Rx ready, A=$01 if Tx full
+UART_A_CTRL             =        3*3+ROMFUNC            ; TODO: UART A control/init
+UART_B_SEND             =        4*3+ROMFUNC            ; blocking output to UART B, A=char (A X Y preserved)
+UART_B_RECV             =        5*3+ROMFUNC            ; blocking input from UART B, A=char (X Y preserved)
+UART_B_STAT             =        6*3+ROMFUNC            ; status from UART B, returns C=1 if Rx ready, A=$01 if Tx full
+UART_B_CTRL             =        7*3+ROMFUNC            ; TODO: UART B control/init
+PRINT                   =        8*3+ROMFUNC            ; print string to V_PRINTCHAR, A/X (l/h)=string ending with 0
+PRINTLN                 =        9*3+ROMFUNC            ; print string to V_PRINTCHAR with EOL, A/X (l/h)=string ending with 0
+READLINE                =       10*3+ROMFUNC            ; input line from V_INPUTCHAR, A/X (l/h)=string, Y=max len, returns Y=len
+PRBYTE                  =       11*3+ROMFUNC            ; print A as 2 digit hex number
+PRDEC32                 =       12*3+ROMFUNC            ; print DWORD_VAL as 32-bit unsigned decimal (PRDEC_WIDTH=width, PRDEC_PAD=pad)
+VT_CLRSCR               =       13*3+ROMFUNC            ; print to V_PRINTCHAR VT100 clear screen code
+VT_MOVEXY               =       14*3+ROMFUNC            ; print to V_PRINTCHAR VT100 move cursor to X, Y position (1 based, 0=unchanged)
+VT_SETCURSOR            =       15*3+ROMFUNC            ; print to V_PRINTCHAR VT100 cursor to 0=hidden, non-zero visible
+ROMINITFUNC             =       16*3+ROMFUNC            ; TODO: call generic ROM bank
