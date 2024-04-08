@@ -14,7 +14,7 @@
 ; Dr. Roc's Blog        https://www.asinine.nz/2023-01-29/SD_Card-part1/
 ;------------------------------------------------------------
 
-                include "defines.asm"
+                include "defines.inc"
 
 TRACE                   =       0       ; 1 for invasive debug trace prints
 REDLED                  =       1

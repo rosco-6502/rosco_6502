@@ -209,6 +209,10 @@ FS_SEEK                 =       20*3+RAMVECT            ; TODO: filesystem seek 
 FS_WRITE                =       21*3+RAMVECT            ; TODO: filesystem write to file (or directory)
 FS_CLOSE                =       22*3+RAMVECT            ; TODO: filesystem close file or directory
 
+; aliases
+COUT                    =       PRINTCHAR
+RDKEY                   =       INPUTCHAR
+
 ; BIOS firmware low-RAM buffers
 INPUTBUF                =       $0300                   ; 256 byte line input/scratch buffer
 INPUTBUF_SIZE           =       $0100

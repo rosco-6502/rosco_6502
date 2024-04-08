@@ -18,7 +18,7 @@
 ; George Foot https://github.com/gfoot/sdcard6502 - Thanks George!
 ; Significantly modified for vasm amd rosco_6502 by Xark
 
-                include "defines.asm"
+                include "defines.inc"
 
 TRACE                   =       0       ; 1 for invasive debug trace prints
 
@@ -32,7 +32,7 @@ tprint                  macro   str
                         phx
                         lda     #<.trstr\@
                         ldx     #>.trstr\@
-                        jsr     PRINT_SZ
+                        jsr     PRINT
                         plx
                         pla
                         plp
@@ -820,7 +820,7 @@ fat32_finddirent:
 
                 tprint  "{fat32_finddirent:"
                 if TRACE
-                        jsr     PRINT_SZ
+                        jsr     PRINT
                         lda     #' '
                         jsr     COUT
                 endif
@@ -915,7 +915,7 @@ fat32_openpath
                 if TRACE
                         lda     #<fat32_lfnbuffer2
                         ldx     #>fat32_lfnbuffer2
-                        jsr     PRINT_SZ
+                        jsr     PRINT
                 tprint  "\r\n"
                 endif
                         lda     #<fat32_lfnbuffer2      ; find path component in current dirent
@@ -1032,14 +1032,14 @@ fat32_file_read:
                         lda     fat32_address+1
                         adc     #2                      ; carry already clear
                         sta     fat32_address+1
-                        cmp     #>(BANK_RAM_AD+BANK_RAM_SZ)
+                        cmp     #>(BANK_RAM_ADDR+BANK_RAM_SIZE)
                         blt     .notnextbank
                         lda     BANK_SET
                         and     #BANK_RAM_M
                         cmp     #BANK_RAM_M
                         beq     .fail                   ; already in last RAM bank, so quit with error
                         inc     BANK_SET
-                        lda     #>BANK_RAM_AD
+                        lda     #>BANK_RAM_ADDR
                         sta     fat32_address+1
 
 .notnextbank            lda     fat32_bytesremaining+1  ; subtract $0200 (sector size)

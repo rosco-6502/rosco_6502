@@ -11,19 +11,19 @@
 ; Initial bringup and basic testing code for the board.
 ;------------------------------------------------------------
 
-                include "defines.asm"
+                include "defines.inc"
 
         if      1
 PRINT           macro   msg
                 lda     #<\msg
                 ldx     #>\msg
-                jsr     PRINT_SZ
+                jsr     PRINT
                 endm
 
 PRINTR          macro   msg
                 lda     #<\msg
                 ldx     #>\msg
-                jmp     PRINT_SZ
+                jmp     PRINT
                 endm
         else
 PRINT           macro   msg
@@ -512,7 +512,7 @@ showdir         jsr     fat32_readdirent
 
                 lda     #<fat32_lfnbuffer
                 ldx     #>fat32_lfnbuffer
-                jsr     PRINT_SZ
+                jsr     PRINT
                 lda     #$22
                 jsr     COUT
 .notlfn

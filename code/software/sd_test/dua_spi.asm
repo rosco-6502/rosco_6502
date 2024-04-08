@@ -11,7 +11,7 @@
 ; Initial bringup and basic testing code for the board.
 ;------------------------------------------------------------
 
-        include "defines.asm"
+        include "defines.inc"
 
 ; *******************************************************
 ; * low-level SPI routines using XR68C681 DUART IP/OP

@@ -11,7 +11,7 @@
 ; Initial bringup and basic testing code for the board.
 ;------------------------------------------------------------
 
-                include "defines.asm"
+                include "defines.inc"
 
 ZP_COUNT        =       USER_ZP_START
 
@@ -19,13 +19,13 @@ ZP_COUNT        =       USER_ZP_START
 PRINT           macro   msg
                 lda     #<\msg
                 ldx     #>\msg
-                jsr     PRINT_SZ
+                jsr     PRINT
                 endm
 
 PRINTR          macro   msg
                 lda     #<\msg
                 ldx     #>\msg
-                jmp     PRINT_SZ
+                jmp     PRINT
                 endm
         else
 PRINT           macro   msg
