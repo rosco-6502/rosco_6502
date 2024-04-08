@@ -6,6 +6,7 @@
 ; |_| |___|___|___|___|_____|___|___|___|___|
 ;                     |_____|    Bringup Code
 ;------------------------------------------------------------
+;
 ; Copyright (c)2022-2024 Ross Bamford and contributors
 ; See top-level LICENSE.md for licence information.
 ;
@@ -19,7 +20,8 @@ CUR_ROMBANK     =       1       ; assemble for ROM bank 1
 ; *******************************************************
 ; * include system defines
 ; *******************************************************
-                .include "defines.s"
+                .include "defines.inc"
+                .include "firmware.inc"
 
 ; *******************************************************
 ; * Include routine table for this bank

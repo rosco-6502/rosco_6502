@@ -19,7 +19,8 @@ CUR_ROMBANK     =       3       ; assemble for ROM bank 3
 ; *******************************************************
 ; * include system defines
 ; *******************************************************
-                .include "defines.s"
+                .include "defines.inc"
+                .include "firmware.inc"
 
 ; *******************************************************
 ; * Include routine table for this bank

@@ -22,7 +22,7 @@
 .macro          r0call  routine
 .ident(.sprintf("_%s", .string(routine))):
                         ldy     #<routine
-                        sty     THUNK_ROM0_MODRTBL
+                        sty     THUNK_ROM0_ROMADRL
                         jmp     THUNK_ROM0
 .endmacro
 

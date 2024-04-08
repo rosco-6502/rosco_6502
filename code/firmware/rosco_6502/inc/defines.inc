@@ -209,6 +209,16 @@ FS_SEEK                 =       20*3+RAMVECT            ; TODO: filesystem seek 
 FS_WRITE                =       21*3+RAMVECT            ; TODO: filesystem write to file (or directory)
 FS_CLOSE                =       22*3+RAMVECT            ; TODO: filesystem close file or directory
 
+; BIOS low-RAM bank switching "thunks" (set )
+THUNK_ROM0              =       $0280                   ; call ROM0 routine
+THUNK_ROM0_ROMADRL      =       THUNK_ROM0+$0A          ; low-byte of ROM0 routine address
+THUNK_BANK              =       $0298                   ; call RAM/ROM routine with BANK_SET
+THUNK_BANK_BANKSET      =       THUNK_BANK+$07          ; BANK_SET to use when calling routine
+THUNK_BANK_FUNCADDR     =       THUNK_BANK+$0C          ; two-byte routine address
+THUNK_BANKFAST          =       $02B2                   ; faster RAM/ROM routine with BANK_SET (trashes Y, P)
+THUNK_BANKFAST_BANKSET  =       THUNK_BANKFAST+$04      ; BANK_SET to use when calling routine
+THUNK_BANKFAST_FUNCADDR =       THUNK_BANKFAST+$08      ; two-byte routine address
+
 ; aliases
 COUT                    =       PRINTCHAR
 RDKEY                   =       INPUTCHAR
