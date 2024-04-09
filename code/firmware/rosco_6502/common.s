@@ -9,9 +9,8 @@
 ; Copyright (c)2022 Ross Bamford and contributors
 ; See top-level LICENSE.md for licence information.
 ;
-; IRQ handling code. This needs to be in all banks in the
-; big ROM, so it's included in each bank main file with
-; an appropriate section that's used in the link script.
+; Common code that needs to be at the same address in all ROM
+; banks, so it's included after romtable at start.
 ;------------------------------------------------------------
 
 ; ROM bank test/init, call with A=ROM bank ($00, $10, $20, $30), X=arg

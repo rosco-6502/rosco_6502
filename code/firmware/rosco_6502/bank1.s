@@ -33,7 +33,7 @@ CUR_ROMBANK     =       1       ; assemble for ROM bank 1
 ; * Include IRQ handling for this bank
 ; *******************************************************
                 .segment "ROMCOMMON1"
-                .include "irq.s"
+                .include "common.s"
 
 ; *******************************************************
 ; * Include vectors for this bank

@@ -280,7 +280,7 @@ ECHO:
 NOADDLF:                RTS
 
 ; X has S, Y bas BANK_SET
-                .global WOZHITBRK
+;                .export WOZHITBRK
 WOZHITBRK:
                         STY     CRCCHECK                ; save BANK_SET at BRK time
                         CLI
@@ -474,4 +474,4 @@ HELPMSG:                .byte   "?", $0D
                         .byte   "L                Load Intel hex", $0D
                         .byte   "#### [.####]     Examine mem",$0D
                         .byte   "####:## [## ...] Modify mem",$0D
-                        .byte   "####R            Run addr (with AXYP at 20.23)", 0
+                        .byte   "####R            Run addr (with AXYP at 30.33)", 0

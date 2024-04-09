@@ -34,13 +34,14 @@ all: boot8k.bin boot32k.bin
 
 boot8k.bin: bank0.o 
 	$(LN) $(LD_FLAGS) -C rosco_6502_8K.cfg -Ln $(basename $@).sym -vm -m $(basename $@).map $^ -o $@
-	-$(DA) --comments 4 --cpu 65SC02 --start-addr 0xE000 $@ >$(basename $@).dis
+	-$(DA) --comments 4 --cpu 65C02 --start-addr 0xE000 $@ >$(basename $@).dis
 
 boot32k.bin: bank0.o bank1.o bank2.o bank3.o
 	$(LN) $(LD_FLAGS) -C rosco_6502_32K.cfg -Ln $(basename $@).sym -vm -m $(basename $@).map $^ -o $@
-	-$(DA) --comments 4 --cpu 65SC02 --start-addr 0xE000 $@.1 >$(basename $@).1.dis
-	-$(DA) --comments 4 --cpu 65SC02 --start-addr 0xE000 $@.2 >$(basename $@).2.dis
-	-$(DA) --comments 4 --cpu 65SC02 --start-addr 0xE000 $@.3 >$(basename $@).3.dis
+	-$(DA) --comments 4 --cpu 65C02 --start-addr 0xE000 $@ >$(basename $@).0.dis
+	-$(DA) --comments 4 --cpu 65C02 --start-addr 0xE000 $@.1 >$(basename $@).1.dis
+	-$(DA) --comments 4 --cpu 65C02 --start-addr 0xE000 $@.2 >$(basename $@).2.dis
+	-$(DA) --comments 4 --cpu 65C02 --start-addr 0xE000 $@.3 >$(basename $@).3.dis
 	cat $@.1 $@.2 $@.3 >>$@
 
 burn8: boot8k.bin

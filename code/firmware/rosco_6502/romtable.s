@@ -20,7 +20,7 @@
 .macro          romvec routine, destaddr
                 .assert (routine-ROMFUNC)=(*-ROMTABLE), error, .sprintf("%s not #%d", .string(routine), (routine-ROMFUNC)/3)
                 .if CUR_ROMBANK=0
-                        .global  routine
+;                        .export  routine
                 .endif
                 .if .PARAMCOUNT=2
                         jmp     destaddr

@@ -12,6 +12,6 @@
 ; Vectors; needs to be in all banks so pulled in from here...
 ;------------------------------------------------------------
 
-NMI:                    .word   nmi_handler
+NMI:                    .word   NMI_INTR
 RESET:                  .word   reset_handler
 IRQ:                    .word   irq_handler

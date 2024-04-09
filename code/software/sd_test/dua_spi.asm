@@ -183,7 +183,7 @@ spi_read_byte2:         ; if X already loaded
                         and     DUA_IP                  ;  4    AND with IP byte
                         stx     DUA_OPR_HI              ;  4    SCK HI
                         cmp     #IP_SPI_CIPO            ;  2    set carry if CIPO set
-                        rol     FW_ZP_IOBYTE            ;  5    rotate carry into lsb
+                        rol     FW_ZP_TEMPBYTE          ;  5    rotate carry into lsb
                 endr    
-                        lda     FW_ZP_IOBYTE            ;  3    get result in A
+                        lda     FW_ZP_TEMPBYTE          ;  3    get result in A
                         rts                             ;  6    done

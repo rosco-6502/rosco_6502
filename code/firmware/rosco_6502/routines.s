@@ -21,8 +21,9 @@
 ; call ROM0 function using thunk function (13 bytes overhead)
 .macro          r0call  routine
 .ident(.sprintf("_%s", .string(routine))):
+                        sty     FW_ZP_BANKTEMP
                         ldy     #<routine
-                        sty     THUNK_ROM0_ROMADRL
+                .assert (>routine)=(>ROMTABLE),error,"routine must be in first page"
                         jmp     THUNK_ROM0
 .endmacro
 

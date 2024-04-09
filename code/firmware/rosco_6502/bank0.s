@@ -33,7 +33,7 @@ CUR_ROMBANK     =       0       ; assemble for ROM bank 0
 ; * Include IRQ handling for this bank
 ; *******************************************************
                 .segment "ROMCOMMON0"
-                .include "irq.s"
+                .include "common.s"
 
 ; *******************************************************
 ; * Include vectors for this bank
@@ -62,12 +62,33 @@ CUR_ROMBANK     =       0       ; assemble for ROM bank 0
                 .import __THUNKINIT_RUN__
                 .import __THUNKINIT_SIZE__
 
-                .global system_reset
+;                .export system_reset
 system_reset:
                         sei
                         cld
                         ldx     #$ff
                         txs
+
+                        ; setup low RAM vectors and thunks
+
+                        ldx     #$00
+@clearvar:              stz     __FW_VARSTART__,x
+                        inx
+                        bne     @clearvar
+
+;                        ldx     #0
+@vecinit:               lda     __VECINIT_LOAD__,x
+                        sta     __VECINIT_RUN__,x
+                        inx
+                        cpx     #<__VECINIT_SIZE__
+                        bne     @vecinit
+
+                        ldx     #0
+@thunkinit:             lda     __THUNKINIT_LOAD__,x
+                        sta     __THUNKINIT_RUN__,x
+                        inx
+                        cpx     #<__THUNKINIT_SIZE__
+                        bne     @thunkinit
 
                         ; Init DUART A
                         lda     #$a0                    ; Enable extended TX rates
@@ -123,27 +144,6 @@ system_reset:
                         lda     #$08                    ; Unmask counter interrupt
                         sta     DUA_IMR
 
-                        ; setup low RAM vectors and thunks
-
-                        ldx     #$00
-@clearvar:              stz     __FW_VARSTART__,x
-                        inx
-                        bne     @clearvar
-
-;                        ldx     #0
-@vecinit:               lda     __VECINIT_LOAD__,x
-                        sta     __VECINIT_RUN__,x
-                        inx
-                        cpx     #<__VECINIT_SIZE__
-                        bne     @vecinit
-
-                        ldx     #0
-@thunkinit:             lda     __THUNKINIT_LOAD__,x
-                        sta     __THUNKINIT_RUN__,x
-                        inx
-                        cpx     #<__THUNKINIT_SIZE__
-                        bne     @thunkinit
-
                         lda     #$80|BLINKCOUNT         ; set initial tick count
                         sta     BLINKCNT
 
@@ -177,22 +177,19 @@ system_reset:
                         cpx     TICK100HZ               ; 4
                         beq     @timeloop               ; 3 = 37 per iteration
 
-                        ldx     #'0'
+                        stz     PRDEC_PAD
+                        stz     PRDEC_PAD
                         lda     FW_ZP_TMPPTR+1
                         sta     CPUMHZ
-@tencnt:                cmp     #10
-                        bcc     @tensdone
-                        inx
-                        sbc     #10
-                        bne     @tencnt
-@tensdone:              pha
-                        txa
-                        cmp     #'0'
-                        beq     @notens
-                        jsr     PRINTCHAR
-@notens:                pla
-                        ora     #'0'
-                        jsr     PRINTCHAR
+                        sta     DWORD_VAL0
+                        ; stz     DWORD_VAL1
+                        ; stz     DWORD_VAL2
+                        ; stz     DWORD_VAL3
+                        jsr     _PRDEC32
+
+                        lda     #<TEMPBUF16
+                        ldx     #>TEMPBUF16
+                        jsr     _PRINT
 
                         lda     #<SYSINFO1
                         ldx     #>SYSINFO1
@@ -216,7 +213,7 @@ system_reset:
                         jsr     _PRINT
 
                         ; Do RAM banks check
-                        jsr     bankcheck
+                        jsr     bank_check
 
                         ; do ROM bank init
                         lda     #0<<BANK_ROM_B
@@ -225,7 +222,7 @@ system_reset:
                         clc
                         adc     #1<<BANK_ROM_B
                         cmp     #ROM_BANKS<<BANK_ROM_B
-                        blt     @romloop
+                        bne     @romloop
 
                         ; tests passed
                         lda     #<PBANK
@@ -259,8 +256,8 @@ an_rts:                 rts
 ; *******************************************************
 ; * non-destructive basic test of RAM memory banks
 ; *******************************************************
-                .global bank_check
-bankcheck:
+;                .export bank_check
+bank_check:
                         ldx     #RAM_BANKS-1            ; Start at banks-1
 @writeloop:
                         stx     BANK_SET                ; Set bank register
@@ -327,7 +324,7 @@ SZ_BANNER1:             .byte   "                           ___ ___ ___ ___ ", $
 SZ_BANNER2:             .byte   " ___ ___ ___ ___ ___      |  _| __|   |__ |", $D, $A
 SZ_BANNER3:             .byte   "|  _| . |_ -|  _| . |     | . |__ | | | __|", $D, $A
 SZ_BANNER4:             .byte   "|_| |___|___|___|___|_____|___|___|___|___|", $D, $A
-SZ_BANNER5:             .byte   "                    |_____|", $1B, "[1;37m System ", $1B, "[1;30m0.02.DEV", $1B, "[0m", $D, $A, $D, $A, 0
+SZ_BANNER5:             .byte   "                    |_____|", $1B, "[1;37m System ", $1B, "[1;30m0.03.DEV", $1B, "[0m", $D, $A, $D, $A, 0
 SYSINFO0:               .byte   "W65C02S CPU @ ", 0
 SYSINFO1:               .byte   "MHz with 16KB+16x32KB RAM and ", 0
 SYSINFO2:               .byte   "x8KB ROM", $D, $A, 0

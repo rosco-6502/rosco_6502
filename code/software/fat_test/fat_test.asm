@@ -105,7 +105,7 @@ _start:
                 lda     #$A
                 jsr     COUT
 
-                PRINT   FAT32FILEREAD
+                PRINT   BENCHMSG
 
                 lda     #<$4000
                 sta     fat32_address
@@ -404,6 +404,8 @@ FILEMSG                 asciiz  "       "
 
 EXITMSG                 ascii   $D, $A, "Exit."
 EOLMSG                  asciiz  $D, $A
+
+BENCHMSG		asciiz	"Reading 512KB into high-RAM banks...",$D,$A
 
 ; test file path
 testpath                asciiz  "/"

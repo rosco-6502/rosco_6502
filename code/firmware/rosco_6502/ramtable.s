@@ -17,27 +17,22 @@
 ;
 ; ramvec <routine>[,<destaddr>]
 .macro          ramvec vector, code
-                .assert (vector-RAMVECT)=(*-RAMTABLE), error, .sprintf("%s not #%d", .string(vector), (vector-RAMVECT)/3)
+                .assert (vector-RAMVECT)=(*-RAMTABLE), warning, .sprintf("%s not #%d", .string(vector), (vector-RAMVECT)/3)
                 .if CUR_ROMBANK=0
-                        .global  vector
+;                        .export  vector
                 .endif
                 .local  vecbeg
                 vecbeg  =       *
-                .if .PARAMCOUNT=2
                        	code
-                        .res    3-(*-vecbeg)
-		.else
-			rts
-			nop
-			nop
-		.endif
+                .res    3-(*-vecbeg),$60
                 .endmacro
 
                 .segment "VECINIT"
 RAMTABLE:
-                        ramvec  PRINTCHAR,      {jmp _UART_A_SEND}
-                        ramvec  INPUTCHAR,      {jmp _UART_A_RECV}
-                        ramvec  CHECKINPUT,     {jmp _UART_A_STAT}
+                        ; unknown ROM bank mapped, so use ROMTABLE for ROM functions
+                        ramvec  PRINTCHAR,      {jmp UART_A_SEND}
+                        ramvec  INPUTCHAR,      {jmp UART_A_RECV}
+                        ramvec  CHECKINPUT,     {jmp UART_A_STAT}
                         ramvec  CLRSCR,         {rts}
                         ramvec  MOVEXY,         {rts}
                         ramvec  SETCURSOR,      {rts}
@@ -46,79 +41,72 @@ RAMTABLE:
 
                 .segment "THUNKINIT"
 ;
-; RAM thunk to call ROM0 routine with another ROM bank banked
+; RAM thunk to call ROM0 routine from another ROM bank
+; A X Y C passed in, A X Y C returned
+;         sty     FW_ZP_BANKTEMP        ; Y to pass in
+;         ldy     #<ROM_routine         ; low byte of ROMTABLE addr
+;         jmp     THUNK_ROM0
 ;
-; THUNK_ROM0_ROMADRL     = low byte of ROMTABLE function
-;
+                .export _THUNK_ROM0
 _THUNK_ROM0:
-                        phy
+                        sty     @jsrmod+1
                         ldy     BANK_SET
-                        sty     THUNK_ROM0_BANKSAVE
-                        stz     BANK_SET
-                        ply
-_THUNK_ROM0_ROMADRL      =       *+1
-        .global _THUNK_ROM0_ROMADRL
-                .assert (*+1-_THUNK_ROM0)=(THUNK_ROM0_ROMADRL-THUNK_ROM0), error, "THUNK_ROM0_ROMADRL mismatch"
-                        jsr     ROMTABLE+$00    ; THUNK_ROM0_ROMADRL modified
-                        php
                         phy
-THUNK_ROM0_BANKSAVE     =       *+1
-                        ldy     #$FF            ; THUNK_ROM0_BANKSAVE modified
-                        sty     BANK_SET
+                        stz     BANK_SET
+                        ldy     FW_ZP_BANKTEMP
+@jsrmod:                jsr     ROMTABLE            ; only low modified!
+                        sty     FW_ZP_BANKTEMP
                         ply
-                        plp
+                        sty     BANK_SET
+                        ldy     FW_ZP_BANKTEMP
                         rts
 
-                        .res    3               ; pad
+                        .res    3
 ;
 ; RAM thunk to call routine with specific RAM/ROM banking
 ;
-; THUNK_BANK_BANKSET    = BANK_SET value for routine
-; THUNK_BANK_FUNCADDR   = address of routine (two bytes)
+;       pha                             ; A to pass in
+;       phx                             ; X to pass in
+;       sty     FW_ZP_BANKTEMP          ; Y to pass in
+;       lda     #<function              ; routine L
+;       ldx     #>function              ; routine H
+;       ldy     #bank                   ; routine bank
+;       jmp     THUNK_BANK
 ;
-                .assert (*-_THUNK_ROM0)=(THUNK_BANK-THUNK_ROM0), error, "_THUNK_BANK mismatch"
+                .assert (*-_THUNK_ROM0)=(THUNK_BANK-THUNK_ROM0), warning, "_THUNK_BANK mismatch"
+                .export _THUNK_BANK
 _THUNK_BANK:
-                        phy
-                        ldy     BANK_SET
-                        sty     THUNK_BANK_BANKSAVE
-_THUNK_BANK_BANKSET      =       *+1
-                .assert (*+1-_THUNK_ROM0)=(THUNK_BANK_BANKSET-THUNK_ROM0), error, "THUNK_BANK_BANKSET mismatch"
-                        ldy     #$FF            ; THUNK_BANK_BANKSET modified
+                        sta     @jsrmod+1
+                        stx     @jsrmod+2
+                        lda     BANK_SET
+                        pha
                         sty     BANK_SET
+                        ldy     FW_ZP_BANKTEMP
+@jsrmod:                jsr     $FFFF
+                        sty     FW_ZP_BANKTEMP
                         ply
-_THUNK_BANK_FUNCADDR     =       *+1
-                .assert (*+1-_THUNK_ROM0)=(THUNK_BANK_FUNCADDR-THUNK_ROM0), error, "THUNK_BANK_FUNCADDR mismatch"
-                        jsr     $FFFF           ; THUNK_BANK_FUNCADDR modified (two bytes)
-                        php
-                        phy
-THUNK_BANK_BANKSAVE     =       *+1
-                        ldy     #$00            ; THUNK_BANK_BANKSAVE modified
                         sty     BANK_SET
-                        ply
-                        plp
+                        ldy     FW_ZP_BANKTEMP
                         rts
-
-                        .res    3               ; pad
-
 ;
-; RAM thunk to call routine with specific RAM/ROM banking (trashes Y and P)
+; RAM thunk to call routine with specific RAM/ROM banking (trashes Y)
 ;
-; THUNK_BANKFAST_BANKSET    = BANK_SET value for routine
-; THUNK_BANKFAST_FUNCADDR   = address of routine (two bytes)
+; pha
+; phx
+; lda     #<function
+; ldx     #>function
+; ldy     #bank
+; jmp     THUNK_BANK
 ;
-                .assert (*-_THUNK_ROM0)=(THUNK_BANKFAST-THUNK_ROM0), error, "_THUNK_BANKFAST mismatch"
+                .assert (*-_THUNK_ROM0)=(THUNK_BANKFAST-THUNK_ROM0), warning, "_THUNK_BANKFAST mismatch"
+                .export _THUNK_BANKFAST
 _THUNK_BANKFAST:
-                        ldy     BANK_SET
-                        phy
-_THUNK_BANKFAST_BANKSET  =       *+1
-                .assert (*+1-_THUNK_ROM0)=(THUNK_BANKFAST_BANKSET-THUNK_ROM0), error, "THUNK_BANKFAST_BANKSET mismatch"
-                        ldy     #$FF            ; THUNK_BANKFAST_BANKSET modified
+                        sta     @jsrmod+1
+                        stx     @jsrmod+2
+                        lda     BANK_SET
+                        pha
                         sty     BANK_SET
-_THUNK_BANKFAST_FUNCADDR =       *+1
-                .assert (*+1-_THUNK_ROM0)=(THUNK_BANKFAST_FUNCADDR-THUNK_ROM0), error, "THUNK_BANKFAST_FUNCADDR mismatch"
-                        jsr     $FFFF           ; THUNK_BANKFAST_FUNCADDR modified (two bytes)
+@jsrmod:                jsr     $FFFF
                         ply
                         sty     BANK_SET
                         rts
-
-                        .res    3               ; pad
