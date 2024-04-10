@@ -90,10 +90,10 @@ sd_init:
                         stx     DUA_OPR_HI
                         trace   '~'
                         lda     #SD_RESET_CYCLES
-                        sta     FW_ZP_IOTEMP
+                        sta     FW_ZP_TEMP_3
 .resetloop              lda     #$FF
                         jsr     spi_write_byte
-                        dec     FW_ZP_IOTEMP
+                        dec     FW_ZP_TEMP_3
                         bne     .resetloop
                         lda     #SD_IDLE_RETRIES
                         sta     sd_idle_retry
@@ -182,7 +182,7 @@ sd_check_status2:       lda     #<sd_7A_cmd58_read_ocr
                         jsr     spi_read_byte
                         tracea
                         sta     sd_sdhc_flag            ; save, bit 6 = SDHC flag
-                        sta     FW_ZP_IOTEMP            ; save for all-zeros check
+                        sta     FW_ZP_TEMP_3            ; save for all-zeros check
                 if TRACE
                         and     #$40
                         cmp     #$40
@@ -193,15 +193,15 @@ sd_check_status2:       lda     #<sd_7A_cmd58_read_ocr
                 endif
                         jsr     spi_read_byte
                         tracea
-                        ora     FW_ZP_IOTEMP
-                        sta     FW_ZP_IOTEMP
+                        ora     FW_ZP_TEMP_3
+                        sta     FW_ZP_TEMP_3
                         jsr     spi_read_byte
                         tracea
-                        ora     FW_ZP_IOTEMP
-                        sta     FW_ZP_IOTEMP
+                        ora     FW_ZP_TEMP_3
+                        sta     FW_ZP_TEMP_3
                         jsr     spi_read_byte
                         tracea
-                        ora     FW_ZP_IOTEMP            ; test result for all zero response (no pull-up on SD CIPO)
+                        ora     FW_ZP_TEMP_3            ; test result for all zero response (no pull-up on SD CIPO)
                         beq     sd_deassert_fail
 sd_deassert_good        clc
                         trace   '^'
@@ -241,7 +241,7 @@ sd_read_block:
                 if CRCCHECKYANK                         ; read CRC to check for yank
                         trace   '-'
                         jsr     spi_read_byte
-                        sta     FW_ZP_IOTEMP
+                        sta     FW_ZP_TEMP_3
                         tracea
                         jsr     spi_read_byte
                         tracea
@@ -249,7 +249,7 @@ sd_read_block:
 ; if CRC $FFFF, double check if card yanked
                         cmp     #$FF
                         bne     .not_FFFF_crc
-                        cmp     FW_ZP_IOTEMP
+                        cmp     FW_ZP_TEMP_3
                         bne     .not_FFFF_crc
 
 ; issue BLKSIZE to check if card responding
@@ -313,10 +313,10 @@ sd_write_block:
 ; A = block cmd byte, 32-bit blocknum at FW_ZP_BLOCKNUM
 ; trashes A, X, Y
 sd_send_blockcmd:
-                        sta     FW_ZP_IOTEMP
+                        sta     FW_ZP_TEMP_3
                         jsr     sd_assert
                         trace   '>'
-                        lda     FW_ZP_IOTEMP
+                        lda     FW_ZP_TEMP_3
                         tracea
                         jsr     spi_write_byte
                         trace   '@'

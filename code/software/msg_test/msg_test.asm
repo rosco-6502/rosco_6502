@@ -44,7 +44,34 @@ PRINTR          macro   msg
 
 _start:
                 PRINT   RUNMSG
-.byebye:
+
+		PRINT	ENTERMSG
+
+		ldx	#0
+.clr:		stz	INPUTBUF,x
+		inx
+		bne	.clr
+
+
+; .echo:		JSR	INPUTCHAR
+; 		JSR	PRINTCHAR
+; 		bra	.echo
+
+		lda	#<INPUTBUF
+		ldx	#>INPUTBUF
+		ldy	#10
+;		jsr	readlinz
+		jsr	READLINE
+		tya
+		jsr	outbyte
+
+		PRINT	OUTMSG
+
+		lda	#<INPUTBUF
+		ldx	#>INPUTBUF
+		jsr	PRINT
+
+byebye:
                 PRINTR   EXITMSG
 
                 global  outbyte
@@ -69,7 +96,9 @@ outbyte:        pha                     ; save a for lsd.
 
 RUNMSG          asciiz  "Message Test Running.", $D, $A
 
-                incbin  "/Users/kenj/Dev/Rosco_Dev/rosco_6502/code/firmware/firstboot/wozmon.asm"
+ENTERMSG        asciiz  "Enter message :"
+
+OUTMSG       	asciiz  $D, $A, "Entered :"
 
 EXITMSG         ascii   $D, $A, "Exit."
 EOLMSG          asciiz  $D, $A

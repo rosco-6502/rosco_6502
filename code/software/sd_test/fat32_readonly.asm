@@ -755,14 +755,14 @@ fat32_readdirent:
                         asl                             ; shift so N=lower ext flag, V=lower ext flag for BIT test
                         asl
                         asl
-                        sta     FW_ZP_IOTEMP
+                        sta     FW_ZP_TEMP_3
                         ldx     #0
                         ldy     #0
 .makelfnbase            lda     (zp_sd_address),y
                         iny
                         cmp     #' '
                         beq     .donebase
-                        bit     FW_ZP_IOTEMP
+                        bit     FW_ZP_TEMP_3
                         bvc     .nobaselower
                         jsr     tolower
 .nobaselower            sta     fat32_lfnbuffer,x
@@ -784,7 +784,7 @@ fat32_readdirent:
                         iny
                         cmp     #' '
                         beq     .donelfn
-                        bit     FW_ZP_IOTEMP
+                        bit     FW_ZP_TEMP_3
                         bpl     .noextlower
                         jsr     tolower
 .noextlower             sta     fat32_lfnbuffer,x
@@ -797,8 +797,8 @@ fat32_readdirent:
 .done
                 tprint  "OK="
                 if TRACE
-                        sta     FW_ZP_IOTEMP
-                tprintv FW_ZP_IOTEMP
+                        sta     FW_ZP_TEMP_3
+                tprintv FW_ZP_TEMP_3
                 endif
                         clc
                         rts
@@ -847,10 +847,10 @@ fat32_finddirent:
                         ldy     #0
 .comparelong            lda     fat32_lfnbuffer,y
                         jsr     tolower
-                        sta     FW_ZP_IOTEMP
+                        sta     FW_ZP_TEMP_3
                         lda     (fat32_filenamepointer),y
                         jsr     tolower
-                        cmp     FW_ZP_IOTEMP
+                        cmp     FW_ZP_TEMP_3
                         bne     .direntloop     ; no match
                         tax
                         beq     .foundit        ; it was NUL
@@ -862,10 +862,10 @@ fat32_finddirent:
 .compareshort           ldy     #11-1
 .comparenameloop        lda     (zp_sd_address),y
                         jsr     tolower
-                        sta     FW_ZP_IOTEMP
+                        sta     FW_ZP_TEMP_3
                         lda     (fat32_filenamepointer),y
                         jsr     tolower
-                        cmp     FW_ZP_IOTEMP
+                        cmp     FW_ZP_TEMP_3
                         bne     .direntloop     ; no match
                         dey
                         bpl     .comparenameloop

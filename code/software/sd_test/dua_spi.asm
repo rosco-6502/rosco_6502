@@ -24,11 +24,11 @@
                 global  spi_write_page
 spi_write_page:
                         ldx     #OP_SPI_SCK             ;  2    load X for spi_write_byte2
-                        stz     FW_ZP_IOLEN             ;  3
-.pageloop               ldy     FW_ZP_IOLEN             ;  3
+                        stz     FW_ZP_TEMPWORD             ;  3
+.pageloop               ldy     FW_ZP_TEMPWORD             ;  3
                         lda     (FW_ZP_IOPTR),y         ;  5
                         jsr     spi_write_byte2         ; ~140
-                        inc     FW_ZP_IOLEN             ;  5
+                        inc     FW_ZP_TEMPWORD             ;  5
                         bne     .pageloop               ; 2/3
                         rts                             ;  6
 
@@ -37,14 +37,14 @@ spi_write_page:
 ;
                 global  spi_write_bytes
 spi_write_bytes:
-                        stx     FW_ZP_IOLEN+1           ;  3
-                        stz     FW_ZP_IOLEN             ;  3
+                        stx     FW_ZP_TEMPWORD+1           ;  3
+                        stz     FW_ZP_TEMPWORD             ;  3
                         ldx     #OP_SPI_SCK             ;  2    load X for spi_write_byte2
-.byteloop               ldy     FW_ZP_IOLEN             ;  2
+.byteloop               ldy     FW_ZP_TEMPWORD             ;  2
                         lda     (FW_ZP_IOPTR),y         ;  5
                         jsr     spi_write_byte2         ; ~140
-                        inc     FW_ZP_IOLEN             ;  5
-                        dec     FW_ZP_IOLEN+1           ;  5
+                        inc     FW_ZP_TEMPWORD             ;  5
+                        dec     FW_ZP_TEMPWORD+1           ;  5
                         bne     .byteloop               ; 2/3
                         rts                             ;  6
 
@@ -183,7 +183,7 @@ spi_read_byte2:         ; if X already loaded
                         and     DUA_IP                  ;  4    AND with IP byte
                         stx     DUA_OPR_HI              ;  4    SCK HI
                         cmp     #IP_SPI_CIPO            ;  2    set carry if CIPO set
-                        rol     FW_ZP_TEMPBYTE          ;  5    rotate carry into lsb
+                        rol     FW_ZP_TEMP_1          ;  5    rotate carry into lsb
                 endr    
-                        lda     FW_ZP_TEMPBYTE          ;  3    get result in A
+                        lda     FW_ZP_TEMP_1          ;  3    get result in A
                         rts                             ;  6    done

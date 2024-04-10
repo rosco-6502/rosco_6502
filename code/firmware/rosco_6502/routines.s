@@ -23,7 +23,7 @@
 .ident(.sprintf("_%s", .string(routine))):
                         sty     FW_ZP_BANKTEMP
                         ldy     #<routine
-                .assert (>routine)=(>ROMTABLE),error,"routine must be in first page"
+                .assert (>routine)=(>_ROMTABLE),error,"routine must be in first page"
                         jmp     THUNK_ROM0
 .endmacro
 
@@ -130,7 +130,7 @@ _PRINT:
 ; *******************************************************
 _PRINTLN:
                         jsr     _PRINT
-                        lda     #$0D
+_PRCRLF:                lda     #$0D
                         jsr     PRINTCHAR
                         lda     #$0A
                         jmp     PRINTCHAR
@@ -145,7 +145,64 @@ _PRINTLN:
                 r0call  VT_CLRSCR
                 r0call  VT_MOVEXY
                 r0call  VT_SETCURSOR
+
         .else
+
+; READLINE - Read an input line with basic editing
+;
+;
+_READLINE:
+		sta	FW_ZP_TMPPTR_L
+		stx	FW_ZP_TMPPTR_H
+		sty	FW_ZP_TEMPWORD_H	; max len-1
+		lda	#$00
+		jsr	@readclr
+		bra	@readchar
+@readbeep:	lda	#$07
+@readecho:	jsr	COUT
+@readchar:	jsr	INPUTCHAR
+		cmp	#$1b
+		beq	@readesc
+		cmp	#$7F
+		bne	@notdel
+		lda	#$08
+@notdel:	cmp	#$08
+		bne	@notbs
+		cpy	#$00
+		beq	@readbeep
+		lda	#$08
+		jsr	COUT
+		lda	#' '
+		jsr	COUT
+		lda	#$08
+		jsr	COUT
+		dey
+		lda	#$00
+		sta	(FW_ZP_TMPPTR),y
+		bra	@readchar
+@notbs:		cmp	#$0D
+		beq	@readenter
+		cpy	FW_ZP_TEMPWORD_H
+		bge	@readbeep
+		cmp	#' '
+		blt	@readbeep
+		sta	(FW_ZP_TMPPTR),y
+		iny
+		bra	@readecho
+@readesc:	lda	#'\'
+		jsr	COUT
+                jsr     _PRCRLF
+@readclr:	lda	#$00
+@clrloop:	sta	(FW_ZP_TMPPTR),y
+		dey
+		cpy	#$FF
+		bne	@clrloop
+		tay
+		sec
+		rts
+@readenter:	jsr     _PRCRLF
+                clc
+		rts
 
 ; PRBYTE - Print A as two digit hex
 ; nothing trashed
@@ -173,8 +230,8 @@ _PRBYTE:                php
 ;           based on very clever code from TobyLobster/dp11 "ultra-compact version":
 ;           https://stardot.org.uk/forums/viewtopic.php?p=369724&sid=e71c30225371c64770ce43d15dea57f0#p369724
 ; DWORD_VAL - 32-bit number to print (will be destroyed)
-; PRDEC_PAD - set to 0 for no leading padding or set to pad char (e.g., "0" or  " ")
-; PRDEC_WIDTH - set padded width (will be exceeded if number doesn't fit)
+; PR_PAD - set to 0 for no leading padding or set to pad char (e.g., "0" or  " ")
+; PR_WIDTH - set padded width (will be exceeded if number doesn't fit)
 ;
 _PRDEC32:
                         phy
@@ -201,9 +258,9 @@ _PRDEC32:
                         sta     TEMPBUF16,y
                         tya
                         tax
-                        lda     PRDEC_PAD
+                        lda     PR_PAD
                         beq     @printloop2
-@printloop0:            cpx     PRDEC_WIDTH
+@printloop0:            cpx     PR_WIDTH
                         bge     @printloop2
                         jsr     PRINTCHAR
                         inx
@@ -228,8 +285,8 @@ _VT_MOVEXY:
                         lda     #<VT100_MOVEXY
                         ldx     #>VT100_MOVEXY
                         jsr     _PRINT
-                        stz     PRDEC_PAD
-                        stz     PRDEC_WIDTH
+                        stz     PR_PAD
+                        stz     PR_WIDTH
                         pla
                         jsr     @print_dec
                         lda     #';'

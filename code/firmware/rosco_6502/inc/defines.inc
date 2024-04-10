@@ -12,6 +12,8 @@
 ; rosco_6502 hardware and firmware BIOS defines
 ;------------------------------------------------------------
 ;
+; NOTE: Made for most 6502 assemblers (mostly "=", ca65 and vasm tested)
+;
 ; rosco_6502 r4 Memory Map:
 ;
 ; |Memory Range | Bytes | Usage
@@ -127,26 +129,26 @@ IP_CTSB                 =       $02                     ; IP input UART B CTS
 IP_SPI_CIPO             =       $04                     ; IP input SPI CIPO
 
 ; *******************************************************
-; * bios memory definitions
+; * BIOS firmware memory definitions (API)
 ; *******************************************************
 
 ; BIOS firmware zero-page addresses                     ; 16 bytes firmware general zero-page
 FW_ZP_START             =       $02
 
-FW_ZP_TMPPTR            =       FW_ZP_START             ; 2 bytes firmware ZP temp pointer
+FW_ZP_TMPPTR            =       FW_ZP_START             ; 2 bytes firmware ZP temp ptr/word
 FW_ZP_TMPPTR_L          =       FW_ZP_TMPPTR
 FW_ZP_TMPPTR_H          =       FW_ZP_TMPPTR+1
-FW_ZP_TEMPBYTE          =       FW_ZP_TMPPTR+2          ; 1 byte temp (set before use, clobbered)
-FW_ZP_BANKTEMP          =       FW_ZP_TEMPBYTE+1        ; 1 byte temp used when switching BANK_SET
-FW_ZP_BANKSAVE          =       FW_ZP_BANKTEMP+1        ; 1 byte firmware thunk previous BANK_SET
-FW_ZP_IOTEMP            =       FW_ZP_BANKSAVE+1        ; 1 byte temp for SD card
-FW_ZP_IOPTR             =       FW_ZP_IOTEMP+1          ; 2 bytes firmware IO buffer pointer
+FW_ZP_TEMPWORD          =       FW_ZP_TMPPTR+2          ; 2 bytes firmware ZP temp word/ptr
+FW_ZP_TEMPWORD_L        =       FW_ZP_TEMPWORD
+FW_ZP_TEMPWORD_H        =       FW_ZP_TEMPWORD+1
+FW_ZP_TEMP_1            =       FW_ZP_TEMPWORD+2        ; 1 byte temp (set before use, clobbered)
+FW_ZP_TEMP_2            =       FW_ZP_TEMP_1+1          ; 1 byte temp (set before use, clobbered)
+FW_ZP_TEMP_3            =       FW_ZP_TEMP_2+1          ; 1 byte temp (used by I/O)
+FW_ZP_BANKTEMP          =       FW_ZP_TEMP_3+1          ; 1 byte temp used when switching BANK_SET
+FW_ZP_IOPTR             =       FW_ZP_BANKTEMP+1        ; 2 bytes firmware IO buffer pointer
 FW_ZP_IOPTR_L           =       FW_ZP_IOPTR
 FW_ZP_IOPTR_H           =       FW_ZP_IOPTR+1
-FW_ZP_IOLEN             =       FW_ZP_IOPTR+2           ; 2 bytes firmware IO buffer length
-FW_ZP_IOLEN_L           =       FW_ZP_IOLEN
-FW_ZP_IOLEN_H           =       FW_ZP_IOLEN+1
-FW_ZP_BLOCKNUM          =       FW_ZP_IOLEN+2           ; 4 bytes ($c-$f) 32-bit IO block number
+FW_ZP_BLOCKNUM          =       FW_ZP_IOPTR+2           ; 4 bytes ($c-$f) 32-bit IO block number
 FW_ZP_BLOCKNUM0         =       FW_ZP_BLOCKNUM          ; LSB [ 7: 0]
 FW_ZP_BLOCKNUM1         =       FW_ZP_BLOCKNUM+1        ;     [15: 8]
 FW_ZP_BLOCKNUM2         =       FW_ZP_BLOCKNUM+2        ;     [23:16]
@@ -157,7 +159,7 @@ MON_ZP_START            =       $30                     ; 16 bytes monitor zero-
 USER_ZP_START           =       $40                     ; 192 bytes zero-page unused by firmware
 
 ; BIOS firmware low-RAM addresses
-FW_RAM_START            =       $0200
+FW_RAM_START            =       $0200                   ; 256 bytes reserved for firmware
 
 TICK100HZ               =       FW_RAM_START            ; 3 bytes $0200-$0202 free incrementing 24-bit 100Hz counter (L/M/H)
 TICK100HZ_L             =       TICK100HZ
@@ -170,9 +172,9 @@ DWORD_VAL0              =       DWORD_VAL
 DWORD_VAL1              =       DWORD_VAL+1
 DWORD_VAL2              =       DWORD_VAL+2
 DWORD_VAL3              =       DWORD_VAL+3
-PRDEC_WIDTH             =       DWORD_VAL+4             ; 1 byte minimum PRDEC32 width
-PRDEC_PAD               =       PRDEC_WIDTH+1           ; 1 byte PRDEC32 leading pad character (or 0 for no padding)
-FW_RSVD_B               =       PRDEC_PAD+1
+PR_WIDTH                =       DWORD_VAL+4             ; 1 byte minimum PRDEC32 width
+PR_PAD                  =       PR_WIDTH+1              ; 1 byte PRDEC32 leading pad character (or 0 for no padding)
+FW_RSVD_B               =       PR_PAD+1
 FW_RSVD_C               =       FW_RSVD_B+1
 FW_RSVD_D               =       FW_RSVD_C+1
 FW_RSVD_E               =       FW_RSVD_D+1
@@ -180,73 +182,74 @@ FW_RSVD_F               =       FW_RSVD_E+1
 TEMPBUF16               =       FW_RSVD_F+1             ; 16 byte temp buffer (PRDEC32)
 
 ; BIOS firmware RAM jump-table
-RAMVECT                 =       $0220                   ; BIOS RAM vectors, 3 bytes per routine
+RAMTABLE                =       $0220                   ; BIOS RAM vectors, 3 bytes per routine
 
 ; BIOS low-RAM vector index numbers with JMP at RAMVECTBL+(3*index) per routine (up to 32)
-PRINTCHAR               =        0*3+RAMVECT            ; console output
-INPUTCHAR               =        1*3+RAMVECT            ; console input, waits for character, returns A=char
-CHECKINPUT              =        2*3+RAMVECT            ; console check input, returns C=1 if char ready
-CLRSCR                  =        3*3+RAMVECT            ; current user output screen (default UART assumes VT100)
-MOVEXY                  =        4*3+RAMVECT            ; move current output screen cursor A=V, X=H (default UART assumes VT100)
-SETCURSOR               =        5*3+RAMVECT            ; hide/show output screen cursor (default UART assumes VT100)
-USER_TICK               =        6*3+RAMVECT            ; called every ~100Hz timer tick (1st slot)
-NMI_INTR                =        7*3+RAMVECT            ; NMI interrupt goes here
-CD_CTRL                 =        8*3+RAMVECT            ; char device control/init
-CD_SENDCHAR             =        9*3+RAMVECT            ; char device output, A=char
-CD_RECVCHAR             =       10*3+RAMVECT            ; char device wait for input
-CD_CHECKCHAR            =       11*3+RAMVECT            ; char device check input
-BD_CTRL                 =       12*3+RAMVECT            ; block device control/init (default SD card)
-BD_STATUS               =       13*3+RAMVECT            ; block device status (default SD card)
-BD_READ                 =       14*3+RAMVECT            ; block device read block (default SD card)
-BD_WRITE                =       15*3+RAMVECT            ; block device write block (default SD card)
-FS_CTRL                 =       16*3+RAMVECT            ; filesystem control/init
-FS_OPEN                 =       17*3+RAMVECT            ; filesystem open file or directory
-FS_READ                 =       18*3+RAMVECT            ; filesystem read from file (or directory)
-FS_READDIRENT           =       19*3+RAMVECT            ; filesystem read next directory entry from directory
-FS_SEEK                 =       20*3+RAMVECT            ; TODO: filesystem seek in file (or directory)
-FS_WRITE                =       21*3+RAMVECT            ; TODO: filesystem write to file (or directory)
-FS_CLOSE                =       22*3+RAMVECT            ; TODO: filesystem close file or directory
+PRINTCHAR               =        0*3+RAMTABLE           ; console output
+INPUTCHAR               =        1*3+RAMTABLE           ; console input, waits for character, returns A=char
+CHECKINPUT              =        2*3+RAMTABLE           ; console check input, returns C=1 if char ready
+INPUTLINE               =        3*3+RAMTABLE           ; console line input, A/X (l/h) buffer, Y=max len
+CLRSCR                  =        4*3+RAMTABLE           ; current user output screen (default UART assumes VT100)
+MOVEXY                  =        5*3+RAMTABLE           ; move current output screen cursor A=V, X=H (default UART assumes VT100)
+SETCURSOR               =        6*3+RAMTABLE           ; hide/show output screen cursor (default UART assumes VT100)
+USER_TICK               =        7*3+RAMTABLE           ; called every ~100Hz timer tick (1st slot)
+NMI_INTR                =        8*3+RAMTABLE           ; NMI interrupt RAM vector address
+CD_CTRL                 =        9*3+RAMTABLE           ; char device control/init
+CD_SENDCHAR             =       10*3+RAMTABLE           ; char device output, A=char
+CD_RECVCHAR             =       11*3+RAMTABLE           ; char device wait for input
+CD_CHECKCHAR            =       12*3+RAMTABLE           ; char device check input
+BD_CTRL                 =       13*3+RAMTABLE           ; block device control/init (default SD card)
+BD_STATUS               =       14*3+RAMTABLE           ; block device status (default SD card)
+BD_READ                 =       15*3+RAMTABLE           ; block device read block (default SD card)
+BD_WRITE                =       16*3+RAMTABLE           ; block device write block (default SD card)
+FS_CTRL                 =       17*3+RAMTABLE           ; filesystem control/init
+FS_OPEN                 =       18*3+RAMTABLE           ; filesystem open file or directory
+FS_READ                 =       19*3+RAMTABLE           ; filesystem read from file (or directory)
+FS_READDIRENT           =       20*3+RAMTABLE           ; filesystem read next directory entry from directory
+FS_SEEK                 =       21*3+RAMTABLE           ; TODO: filesystem seek in file (or directory)
+FS_WRITE                =       22*3+RAMTABLE           ; TODO: filesystem write to file (or directory)
+FS_CLOSE                =       23*3+RAMTABLE           ; TODO: filesystem close file or directory
 
 ; BIOS low-RAM bank switching "thunks" (code copied at boot)
 THUNK_ROM0              =       $0280                   ; call ROM0 routine (Y=bank, FW_ZP_BANKTEMP=Y)
-THUNK_BANK              =       $0298                   ; call RAM/ROM routine with BANK_SET
-THUNK_BANKFAST          =       $02B0                   ; faster call RAM/ROM routine with Y=BANK_SET (trashes Y)
+;THUNK_BANK              =       $0298                   ; TODO: call RAM/ROM routine with BANK_SET
+;THUNK_BANKFAST          =       $02B4                   ; TODO: faster call RAM/ROM routine with Y=BANK_SET (trashes Y)
 
-; aliases
+; 6502 aliases
 COUT                    =       PRINTCHAR
 RDKEY                   =       INPUTCHAR
 
 ; BIOS firmware low-RAM buffers
-INPUTBUF                =       $0300                   ; 256 byte line input/scratch buffer
+INPUTBUF                =       $0300                   ; 256 byte line input buffer (or scratch use)
 INPUTBUF_SIZE           =       $0100
-SCRATCHBUF              =       $0400                   ; 256 byte scratch buffer (used for copying between banks)
-SCRATCHBUF_SIZE         =       $0100
-FILESYSBUF              =       $0500                   ; 512 byte sector buffer
+FILESYSBUF              =       $0400                   ; 512 byte sector buffer (filesystem)
 FILESYSBUF_SIZE         =       $0200
-FILENAMEBUF             =       $0700                   ; 256 byte file name buffer (for LFN support)
+FILENAMEBUF             =       $0600                   ; 256 byte file name buffer (filesystem)
 FILENAMEBUF_SIZE        =       $0100
+SCRATCHBUF              =       $0700                   ; 256 byte scratch buffer (also used copying between banks)
+SCRATCHBUF_SIZE         =       $0100
 
 ; *******************************************************
 ; * firmware BIOS routine and vector numbers
 ; *******************************************************
 ; BIOS firmware ROM jump-table
-ROMFUNC                 =       BANK_ROM_ADDR           ; BIOS ROM functions, 3 bytes per routine
+ROMTABLE                =       BANK_ROM_ADDR           ; BIOS ROM functions, 3 bytes per routine
 
 ; BIOS ROM routine index numbers with JMP at ROMVECTBL+(3*index) per routine
-UART_A_SEND             =        0*3+ROMFUNC            ; blocking output to UART A, A=char (A X Y preserved)
-UART_A_RECV             =        1*3+ROMFUNC            ; blocking input from UART A, A=char (X Y preserved)
-UART_A_STAT             =        2*3+ROMFUNC            ; status from UART A, returns C=1 if Rx ready, A=$01 if Tx full
-UART_A_CTRL             =        3*3+ROMFUNC            ; TODO: UART A control/init
-UART_B_SEND             =        4*3+ROMFUNC            ; blocking output to UART B, A=char (A X Y preserved)
-UART_B_RECV             =        5*3+ROMFUNC            ; blocking input from UART B, A=char (X Y preserved)
-UART_B_STAT             =        6*3+ROMFUNC            ; status from UART B, returns C=1 if Rx ready, A=$01 if Tx full
-UART_B_CTRL             =        7*3+ROMFUNC            ; TODO: UART B control/init
-PRINT                   =        8*3+ROMFUNC            ; print string to V_PRINTCHAR, A/X (l/h)=string ending with 0
-PRINTLN                 =        9*3+ROMFUNC            ; print string to V_PRINTCHAR with EOL, A/X (l/h)=string ending with 0
-READLINE                =       10*3+ROMFUNC            ; input line from V_INPUTCHAR, A/X (l/h)=string, Y=max len, returns Y=len
-PRBYTE                  =       11*3+ROMFUNC            ; print A as 2 digit hex number
-PRDEC32                 =       12*3+ROMFUNC            ; print DWORD_VAL as 32-bit unsigned decimal (PRDEC_WIDTH=width, PRDEC_PAD=pad)
-VT_CLRSCR               =       13*3+ROMFUNC            ; print to V_PRINTCHAR VT100 clear screen code
-VT_MOVEXY               =       14*3+ROMFUNC            ; print to V_PRINTCHAR VT100 move cursor to X, Y position (1 based, 0=unchanged)
-VT_SETCURSOR            =       15*3+ROMFUNC            ; print to V_PRINTCHAR VT100 cursor to 0=hidden, non-zero visible
-ROMINITFUNC             =       16*3+ROMFUNC            ; ROM bank specific init
+UART_A_SEND             =        0*3+ROMTABLE           ; blocking output to UART A, A=char (A X Y preserved)
+UART_A_RECV             =        1*3+ROMTABLE           ; blocking input from UART A, A=char (X Y preserved)
+UART_A_STAT             =        2*3+ROMTABLE           ; status from UART A, returns C=1 if Rx ready, A=$01 if Tx full
+UART_A_CTRL             =        3*3+ROMTABLE           ; TODO: UART A control/init
+UART_B_SEND             =        4*3+ROMTABLE           ; blocking output to UART B, A=char (A X Y preserved)
+UART_B_RECV             =        5*3+ROMTABLE           ; blocking input from UART B, A=char (X Y preserved)
+UART_B_STAT             =        6*3+ROMTABLE           ; status from UART B, returns C=1 if Rx ready, A=$01 if Tx full
+UART_B_CTRL             =        7*3+ROMTABLE           ; TODO: UART B control/init
+PRINT                   =        8*3+ROMTABLE           ; print string to V_PRINTCHAR, A/X (l/h)=string ending with 0
+PRINTLN                 =        9*3+ROMTABLE           ; print string to V_PRINTCHAR with EOL, A/X (l/h)=string ending with 0
+READLINE                =       10*3+ROMTABLE           ; input line from V_INPUTCHAR, A/X (l/h)=string, Y=max len, returns Y=len
+PRBYTE                  =       11*3+ROMTABLE           ; print A as 2 digit hex number
+PRDEC32                 =       12*3+ROMTABLE           ; print DWORD_VAL as 32-bit unsigned decimal (PR_WIDTH=width, PR_PAD=pad)
+VT_CLRSCR               =       13*3+ROMTABLE           ; print to V_PRINTCHAR VT100 clear screen code
+VT_MOVEXY               =       14*3+ROMTABLE           ; print to V_PRINTCHAR VT100 move cursor to X, Y position (1 based, 0=unchanged)
+VT_SETCURSOR            =       15*3+ROMTABLE           ; print to V_PRINTCHAR VT100 cursor to 0=hidden, non-zero visible
+ROMINITFUNC             =       16*3+ROMTABLE           ; ROM bank specific init

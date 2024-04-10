@@ -9,7 +9,7 @@
 ; Copyright (c)2022-2023 Ross Bamford and contributors
 ; See top-level LICENSE.md for licence information.
 ;
-; Routine table, bios entry points callable from all ROM banks
+; Routine table, BIOS entry points callable from all ROM banks
 ;------------------------------------------------------------
 
 ; R_<routine>   = rtable.inc routine table index
@@ -18,7 +18,7 @@
 ;
 ; romvec <routine>[,<destaddr>]
 .macro          romvec routine, destaddr
-                .assert (routine-ROMFUNC)=(*-ROMTABLE), error, .sprintf("%s not #%d", .string(routine), (routine-ROMFUNC)/3)
+                .assert (routine-ROMTABLE)=(*-_ROMTABLE), error, .sprintf("%s not #%d", .string(routine), (routine-ROMTABLE)/3)
                 .if CUR_ROMBANK=0
 ;                        .export  routine
                 .endif
@@ -29,7 +29,8 @@
                 .endif
                 .endmacro
 
-ROMTABLE:
+                .assert (_ROMTABLE=ROMTABLE),error,"ROMTABLE mismatch"
+_ROMTABLE:
                         romvec  UART_A_SEND
                         romvec  UART_A_RECV
                         romvec  UART_A_STAT
@@ -40,7 +41,7 @@ ROMTABLE:
                         romvec  UART_B_CTRL,_STUB
                         romvec  PRINT       
                         romvec  PRINTLN     
-                        romvec  READLINE,_STUB
+                        romvec  READLINE
                         romvec  PRBYTE      
                         romvec  PRDEC32     
                         romvec  VT_CLRSCR   

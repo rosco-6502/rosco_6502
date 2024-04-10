@@ -69,27 +69,6 @@ system_reset:
                         ldx     #$ff
                         txs
 
-                        ; setup low RAM vectors and thunks
-
-                        ldx     #$00
-@clearvar:              stz     __FW_VARSTART__,x
-                        inx
-                        bne     @clearvar
-
-;                        ldx     #0
-@vecinit:               lda     __VECINIT_LOAD__,x
-                        sta     __VECINIT_RUN__,x
-                        inx
-                        cpx     #<__VECINIT_SIZE__
-                        bne     @vecinit
-
-                        ldx     #0
-@thunkinit:             lda     __THUNKINIT_LOAD__,x
-                        sta     __THUNKINIT_RUN__,x
-                        inx
-                        cpx     #<__THUNKINIT_SIZE__
-                        bne     @thunkinit
-
                         ; Init DUART A
                         lda     #$a0                    ; Enable extended TX rates
                         sta     DUA_CRA
@@ -144,6 +123,27 @@ system_reset:
                         lda     #$08                    ; Unmask counter interrupt
                         sta     DUA_IMR
 
+                        ; setup low RAM vectors and thunks
+
+                        ldx     #$00
+@clearvar:              stz     __FW_VARSTART__,x
+                        inx
+                        bne     @clearvar
+
+;                        ldx     #0
+@vecinit:               lda     __VECINIT_LOAD__,x
+                        sta     __VECINIT_RUN__,x
+                        inx
+                        cpx     #<__VECINIT_SIZE__
+                        bne     @vecinit
+
+                        ldx     #0
+@thunkinit:             lda     __THUNKINIT_LOAD__,x
+                        sta     __THUNKINIT_RUN__,x
+                        inx
+                        cpx     #<__THUNKINIT_SIZE__
+                        bne     @thunkinit
+
                         lda     #$80|BLINKCOUNT         ; set initial tick count
                         sta     BLINKCNT
 
@@ -177,8 +177,8 @@ system_reset:
                         cpx     TICK100HZ               ; 4
                         beq     @timeloop               ; 3 = 37 per iteration
 
-                        stz     PRDEC_PAD
-                        stz     PRDEC_PAD
+                        stz     PR_PAD
+                        stz     PR_PAD
                         lda     FW_ZP_TMPPTR+1
                         sta     CPUMHZ
                         sta     DWORD_VAL0
@@ -256,7 +256,7 @@ an_rts:                 rts
 ; *******************************************************
 ; * non-destructive basic test of RAM memory banks
 ; *******************************************************
-;                .export bank_check
+                .export bank_check
 bank_check:
                         ldx     #RAM_BANKS-1            ; Start at banks-1
 @writeloop:

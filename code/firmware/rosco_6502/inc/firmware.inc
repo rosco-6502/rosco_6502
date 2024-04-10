@@ -9,7 +9,7 @@
 ; Copyright (c)2022 Ross Bamford and contributors
 ; See top-level LICENSE.md for licence information.
 ;
-; rosco_6502 hardware and firmware "bios" defines
+; rosco_6502 hardware and firmware BIOS defines
 ;------------------------------------------------------------
 
 ; misc constants
