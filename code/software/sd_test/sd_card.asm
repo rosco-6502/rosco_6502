@@ -335,7 +335,7 @@ sd_send_blockcmd:
                         tracea
                         jsr     spi_write_byte
 .dummycrc7              lda     #$FF                    ; send ignored CRC7
-                        tracea
+                        trace	'_'
                         jmp     spi_write_byte
                         ; rts
 .not_sdhc               lda     FW_ZP_BLOCKNUM+0        ; calc bytenum = blocknum << 9
@@ -372,8 +372,9 @@ sd_send_sd_cmd:
 .cmd_trace_loop         lda     (FW_ZP_IOPTR),y
                         jsr     outbyte
                         iny
-                        cpy     #6
+                        cpy     #5
                         bne     .cmd_trace_loop
+			trace	'_'
                 endif
                         ldx     #6
                         jsr     spi_write_bytes
