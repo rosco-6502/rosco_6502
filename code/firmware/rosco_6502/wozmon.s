@@ -32,6 +32,7 @@ BYTESH                  =       $3F                     ; Intel hex byte count h
 ; Other Variables
 
 IN                      =       INPUTBUF                ;  Input buffer to $0300
+_PRBYTE                 =       _PRHEX_U8
 
 ;-------------------------------------------------------------------------
 ;  Constants

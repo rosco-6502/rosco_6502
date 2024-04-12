@@ -172,14 +172,14 @@ DWORD_VAL0              =       DWORD_VAL
 DWORD_VAL1              =       DWORD_VAL+1
 DWORD_VAL2              =       DWORD_VAL+2
 DWORD_VAL3              =       DWORD_VAL+3
-PR_WIDTH                =       DWORD_VAL+4             ; 1 byte minimum PRDEC32 width
-PR_PAD                  =       PR_WIDTH+1              ; 1 byte PRDEC32 leading pad character (or 0 for no padding)
+PR_WIDTH                =       DWORD_VAL+4             ; 1 byte minimum PRDEC_U32 width
+PR_PAD                  =       PR_WIDTH+1              ; 1 byte PRDEC_U32 leading pad character (or 0 for no padding)
 FW_RSVD_B               =       PR_PAD+1
 FW_RSVD_C               =       FW_RSVD_B+1
 FW_RSVD_D               =       FW_RSVD_C+1
 FW_RSVD_E               =       FW_RSVD_D+1
 FW_RSVD_F               =       FW_RSVD_E+1
-TEMPBUF16               =       FW_RSVD_F+1             ; 16 byte temp buffer (PRDEC32)
+TEMPBUF16               =       FW_RSVD_F+1             ; 16 byte temp buffer (PRDEC_U32)
 
 ; BIOS firmware RAM jump-table
 RAMTABLE                =       $0220                   ; BIOS RAM vectors, 3 bytes per routine
@@ -192,7 +192,7 @@ INPUTLINE               =        3*3+RAMTABLE           ; console line input, A/
 CLRSCR                  =        4*3+RAMTABLE           ; current user output screen (default UART assumes VT100)
 MOVEXY                  =        5*3+RAMTABLE           ; move current output screen cursor A=V, X=H (default UART assumes VT100)
 SETCURSOR               =        6*3+RAMTABLE           ; hide/show output screen cursor (default UART assumes VT100)
-USER_TICK               =        7*3+RAMTABLE           ; called every ~100Hz timer tick (1st slot)
+USER_TICK               =        7*3+RAMTABLE           ; called every ~100Hz timer tick
 NMI_INTR                =        8*3+RAMTABLE           ; NMI interrupt RAM vector address
 CD_CTRL                 =        9*3+RAMTABLE           ; char device control/init
 CD_SENDCHAR             =       10*3+RAMTABLE           ; char device output, A=char
@@ -215,9 +215,11 @@ THUNK_ROM0              =       $0280                   ; call ROM0 routine (Y=b
 ;THUNK_BANK              =       $0298                   ; TODO: call RAM/ROM routine with BANK_SET
 ;THUNK_BANKFAST          =       $02B4                   ; TODO: faster call RAM/ROM routine with Y=BANK_SET (trashes Y)
 
-; 6502 aliases
+; common 6502 aliases
 COUT                    =       PRINTCHAR
 RDKEY                   =       INPUTCHAR
+GETKEY                  =       INPUTCHAR
+PRBYTE                  =       PRHEX_U8
 
 ; BIOS firmware low-RAM buffers
 INPUTBUF                =       $0300                   ; 256 byte line input buffer (or scratch use)
@@ -236,20 +238,31 @@ SCRATCHBUF_SIZE         =       $0100
 ROMTABLE                =       BANK_ROM_ADDR           ; BIOS ROM functions, 3 bytes per routine
 
 ; BIOS ROM routine index numbers with JMP at ROMVECTBL+(3*index) per routine
-UART_A_SEND             =        0*3+ROMTABLE           ; blocking output to UART A, A=char (A X Y preserved)
-UART_A_RECV             =        1*3+ROMTABLE           ; blocking input from UART A, A=char (X Y preserved)
-UART_A_STAT             =        2*3+ROMTABLE           ; status from UART A, returns C=1 if Rx ready, A=$01 if Tx full
-UART_A_CTRL             =        3*3+ROMTABLE           ; TODO: UART A control/init
-UART_B_SEND             =        4*3+ROMTABLE           ; blocking output to UART B, A=char (A X Y preserved)
-UART_B_RECV             =        5*3+ROMTABLE           ; blocking input from UART B, A=char (X Y preserved)
-UART_B_STAT             =        6*3+ROMTABLE           ; status from UART B, returns C=1 if Rx ready, A=$01 if Tx full
-UART_B_CTRL             =        7*3+ROMTABLE           ; TODO: UART B control/init
-PRINT                   =        8*3+ROMTABLE           ; print string to V_PRINTCHAR, A/X (l/h)=string ending with 0
-PRINTLN                 =        9*3+ROMTABLE           ; print string to V_PRINTCHAR with EOL, A/X (l/h)=string ending with 0
-READLINE                =       10*3+ROMTABLE           ; input line from V_INPUTCHAR, A/X (l/h)=string, Y=max len, returns Y=len
-PRBYTE                  =       11*3+ROMTABLE           ; print A as 2 digit hex number
-PRDEC32                 =       12*3+ROMTABLE           ; print DWORD_VAL as 32-bit unsigned decimal (PR_WIDTH=width, PR_PAD=pad)
-VT_CLRSCR               =       13*3+ROMTABLE           ; print to V_PRINTCHAR VT100 clear screen code
-VT_MOVEXY               =       14*3+ROMTABLE           ; print to V_PRINTCHAR VT100 move cursor to X, Y position (1 based, 0=unchanged)
-VT_SETCURSOR            =       15*3+ROMTABLE           ; print to V_PRINTCHAR VT100 cursor to 0=hidden, non-zero visible
-ROMINITFUNC             =       16*3+ROMTABLE           ; ROM bank specific init
+ROMINITFUNC             =        0*3+ROMTABLE           ; ROM bank specific init
+UART_A_CTRL             =        1*3+ROMTABLE           ; TODO: UART A control/init
+UART_A_SEND             =        2*3+ROMTABLE           ; blocking output to UART A, A=char (A X Y preserved)
+UART_A_RECV             =        3*3+ROMTABLE           ; blocking input from UART A, A=char (X Y preserved)
+UART_A_STAT             =        4*3+ROMTABLE           ; status from UART A, returns C=1 if Rx ready, A=$01 if Tx full
+UART_B_CTRL             =        5*3+ROMTABLE           ; TODO: UART B control/init
+UART_B_SEND             =        6*3+ROMTABLE           ; blocking output to UART B, A=char (A X Y preserved)
+UART_B_RECV             =        7*3+ROMTABLE           ; blocking input from UART B, A=char (X Y preserved)
+UART_B_STAT             =        8*3+ROMTABLE           ; status from UART B, returns C=1 if Rx ready, A=$01 if Tx full
+PRINT                   =        9*3+ROMTABLE           ; print string to PRINTCHAR, A/X (l/h)=string ending with 0
+PRINTLN                 =       10*3+ROMTABLE           ; print string to PRINTCHAR with EOL, A/X (l/h)=string ending with 0
+READLINE                =       11*3+ROMTABLE           ; input line from INPUTCHAR, A/X (l/h)=string, Y=max len, returns Y=len
+PRHEX_U8                =       12*3+ROMTABLE           ; print A as 2 digit hex number
+PRDEC_U32               =       13*3+ROMTABLE           ; print DWORD_VAL as 32-bit unsigned decimal (PR_WIDTH=width, PR_PAD=pad)
+VT_CLRSCR               =       14*3+ROMTABLE           ; print to PRINTCHAR VT100 clear screen code
+VT_MOVEXY               =       15*3+ROMTABLE           ; print to PRINTCHAR VT100 move cursor to X, Y position (1 based, 0=unchanged)
+VT_SETCURSOR            =       16*3+ROMTABLE           ; print to PRINTCHAR VT100 cursor to 0=hidden, non-zero visible
+SD_CTRL                 =       17*3+RAMTABLE           ; FIXME: block device control/init (default SD card)
+SD_STATUS               =       18*3+RAMTABLE           ; FIXME: block device status (default SD card)
+SD_READ                 =       19*3+RAMTABLE           ; FIXME: block device read block (default SD card)
+SD_WRITE                =       20*3+RAMTABLE           ; FIXME: block device write block (default SD card)
+FAT_CTRL                =       21*3+RAMTABLE           ; FIXME: filesystem control/init
+FAT_OPEN                =       22*3+RAMTABLE           ; FIXME: filesystem open file or directory
+FAT_READ                =       23*3+RAMTABLE           ; FIXME: filesystem read from file (or directory)
+FAT_READDIRENT          =       24*3+RAMTABLE           ; FIXME: filesystem read next directory entry from directory
+FAT_SEEK                =       25*3+RAMTABLE           ; TODO: filesystem seek in file (or directory)
+FAT_WRITE               =       26*3+RAMTABLE           ; TODO: filesystem write to file (or directory)
+FAT_CLOSE               =       27*3+RAMTABLE           ; TODO: filesystem close file or directory

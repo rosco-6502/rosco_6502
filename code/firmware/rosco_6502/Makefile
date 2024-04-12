@@ -53,5 +53,5 @@ burn32: boot32k.bin
 clean:
 	$(RM) *.bin *.o *.lst *.sym *.map *.dis
 
-.PHONY: all burn clean rom8K rom32K
+.PHONY: all burn8 burn32 clean rom8K rom32K
 

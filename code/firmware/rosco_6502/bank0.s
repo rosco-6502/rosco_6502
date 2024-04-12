@@ -185,7 +185,7 @@ system_reset:
                         ; stz     DWORD_VAL1
                         ; stz     DWORD_VAL2
                         ; stz     DWORD_VAL3
-                        jsr     _PRDEC32
+                        jsr     _PRDEC_U32
 
                         lda     #<TEMPBUF16
                         ldx     #>TEMPBUF16
@@ -229,6 +229,7 @@ system_reset:
                         ldx     #>PBANK
                         jsr     _PRINT
 
+                        ldx     #$3
                         lda     DUA_SRA                 ; clear any pending RX garbage
                         lda     DUA_RBA
                         lda     DUA_SRA

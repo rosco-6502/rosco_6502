@@ -140,8 +140,8 @@ _PRCRLF:                lda     #$0D
         .if CUR_ROMBANK<>0
 ; call ROM0 thunk for these routines (if not in ROM0)
                 r0call  READLINE
-                r0call  PRBYTE
-                r0call  PRDEC32
+                r0call  PRHEX_U8
+                r0call  PRDEC_U32
                 r0call  VT_CLRSCR
                 r0call  VT_MOVEXY
                 r0call  VT_SETCURSOR
@@ -204,9 +204,9 @@ _READLINE:
                 clc
 		rts
 
-; PRBYTE - Print A as two digit hex
+; PRHEX_U8 - Print A as two digit hex
 ; nothing trashed
-_PRBYTE:                php
+_PRHEX_U8:                php
                         pha
                         jsr     @prhex2
                         pla
@@ -226,14 +226,14 @@ _PRBYTE:                php
                         adc     #$06            ; add offset for letter.
 @echo:                  jmp     PRINTCHAR
 
-; PRDEC32 - print unsigned 32 bit number in decimal (with optional width padding)
+; PRDEC_U32 - print unsigned 32 bit number in decimal (with optional width padding)
 ;           based on very clever code from TobyLobster/dp11 "ultra-compact version":
 ;           https://stardot.org.uk/forums/viewtopic.php?p=369724&sid=e71c30225371c64770ce43d15dea57f0#p369724
 ; DWORD_VAL - 32-bit number to print (will be destroyed)
 ; PR_PAD - set to 0 for no leading padding or set to pad char (e.g., "0" or  " ")
 ; PR_WIDTH - set padded width (will be exceeded if number doesn't fit)
 ;
-_PRDEC32:
+_PRDEC_U32:
                         phy
                         phx
                         lda     #$0
@@ -300,7 +300,7 @@ _VT_MOVEXY:
                         stz     DWORD_VAL1
                         stz     DWORD_VAL2
                         stz     DWORD_VAL3
-                        jsr     _PRDEC32
+                        jsr     _PRDEC_U32
                         lda     #<TEMPBUF16
                         ldx     #<TEMPBUF16
                         jmp     _PRINT
