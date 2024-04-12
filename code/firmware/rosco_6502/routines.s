@@ -18,15 +18,6 @@
 ; banks, since the routine table will point to them.
 ;------------------------------------------------------------
 
-; call ROM0 function using thunk function (13 bytes overhead)
-.macro          r0call  routine
-.ident(.sprintf("_%s", .string(routine))):
-                        sty     FW_ZP_BANKTEMP
-                        ldy     #<routine
-                .assert (>routine)=(>_ROMTABLE),error,"routine must be in first page"
-                        jmp     THUNK_ROM0
-.endmacro
-
 ; *******************************************************
 ; * Blocking output to DUART A. Character in A
 ; *******************************************************
@@ -146,6 +137,14 @@ _PRCRLF:                lda     #$0D
                 r0call  VT_MOVEXY
                 r0call  VT_SETCURSOR
 
+                r0call  SD_CTRL
+                r0call  SD_READ
+                r0call  SD_WRITE
+
+                r0call  FAT_CTRL
+                r0call  FAT_OPEN
+                r0call  FAT_READDIRENT
+                r0call  FAT_READ
         .else
 
 ; READLINE - Read an input line with basic editing
@@ -320,6 +319,6 @@ _VT_SETCURSOR:
                 .segment "RODATA0"
 VT100_CLRSCR:           .byte   $1b,"[2J",0
 VT100_MOVEXY:           .byte   $1b,"[",0
-VT100_SETCURSOR:        .byte   $1b, "[?25",0 
-                
+VT100_SETCURSOR:        .byte   $1b, "[?25",0
+
         .endif

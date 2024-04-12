@@ -30,7 +30,7 @@ LD_FLAGS := -v
 all: boot8k.bin boot32k.bin
 
 %.o : %.s $(S_INCLUDES) $(MAKEFILE_LIST)
-	$(AS) $(AS_FLAGS) -l $<.lst $< -o $@
+	$(AS) $(AS_FLAGS) -l $(basename $<).lst $< -o $@
 
 boot8k.bin: bank0.o 
 	$(LN) $(LD_FLAGS) -C rosco_6502_8K.cfg -Ln $(basename $@).sym -vm -m $(basename $@).map $^ -o $@

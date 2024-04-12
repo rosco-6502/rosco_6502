@@ -12,8 +12,6 @@
 ;
 ; Main code for ROM bank 0 (system bank)
 ;------------------------------------------------------------
-                .macpack generic
-                .macpack longbranch
 
 CUR_ROMBANK     =       0       ; assemble for ROM bank 0
 
@@ -243,7 +241,7 @@ system_reset:
                         jmp     WOZMON
 
                         ; rts
-                        
+
 
 ; *******************************************************
 ; * Bank init/test
@@ -298,6 +296,17 @@ bank_check:
                         ldx     #>BCFAILED
                         jmp     _PRINT
                         ; rts
+
+; *******************************************************
+; * SD card routines
+; *******************************************************
+                .include "duart_spi.s"
+                .include "sd_card.s"
+
+; *******************************************************
+; * filesystem routines
+; *******************************************************
+                .include "fat32_readonly.s"
 
 ; *******************************************************
 ; * Include wozmon

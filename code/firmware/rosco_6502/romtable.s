@@ -31,7 +31,7 @@
 
                 .assert (_ROMTABLE=ROMTABLE),error,"ROMTABLE mismatch"
 _ROMTABLE:
-                        romvec  ROMINITFUNC 
+                        romvec  ROMINITFUNC
                         romvec  UART_A_CTRL,_STUB
                         romvec  UART_A_SEND
                         romvec  UART_A_RECV
@@ -40,11 +40,21 @@ _ROMTABLE:
                         romvec  UART_B_SEND
                         romvec  UART_B_RECV
                         romvec  UART_B_STAT
-                        romvec  PRINT       
-                        romvec  PRINTLN     
+                        romvec  PRINT
+                        romvec  PRINTLN
                         romvec  READLINE
-                        romvec  PRHEX_U8      
-                        romvec  PRDEC_U32     
-                        romvec  VT_CLRSCR   
-                        romvec  VT_MOVEXY   
+                        romvec  PRHEX_U8
+                        romvec  PRDEC_U32
+                        romvec  VT_CLRSCR
+                        romvec  VT_MOVEXY
                         romvec  VT_SETCURSOR
+                        romvec  SD_CTRL
+                        romvec  SD_READ
+                        romvec  SD_WRITE
+                        romvec  FAT_CTRL
+                        romvec  FAT_OPEN
+                        romvec  FAT_READDIRENT
+                        romvec  FAT_READ
+                        romvec  FAT_SEEK,_STUB
+                        romvec  FAT_WRITE,_STUB
+                        romvec  FAT_CLOSE,_STUB

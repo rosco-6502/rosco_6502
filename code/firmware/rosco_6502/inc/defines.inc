@@ -13,6 +13,9 @@
 ;------------------------------------------------------------
 ;
 ; NOTE: Made for most 6502 assemblers (mostly "=", ca65 and vasm tested)
+
+DEFINES_INC             =       1
+
 ;
 ; rosco_6502 r4 Memory Map:
 ;
@@ -132,8 +135,9 @@ IP_SPI_CIPO             =       $04                     ; IP input SPI CIPO
 ; * BIOS firmware memory definitions (API)
 ; *******************************************************
 
-; BIOS firmware zero-page addresses                     ; 16 bytes firmware general zero-page
-FW_ZP_START             =       $02
+; BIOS firmware zero-page addresses                     
+FW_ZP_START             =       $0002                   ; ZP start after HW bank registes
+FW_ZP_SIZE              =       $0E                     ; firmware ZP size
 
 FW_ZP_TMPPTR            =       FW_ZP_START             ; 2 bytes firmware ZP temp ptr/word
 FW_ZP_TMPPTR_L          =       FW_ZP_TMPPTR
@@ -154,9 +158,12 @@ FW_ZP_BLOCKNUM1         =       FW_ZP_BLOCKNUM+1        ;     [15: 8]
 FW_ZP_BLOCKNUM2         =       FW_ZP_BLOCKNUM+2        ;     [23:16]
 FW_ZP_BLOCKNUM3         =       FW_ZP_BLOCKNUM+3        ; MSB [31:24]
 
-FS_ZP_START             =       $10                     ; 32 bytes filesystem zero-page (when used)
-MON_ZP_START            =       $30                     ; 16 bytes monitor zero-page (only used while in use)
-USER_ZP_START           =       $40                     ; 192 bytes zero-page unused by firmware
+FS_ZP_START             =       FW_ZP_START+FW_ZP_SIZE  ; 16 bytes filesystem zero-page (when used)
+FS_ZP_SIZE              =       $10
+MON_ZP_START            =       FS_ZP_START+FS_ZP_SIZE  ; 16 bytes monitor zero-page (only used while in use)
+MON_ZP_SIZE             =       $10
+USER_ZP_START           =       MON_ZP_START+MON_ZP_SIZE ; remainder unused by firmware
+USER_ZP_SIZE            =       $0100-USER_ZP_START
 
 ; BIOS firmware low-RAM addresses
 FW_RAM_START            =       $0200                   ; 256 bytes reserved for firmware
@@ -181,8 +188,10 @@ FW_RSVD_E               =       FW_RSVD_D+1
 FW_RSVD_F               =       FW_RSVD_E+1
 TEMPBUF16               =       FW_RSVD_F+1             ; 16 byte temp buffer (PRDEC_U32)
 
+FS_RAM_START            =       TEMPBUF16+16
+FS_RAM_SIZE             =       16
 ; BIOS firmware RAM jump-table
-RAMTABLE                =       $0220                   ; BIOS RAM vectors, 3 bytes per routine
+RAMTABLE                =       $0240                   ; BIOS RAM vectors, 3 bytes per routine
 
 ; BIOS low-RAM vector index numbers with JMP at RAMVECTBL+(3*index) per routine (up to 32)
 PRINTCHAR               =        0*3+RAMTABLE           ; console output
@@ -198,22 +207,20 @@ CD_CTRL                 =        9*3+RAMTABLE           ; char device control/in
 CD_SENDCHAR             =       10*3+RAMTABLE           ; char device output, A=char
 CD_RECVCHAR             =       11*3+RAMTABLE           ; char device wait for input
 CD_CHECKCHAR            =       12*3+RAMTABLE           ; char device check input
-BD_CTRL                 =       13*3+RAMTABLE           ; block device control/init (default SD card)
-BD_STATUS               =       14*3+RAMTABLE           ; block device status (default SD card)
-BD_READ                 =       15*3+RAMTABLE           ; block device read block (default SD card)
-BD_WRITE                =       16*3+RAMTABLE           ; block device write block (default SD card)
-FS_CTRL                 =       17*3+RAMTABLE           ; filesystem control/init
-FS_OPEN                 =       18*3+RAMTABLE           ; filesystem open file or directory
-FS_READ                 =       19*3+RAMTABLE           ; filesystem read from file (or directory)
-FS_READDIRENT           =       20*3+RAMTABLE           ; filesystem read next directory entry from directory
-FS_SEEK                 =       21*3+RAMTABLE           ; TODO: filesystem seek in file (or directory)
-FS_WRITE                =       22*3+RAMTABLE           ; TODO: filesystem write to file (or directory)
-FS_CLOSE                =       23*3+RAMTABLE           ; TODO: filesystem close file or directory
+BD_CTRL                 =       13*3+RAMTABLE           ; block device control/init/status (default SD card)
+BD_READ                 =       14*3+RAMTABLE           ; block device read block (default SD card)
+BD_WRITE                =       15*3+RAMTABLE           ; block device write block (default SD card)
+FS_CTRL                 =       16*3+RAMTABLE           ; filesystem control/init
+FS_OPEN                 =       17*3+RAMTABLE           ; filesystem open file or directory
+FS_READ                 =       18*3+RAMTABLE           ; filesystem read from file (or directory)
+FS_READDIRENT           =       19*3+RAMTABLE           ; filesystem read next directory entry from directory
+FS_SEEK                 =       20*3+RAMTABLE           ; TODO: filesystem seek in file (or directory)
+FS_WRITE                =       21*3+RAMTABLE           ; TODO: filesystem write to file (or directory)
+FS_CLOSE                =       22*3+RAMTABLE           ; TODO: filesystem close file or directory
 
 ; BIOS low-RAM bank switching "thunks" (code copied at boot)
-THUNK_ROM0              =       $0280                   ; call ROM0 routine (Y=bank, FW_ZP_BANKTEMP=Y)
-;THUNK_BANK              =       $0298                   ; TODO: call RAM/ROM routine with BANK_SET
-;THUNK_BANKFAST          =       $02B4                   ; TODO: faster call RAM/ROM routine with Y=BANK_SET (trashes Y)
+THUNK_ROM0              =       $02A0                   ; call ROM0 routine (Y=bank, FW_ZP_BANKTEMP=Y)
+;THUNK_BANK              =       $XXXX                   ; TODO: call RAM/ROM routine with BANK_SET
 
 ; common 6502 aliases
 COUT                    =       PRINTCHAR
@@ -255,14 +262,13 @@ PRDEC_U32               =       13*3+ROMTABLE           ; print DWORD_VAL as 32-
 VT_CLRSCR               =       14*3+ROMTABLE           ; print to PRINTCHAR VT100 clear screen code
 VT_MOVEXY               =       15*3+ROMTABLE           ; print to PRINTCHAR VT100 move cursor to X, Y position (1 based, 0=unchanged)
 VT_SETCURSOR            =       16*3+ROMTABLE           ; print to PRINTCHAR VT100 cursor to 0=hidden, non-zero visible
-SD_CTRL                 =       17*3+RAMTABLE           ; FIXME: block device control/init (default SD card)
-SD_STATUS               =       18*3+RAMTABLE           ; FIXME: block device status (default SD card)
-SD_READ                 =       19*3+RAMTABLE           ; FIXME: block device read block (default SD card)
-SD_WRITE                =       20*3+RAMTABLE           ; FIXME: block device write block (default SD card)
-FAT_CTRL                =       21*3+RAMTABLE           ; FIXME: filesystem control/init
-FAT_OPEN                =       22*3+RAMTABLE           ; FIXME: filesystem open file or directory
-FAT_READ                =       23*3+RAMTABLE           ; FIXME: filesystem read from file (or directory)
-FAT_READDIRENT          =       24*3+RAMTABLE           ; FIXME: filesystem read next directory entry from directory
-FAT_SEEK                =       25*3+RAMTABLE           ; TODO: filesystem seek in file (or directory)
-FAT_WRITE               =       26*3+RAMTABLE           ; TODO: filesystem write to file (or directory)
-FAT_CLOSE               =       27*3+RAMTABLE           ; TODO: filesystem close file or directory
+SD_CTRL                 =       17*3+ROMTABLE           ; FIXME: block device control/init/status (default SD card)
+SD_READ                 =       18*3+ROMTABLE           ; FIXME: block device read block (default SD card)
+SD_WRITE                =       19*3+ROMTABLE           ; FIXME: block device write block (default SD card)
+FAT_CTRL                =       20*3+ROMTABLE           ; FIXME: filesystem control/init
+FAT_OPEN                =       21*3+ROMTABLE           ; FIXME: filesystem open file or directory
+FAT_READDIRENT          =       22*3+ROMTABLE           ; FIXME: filesystem read next directory entry from directory
+FAT_READ                =       23*3+ROMTABLE           ; FIXME: filesystem read from file (or directory)
+FAT_SEEK                =       24*3+ROMTABLE           ; TODO: filesystem seek in file (or directory)
+FAT_WRITE               =       25*3+ROMTABLE           ; TODO: filesystem write to file (or directory)
+FAT_CLOSE               =       26*3+ROMTABLE           ; TODO: filesystem close file or directory

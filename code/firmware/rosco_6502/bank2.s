@@ -11,9 +11,6 @@
 ;
 ; Main code for ROM bank 2
 ;------------------------------------------------------------
-                .macpack generic
-                .macpack longbranch
-
 CUR_ROMBANK     =       2       ; assemble for ROM bank 2
 
 ; *******************************************************
