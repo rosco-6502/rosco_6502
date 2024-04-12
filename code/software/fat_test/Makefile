@@ -1,3 +1,16 @@
+#------------------------------------------------------------
+#                            ___ ___ ___ ___
+#  ___ ___ ___ ___ ___      |  _| __|   |__ |
+# |  _| . |_ -|  _| . |     | . |__ | | | __|
+# |_| |___|___|___|___|_____|___|___|___|___|
+#                     |_____|   
+#------------------------------------------------------------
+# Copyright (c)2022-2024 Ross Bamford and contributors
+# See top-level LICENSE.md for licence information.
+#
+# Makefile - SD and FAT test using Vasm
+#------------------------------------------------------------
+
 VASM=vasm6502_oldstyle
 VLINK=vlink
 ASFLAGS=-quiet -wdc02 -opt-branch -esc -Fvobj -I../../firmware/rosco_6502/inc
