@@ -89,7 +89,7 @@ DUA_ISR                 =       DUART_BASE+$5           ; R     intr. status reg
 DUA_IMR                 =       DUART_BASE+$5           ; W     intr. mask reg
 DUA_CTU                 =       DUART_BASE+$6           ; R/W   counter/timer upper reg
 DUA_CTL                 =       DUART_BASE+$7           ; R/W   counter/timer lower reg
-DUA_MR1B                =       DUART_BASE+$8           ; R/W   B mode reg        
+DUA_MR1B                =       DUART_BASE+$8           ; R/W   B mode reg
 DUA_MR2B                =       DUART_BASE+$8           ; R/W   B mode reg
 DUA_SRB                 =       DUART_BASE+$9           ; R     B status reg
 DUA_CSRB                =       DUART_BASE+$9           ; W     B clock select reg
@@ -135,7 +135,7 @@ IP_SPI_CIPO             =       $04                     ; IP input SPI CIPO
 ; * BIOS firmware memory definitions (API)
 ; *******************************************************
 
-; BIOS firmware zero-page addresses                     
+; BIOS firmware zero-page addresses
 FW_ZP_START             =       $0002                   ; ZP start after HW bank registes
 FW_ZP_SIZE              =       $0E                     ; firmware ZP size
 
@@ -160,6 +160,19 @@ FW_ZP_BLOCKNUM3         =       FW_ZP_BLOCKNUM+3        ; MSB [31:24]
 
 FS_ZP_START             =       FW_ZP_START+FW_ZP_SIZE  ; 16 bytes filesystem zero-page (when used)
 FS_ZP_SIZE              =       $10
+
+FS_ZP_ADDRPTR           =       FS_ZP_START             ; 2 bytes
+FS_ZP_ADDRPTR_L         =       FS_ZP_ADDRPTR
+FS_ZP_ADDRPTR_H         =       FS_ZP_ADDRPTR+1
+FS_ZP_BYTESLEFT         =       FS_ZP_ADDRPTR+2         ; 4 bytes
+FS_ZP_BYTESLEFT0        =       FS_ZP_BYTESLEFT         ; 4 bytes
+FS_ZP_BYTESLEFT1        =       FS_ZP_BYTESLEFT+1
+FS_ZP_BYTESLEFT2        =       FS_ZP_BYTESLEFT+2
+FS_ZP_BYTESLEFT3        =       FS_ZP_BYTESLEFT+3
+FS_ZP_ERRORCODE         =       FS_ZP_BYTESLEFT+4       ; 1 byte
+FS_ZP_PRIVATE           =       FS_ZP_ERRORCODE+1
+
+
 MON_ZP_START            =       FS_ZP_START+FS_ZP_SIZE  ; 16 bytes monitor zero-page (only used while in use)
 MON_ZP_SIZE             =       $10
 USER_ZP_START           =       MON_ZP_START+MON_ZP_SIZE ; remainder unused by firmware

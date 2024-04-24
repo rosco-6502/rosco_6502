@@ -13,7 +13,8 @@
 
 VASM=vasm6502_oldstyle
 VLINK=vlink
-ASFLAGS=-quiet -wdc02 -opt-branch -esc -Fvobj -I../../firmware/rosco_6502/inc
+#ASFLAGS=-quiet -wdc02 -opt-branch -esc -Fvobj -I../../firmware/rosco_6502/inc
+ASFLAGS=-quiet -wdc02 -opt-branch -esc -Fvobj -I../../firmware/firstboot
 LDFLAGS=-e_start -bihex
 
 LOADADDR := 0x0800

@@ -99,13 +99,10 @@ zp_sd_address           =       FW_ZP_IOPTR
 sd_readsector           =       BD_READ
 
                         .pushseg
-                        .org    FS_ZP_START
-fat32_address:          .res    2
+                        .org    FS_ZP_PRIVATE
 fat32_nextcluster:      .res    4
-fat32_bytesremaining:   .res    4
 fat32_filenamepointer:  .res    2
 fat32_userfilename:     .res    2
-fat32_errorcode:        .res    1
                         .assert (*-FS_ZP_START<FS_ZP_SIZE),warning,"FS_ZP overflow"
                         .popseg
 
@@ -152,10 +149,10 @@ _FAT_CTRL:
                         jsr     sd_readsector
                         bcc     @readokay
 @mediaerr:              lda     #FSERR_MEDIAERR
-                        sta     fat32_errorcode
+                        sta     FS_ZP_ERRORCODE
                         bra     @fail
 
-@readokay:              inc     fat32_errorcode ; stage 1 = FSERR_MBR boot sector signature check
+@readokay:              inc     FS_ZP_ERRORCODE ; stage 1 = FSERR_MBR boot sector signature check
 
                         ; Check some things
                         lda     fat32_readbuffer+510 ; Boot sector signature 55
@@ -165,7 +162,7 @@ _FAT_CTRL:
                         cmp     #$aa
                         bne     @fail
 
-                        inc     fat32_errorcode ; stage 2 = FSERR_PARTITION find FAT32 LBA partition
+                        inc     FS_ZP_ERRORCODE ; stage 2 = FSERR_PARTITION find FAT32 LBA partition
 
                         ; Find a FAT32 partition (type $0B or $0C)
 @FSTYPE_FAT32_1 = $0B
@@ -197,7 +194,7 @@ _FAT_CTRL:
 
 @fail:
            tprint "Err="
-           tprintv fat32_errorcode
+           tprintv FS_ZP_ERRORCODE
                         sec
                         rts
 @foundpart:
@@ -214,7 +211,7 @@ _FAT_CTRL:
                         jsr     sd_readsector
                         bcs     @mediaerr
 
-                        inc     fat32_errorcode ; stage 3 = FAT32_FILESYS_ERR BPB signature check
+                        inc     FS_ZP_ERRORCODE ; stage 3 = FAT32_FILESYS_ERR BPB signature check
 
                         ; Check some things
                         lda     fat32_readbuffer+510 ; BPB sector signature 55
@@ -224,19 +221,19 @@ _FAT_CTRL:
                         cmp     #$aa
                         bne     @fail
 
-                        inc     fat32_errorcode ; stage 4 = FSERR_BADROOT RootEntCnt check
+                        inc     FS_ZP_ERRORCODE ; stage 4 = FSERR_BADROOT RootEntCnt check
 
                         lda     fat32_readbuffer+17 ; RootEntCnt should be 0 for FAT32
                         ora     fat32_readbuffer+18
                         bne     @fail
 
-                        inc     fat32_errorcode ; stage 5 = FSERR_BADTOTSEC TotSec16 check
+                        inc     FS_ZP_ERRORCODE ; stage 5 = FSERR_BADTOTSEC TotSec16 check
 
                         lda     fat32_readbuffer+19 ; TotSec16 should be 0 for FAT32
                         ora     fat32_readbuffer+20
                         bne     @fail
 
-                        inc     fat32_errorcode ; stage 6 = FSERR_BADSECSIZE SectorsPerCluster check
+                        inc     FS_ZP_ERRORCODE ; stage 6 = FSERR_BADSECSIZE SectorsPerCluster check
 
                         ; Check bytes per filesystem sector, it should be 512 for any SD card that supports FAT32
                         lda     fat32_readbuffer+11 ; low byte should be zero
@@ -307,7 +304,7 @@ _FAT_CTRL:
 fat32_seekcluster:
                 tprint  "{fat32_seekcluster:"
                 tprintv32 fat32_nextcluster
-                        stz     fat32_errorcode
+                        stz     FS_ZP_ERRORCODE
 
                         ; FAT sector = (cluster*4) / 512 = (cluster*2) / 256
                         lda     fat32_nextcluster
@@ -348,9 +345,9 @@ fat32_seekcluster:
                         bcc     @readok
                         ; sec
                         lda     #FSERR_MEDIAERR
-                        sta     fat32_errorcode
+                        sta     FS_ZP_ERRORCODE
            tprint "Err="
-           tprintv fat32_errorcode
+           tprintv FS_ZP_ERRORCODE
                         rts
 @readok:
                         ; Before using this FAT data, set currentsector ready to read the cluster itself
@@ -450,7 +447,7 @@ fat32_seekcluster:
                         clc
                         rts
 
-; Reads the next sector from a cluster chain into the buffer at fat32_address.
+; Reads the next sector from a cluster chain into the buffer at FS_ZP_ADDRPTR.
 ;
 ; Advances the current sector ready for the next read and looks up the next cluster
 ; in the chain when necessary.
@@ -459,7 +456,7 @@ fat32_seekcluster:
 ; NEW: On return, C set on error.  Z is clear if data was read (BNE), or Z set if the cluster chain has ended (BEQ).
 fat32_readnextsector:
                 tprint  "{fat32_readnextsector:"
-                        stz     fat32_errorcode
+                        stz     FS_ZP_ERRORCODE
 
                         ; Maybe there are pending sectors in the current cluster
                         lda     fat32_pendingsectors
@@ -475,9 +472,9 @@ fat32_readnextsector:
                         dec     fat32_pendingsectors
 
                         ; Set up target address
-                        lda     fat32_address
+                        lda     FS_ZP_ADDRPTR
                         sta     zp_sd_address
-                        lda     fat32_address+1
+                        lda     FS_ZP_ADDRPTR+1
                         sta     zp_sd_address+1
 
                 tprintv32 zp_sd_currentsector
@@ -487,7 +484,7 @@ fat32_readnextsector:
                         bcc     @readokay
 
                         lda     #FSERR_MEDIAERR
-                        sta     fat32_errorcode
+                        sta     FS_ZP_ERRORCODE
                         bra     @fail
 
                         ; Advance to next sector
@@ -511,7 +508,7 @@ fat32_readnextsector:
                         ; error - set carry and return (also EQ for end of chain)
 @fail:
            tprint "Err="
-           tprintv fat32_errorcode
+           tprintv FS_ZP_ERRORCODE
 
                         lda     #$00
                         sec
@@ -554,7 +551,7 @@ fat32_openroot:
                         rts
 @fail:
            tprint "Err="
-           tprintv fat32_errorcode
+           tprintv FS_ZP_ERRORCODE
 
                         sec
                         rts
@@ -574,24 +571,24 @@ tolower:
 ;
 ; Point zp_sd_address at the dirent
 fat32_opendirent:
-                        stz     fat32_errorcode
+                        stz     FS_ZP_ERRORCODE
 
                         ; Remember file size in bytes remaining
                         ldy     #28
                         lda     (zp_sd_address),y
-                        sta     fat32_bytesremaining
+                        sta     FS_ZP_BYTESLEFT
                         iny
                         lda     (zp_sd_address),y
-                        sta     fat32_bytesremaining+1
+                        sta     FS_ZP_BYTESLEFT+1
                         iny
                         lda     (zp_sd_address),y
-                        sta     fat32_bytesremaining+2
+                        sta     FS_ZP_BYTESLEFT+2
                         iny
                         lda     (zp_sd_address),y
-                        sta     fat32_bytesremaining+3
+                        sta     FS_ZP_BYTESLEFT+3
 
                 tprint  "{fat32_opendirent:"
-                tprintv32 fat32_bytesremaining
+                tprintv32 FS_ZP_BYTESLEFT
 
                         ; Seek to first cluster
                         ldy     #26
@@ -620,7 +617,7 @@ fat32_opendirent:
 
 @fail:
            tprint "Err="
-           tprintv fat32_errorcode
+           tprintv FS_ZP_ERRORCODE
                         sec
                         rts
 
@@ -651,9 +648,9 @@ _FAT_READDIRENT:
 
                         ; Read another sector
                         lda     #<fat32_readbuffer
-                        sta     fat32_address
+                        sta     FS_ZP_ADDRPTR
                         lda     #>fat32_readbuffer
-                        sta     fat32_address+1
+                        sta     FS_ZP_ADDRPTR+1
 
                         jsr     fat32_readnextsector
                         jcs     @fail
@@ -805,14 +802,14 @@ _FAT_READDIRENT:
                         rts
 @fail:
                 tprint  "Err="
-                tprintv fat32_errorcode
+                tprintv FS_ZP_ERRORCODE
                         sec
                         rts
 
 ; Finds a particular directory entry. A,X point to the NUL terminated filename to seek.
 ; The directory should already be open for iteration.
 fat32_finddirent:
-                        stz     fat32_errorcode
+                        stz     FS_ZP_ERRORCODE
 
                         ; Form ZP pointer to user's filename
                         sta     fat32_filenamepointer
@@ -833,10 +830,10 @@ fat32_finddirent:
                         bne     @comparename
 
                         lda     #FSERR_NOTFOUND
-                        sta     fat32_errorcode
+                        sta     FS_ZP_ERRORCODE
 @fail:
                 tprint  "Err="
-                tprintv fat32_errorcode
+                tprintv FS_ZP_ERRORCODE
                         sec
                         rts     ; with carry set
 
@@ -878,7 +875,7 @@ fat32_finddirent:
 ; traverse a file path and open final dirent
 ;
 _FAT_OPEN:
-                        stz     fat32_errorcode
+                        stz     FS_ZP_ERRORCODE
 
                         ; Form ZP pointer to user's filename
                         sta     fat32_userfilename
@@ -896,7 +893,7 @@ _FAT_OPEN:
                         tya                             ; test source index
                         bne     @pathcharloop           ; if not wrapped, loop
                         lda     #FSERR_BADPATH   ; source path too long
-                        sta     fat32_errorcode         ; set error code
+                        sta     FS_ZP_ERRORCODE         ; set error code
                         bra     @fail                   ; fail return
 
 @openpath:              stz     fat32_lfnbuffer2,x      ; NUL terminal path component
@@ -938,26 +935,26 @@ _FAT_OPEN:
 ; TODO: more than A
 _FAT_READ:
                         ; Is there any data to read at all?
-                        lda     fat32_bytesremaining
-                        ora     fat32_bytesremaining+1
-                        ora     fat32_bytesremaining+2
-                        ora     fat32_bytesremaining+3
+                        lda     FS_ZP_BYTESLEFT
+                        ora     FS_ZP_BYTESLEFT+1
+                        ora     FS_ZP_BYTESLEFT+2
+                        ora     FS_ZP_BYTESLEFT+3
                         beq     @fail
 
                         ; Decrement the remaining byte count
-                        lda     fat32_bytesremaining
+                        lda     FS_ZP_BYTESLEFT
                         sec
                         sbc     #1
-                        sta     fat32_bytesremaining
-                        lda     fat32_bytesremaining+1
+                        sta     FS_ZP_BYTESLEFT
+                        lda     FS_ZP_BYTESLEFT+1
                         sbc     #0
-                        sta     fat32_bytesremaining+1
-                        lda     fat32_bytesremaining+2
+                        sta     FS_ZP_BYTESLEFT+1
+                        lda     FS_ZP_BYTESLEFT+2
                         sbc     #0
-                        sta     fat32_bytesremaining+2
-                        lda     fat32_bytesremaining+3
+                        sta     FS_ZP_BYTESLEFT+2
+                        lda     FS_ZP_BYTESLEFT+3
                         sbc     #0
-                        sta     fat32_bytesremaining+3
+                        sta     FS_ZP_BYTESLEFT+3
 
                         ; Need to read a new sector?
                         lda     zp_sd_address+1
@@ -966,9 +963,9 @@ _FAT_READ:
 
                         ; Read another sector
                         lda     #<fat32_readbuffer
-                        sta     fat32_address
+                        sta     FS_ZP_ADDRPTR
                         lda     #>fat32_readbuffer
-                        sta     fat32_address+1
+                        sta     FS_ZP_ADDRPTR+1
 
                         jsr     fat32_readnextsector
                         bcs     @fail
@@ -1004,34 +1001,34 @@ fat32_file_read:
                         pha
 
                         ; add $01ff to round up number of sectors
-                        lda     fat32_bytesremaining
+                        lda     FS_ZP_BYTESLEFT
                         clc
                         adc     #$FF
-                        sta     fat32_bytesremaining
-                        lda     fat32_bytesremaining+1
+                        sta     FS_ZP_BYTESLEFT
+                        lda     FS_ZP_BYTESLEFT+1
                         adc     #1
-                        sta     fat32_bytesremaining+1
-                        lda     fat32_bytesremaining+2
+                        sta     FS_ZP_BYTESLEFT+1
+                        lda     FS_ZP_BYTESLEFT+2
                         adc     #0
-                        sta     fat32_bytesremaining+2
+                        sta     FS_ZP_BYTESLEFT+2
 
 @sectorreadloop:
                         ; check if 24-bit count zero (ignoring low byte)
-                        lda     fat32_bytesremaining+2
-                        ora     fat32_bytesremaining+1
+                        lda     FS_ZP_BYTESLEFT+2
+                        ora     FS_ZP_BYTESLEFT+1
                         ; No data?
                         beq     @done
 
 @readsector:            ; Read entire sectors to the user-supplied buffer
-                        ; Read a sector to fat32_address
+                        ; Read a sector to FS_ZP_ADDRPTR
                         jsr     fat32_readnextsector
                         bcs     @fail
                         beq     @done
 
-                        ; Advance fat32_address by 512 bytes
-                        lda     fat32_address+1
+                        ; Advance FS_ZP_ADDRPTR by 512 bytes
+                        lda     FS_ZP_ADDRPTR+1
                         adc     #2                      ; carry already clear
-                        sta     fat32_address+1
+                        sta     FS_ZP_ADDRPTR+1
                         cmp     #>(BANK_RAM_ADDR+BANK_RAM_SIZE)
                         blt     @notnextbank
                         lda     BANK_SET
@@ -1040,15 +1037,15 @@ fat32_file_read:
                         beq     @fail                   ; already in last RAM bank, so quit with error
                         inc     BANK_SET
                         lda     #>BANK_RAM_ADDR
-                        sta     fat32_address+1
+                        sta     FS_ZP_ADDRPTR+1
 
-@notnextbank:           lda     fat32_bytesremaining+1  ; subtract $0200 (sector size)
+@notnextbank:           lda     FS_ZP_BYTESLEFT+1  ; subtract $0200 (sector size)
                         sec
                         sbc     #$02
-                        sta     fat32_bytesremaining+1
-                        lda     fat32_bytesremaining+2
+                        sta     FS_ZP_BYTESLEFT+1
+                        lda     FS_ZP_BYTESLEFT+2
                         sbc     #$00
-                        sta     fat32_bytesremaining+2
+                        sta     FS_ZP_BYTESLEFT+2
                         bcs     @sectorreadloop         ; loop until underflow
 @done:
                         clc

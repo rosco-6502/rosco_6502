@@ -67,6 +67,27 @@ system_reset:
                         ldx     #$ff
                         txs
 
+                        ; setup low RAM vectors and thunks
+
+                        ldx     #$00
+@clearvar:              stz     __FW_VARSTART__,x
+                        inx
+                        bne     @clearvar
+
+;                        ldx     #0
+@vecinit:               lda     __VECINIT_LOAD__,x
+                        sta     __VECINIT_RUN__,x
+                        inx
+                        cpx     #<__VECINIT_SIZE__
+                        bne     @vecinit
+
+                        ldx     #0
+@thunkinit:             lda     __THUNKINIT_LOAD__,x
+                        sta     __THUNKINIT_RUN__,x
+                        inx
+                        cpx     #<__THUNKINIT_SIZE__
+                        bne     @thunkinit
+
                         ; Init DUART A
                         lda     #$a0                    ; Enable extended TX rates
                         sta     DUA_CRA
@@ -120,27 +141,6 @@ system_reset:
                         lda     DUA_STARTC              ; Issue START COUNTER
                         lda     #$08                    ; Unmask counter interrupt
                         sta     DUA_IMR
-
-                        ; setup low RAM vectors and thunks
-
-                        ldx     #$00
-@clearvar:              stz     __FW_VARSTART__,x
-                        inx
-                        bne     @clearvar
-
-;                        ldx     #0
-@vecinit:               lda     __VECINIT_LOAD__,x
-                        sta     __VECINIT_RUN__,x
-                        inx
-                        cpx     #<__VECINIT_SIZE__
-                        bne     @vecinit
-
-                        ldx     #0
-@thunkinit:             lda     __THUNKINIT_LOAD__,x
-                        sta     __THUNKINIT_RUN__,x
-                        inx
-                        cpx     #<__THUNKINIT_SIZE__
-                        bne     @thunkinit
 
                         lda     #$80|BLINKCOUNT         ; set initial tick count
                         sta     BLINKCNT
@@ -227,7 +227,6 @@ system_reset:
                         ldx     #>PBANK
                         jsr     _PRINT
 
-                        ldx     #$3
                         lda     DUA_SRA                 ; clear any pending RX garbage
                         lda     DUA_RBA
                         lda     DUA_SRA
