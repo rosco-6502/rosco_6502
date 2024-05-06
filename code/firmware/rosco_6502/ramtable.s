@@ -30,16 +30,29 @@
                 .segment "VECINIT"
 _RAMTABLE:
                         ; unknown ROM bank mapped, so use _ROMTABLE for ROM functions
-                        ramvec  PRINTCHAR,      { jmp   UART_A_SEND }
-                        ramvec  INPUTCHAR,      { jmp   UART_A_RECV }
-                        ramvec  CHECKINPUT,     { jmp   UART_A_STAT }
-                        ramvec  INPUTLINE,      { jmp   READLINE }
-                        ramvec  CLRSCR,         { jmp   CLRSCR }
-                        ramvec  MOVEXY,         { jmp   MOVEXY }
-                        ramvec  SETCURSOR,      { jmp   SETCURSOR }
+                        ramvec  PRINTCHAR,      { jmp   UART_A_SEND     }
+                        ramvec  INPUTCHAR,      { jmp   UART_A_RECV     }
+                        ramvec  CHECKINPUT,     { jmp   UART_A_STAT     }
+                        ramvec  INPUTLINE,      { jmp   READLINE        }
+                        ramvec  CLRSCR,         { jmp   CLRSCR          }
+                        ramvec  MOVEXY,         { jmp   MOVEXY          }
+                        ramvec  SETCURSOR,      { jmp   SETCURSOR       }
 			ramvec  USER_TICK,      { rts }
 			ramvec  NMI_INTR,       { rti } ; NOTE: Uses RTI not RTS
-
+			ramvec  CD_CTRL,        { rts } ; TODO
+			ramvec  CD_SENDCHAR,    { jmp   UART_B_SEND     }
+			ramvec  CD_RECVCHAR,    { jmp   UART_B_RECV     }
+			ramvec  CD_CHECKCHAR,   { jmp   UART_B_STAT     }
+			ramvec  BD_CTRL,        { jmp   SD_CTRL         }
+			ramvec  BD_READ,        { jmp   SD_READ         }
+			ramvec  BD_WRITE,       { jmp   SD_WRITE        }
+			ramvec  FS_CTRL,        { jmp   FAT_CTRL        }
+			ramvec  FS_OPEN,        { jmp   FAT_OPEN        }
+			ramvec  FS_READ,        { jmp   FAT_READ        }
+			ramvec  FS_READDIRENT,  { jmp   FAT_READDIRENT  }
+			ramvec  FS_SEEK,        { jmp   FAT_SEEK        }
+			ramvec  FS_WRITE,       { jmp   FAT_WRITE       }
+			ramvec  FS_CLOSE,       { jmp   FAT_CLOSE       }
 
 ; *******************************************************
 ; * Low-RAM thunk code (copied to RAM by system_reset)

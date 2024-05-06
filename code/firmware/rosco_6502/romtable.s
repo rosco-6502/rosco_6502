@@ -32,11 +32,11 @@
                 .assert (_ROMTABLE=ROMTABLE),error,"ROMTABLE mismatch"
 _ROMTABLE:
                         romvec  ROMINITFUNC
-                        romvec  UART_A_CTRL,_STUB
+                        romvec  UART_A_CTRL,_STUB       ; TODO
                         romvec  UART_A_SEND
                         romvec  UART_A_RECV
                         romvec  UART_A_STAT
-                        romvec  UART_B_CTRL,_STUB
+                        romvec  UART_B_CTRL,_STUB       ; TODO
                         romvec  UART_B_SEND
                         romvec  UART_B_RECV
                         romvec  UART_B_STAT
@@ -55,6 +55,6 @@ _ROMTABLE:
                         romvec  FAT_OPEN
                         romvec  FAT_READDIRENT
                         romvec  FAT_READ
-                        romvec  FAT_SEEK,_STUB
-                        romvec  FAT_WRITE,_STUB
-                        romvec  FAT_CLOSE,_STUB
+                        romvec  FAT_SEEK,_STUB          ; TODO
+                        romvec  FAT_WRITE,_STUB         ; TODO
+                        romvec  FAT_CLOSE,_STUB         ; TODO
