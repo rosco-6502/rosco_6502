@@ -48,9 +48,9 @@ _ROMTABLE:
                         romvec  VT_CLRSCR
                         romvec  VT_MOVEXY
                         romvec  VT_SETCURSOR
-                        romvec  SD_CTRL,_STUB
-                        romvec  SD_READ,_STUB
-                        romvec  SD_WRITE,_STUB
+                        romvec  SD_CTRL
+                        romvec  SD_READ
+                        romvec  SD_WRITE
                         romvec  FAT_CTRL,_STUB
                         romvec  FAT_OPEN,_STUB
                         romvec  FAT_READDIRENT,_STUB

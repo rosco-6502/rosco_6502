@@ -63,4 +63,4 @@ bank_init:
 ; *******************************************************
                 .segment "RODATA3"
 
-EBANK:                  .byte   $1B, "[0;37m    Bank    #3 ", $1B, "[1;32mpassed", $1B, "[0m (unused)", $D, $A, 0
+EBANK:                  .byte   $1B, "[0;37m    8K Bank #3 ", $1B, "[1;32mpassed", $1B, "[0m (unused)", $D, $A, 0

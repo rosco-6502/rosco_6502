@@ -299,8 +299,8 @@ bank_check:
 ; *******************************************************
 ; * SD card routines
 ; *******************************************************
-;                .include "duart_spi.s"
-;                .include "sd_card.s"
+                 .include "duart_spi.s"
+                 .include "sd_card.s"
 
 ; *******************************************************
 ; * filesystem routines
@@ -339,5 +339,5 @@ SYSINFO1:               .byte   "MHz with 16KB+16x32KB RAM and ", 0
 SYSINFO2:               .byte   "x8KB ROM", $D, $A, 0
 BCFAILED:               .byte   $1B, "[0;37mRAM Banks 0-15 ", $1B, "[1;31mfailed", $1B, "[0m", $D, $A, 0
 BCPASSED:               .byte   $1B, "[0;37mRAM Banks 0-15 ", $1B, "[1;32mpassed", $1B, "[0m", $D, $A, 0
-EBANK:                  .byte   $1B, "[0;37mROM Bank    #0 ", $1B, "[1;32mpassed", $1B, "[0m (BIOS+Monitor)", $D, $A, 0
+EBANK:                  .byte   $1B, "[0;37mROM 8K Bank #0 ", $1B, "[1;32mpassed", $1B, "[0m (BIOS+Monitor)", $D, $A, 0
 PBANK:                  .byte   $1B, "[0;37mMemory checks: ", $1B, "[1;32mpassed", $1B, "[0m", $D, $A, 0
