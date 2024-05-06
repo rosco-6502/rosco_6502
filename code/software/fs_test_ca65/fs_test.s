@@ -12,6 +12,11 @@
 ; Filesystem ROM call test
 ;------------------------------------------------------------
 
+                .list   off
+                .macpack generic
+                .macpack longbranch
+                .list   on
+
                 .include "defines.inc"
 
 ZP_COUNT        =       USER_ZP_START
@@ -45,13 +50,13 @@ _start:
                 PRINT   RUNMSG
 
                 PRINT   SDINIT
-                jsr     sd_init                 ; init SD card
+                jsr     BD_CTRL                 ; init SD card
                 bcc     @sdcardok
                 PRINT   NOSDMSG
-                bcs     bail
+                jcs     bail
 @sdcardok:
                 PRINT   FAT32INIT
-                jsr     fat32_init              ; init FAT32
+                jsr     FS_CTRL                 ; init FAT32
                 jsr     res_msg
                 bcs     @byebye
 @fatinitgood:
@@ -60,7 +65,7 @@ _start:
                 jsr     PRINT
                 lda     #<testpath
                 ldx     #>testpath
-                jsr     fat32_openpath          ; open filepath in A/X
+                jsr     FS_OPEN                 ; open filepath in A/X
                 bcs     @byebye
                 jsr     showdir
 
@@ -73,47 +78,50 @@ _start:
 
                 lda     #<testfile
                 ldx     #>testfile
-                jsr     fat32_openpath          ; open filepath in A/X
+                jsr     FS_OPEN                 ; open filepath in A/X
                 bcs     @byebye
 
-                lda     fat32_bytesremaining+3  ; show opened file size
-                jsr     outbyte
-                lda     fat32_bytesremaining+2
-                jsr     outbyte
-                lda     fat32_bytesremaining+1
-                jsr     outbyte
-                lda     fat32_bytesremaining+0
-                jsr     outbyte
+                lda     FS_ZP_BYTESLEFT+3       ; show opened file size
+                jsr     PRHEX_U8
+                lda     FS_ZP_BYTESLEFT+2
+                jsr     PRHEX_U8
+                lda     FS_ZP_BYTESLEFT+1
+                jsr     PRHEX_U8
+                lda     FS_ZP_BYTESLEFT+0
+                jsr     PRHEX_U8
 
-                lda     fat32_bytesremaining+3
-                sta     print_dec_value+3
-                lda     fat32_bytesremaining+2
-                sta     print_dec_value+2
-                lda     fat32_bytesremaining+1
-                sta     print_dec_value+1
-                lda     fat32_bytesremaining+0
-                sta     print_dec_value+0
+                lda     FS_ZP_BYTESLEFT+3
+                sta     DWORD_VAL+3
+                lda     FS_ZP_BYTESLEFT+2
+                sta     DWORD_VAL+2
+                lda     FS_ZP_BYTESLEFT+1
+                sta     DWORD_VAL+1
+                lda     FS_ZP_BYTESLEFT+0
+                sta     DWORD_VAL+0
 
                 lda     #10
-                sta     print_dec_width
+                sta     PR_WIDTH
                 lda     #' '
-                sta     print_dec_pad
-                jsr     print_dec
+                sta     PR_PAD
+                jsr     PRDEC_U32
 
                 lda     #$D
                 jsr     COUT
                 lda     #$A
                 jsr     COUT
 
+        .if 0
                 PRINT   BENCHMSG
 
                 lda     #<$4000
-                sta     fat32_address
+                sta     FS_ZP_ADDRPTR
                 lda     #>$4000
-                sta     fat32_address+1
+                sta     FS_ZP_ADDRPTR+1
 
                 jsr     fat32_file_read         ; at $C000 ptr back to $4000 and inc bank (stops after bank 15)
                 jsr     res_msg
+
+        .endif
 
                 bra     @byebye
 
@@ -123,8 +131,8 @@ _start:
 
 res_msg:        bcc     ok_msg
                 PRINT   ERRMSG
-                lda     fat32_errorcode
-                jsr     outbyte
+                lda     FS_ZP_ERRORCODE
+                jsr     PRHEX_U8
 bail:           PRINT   EOLMSG
                 sec
                 rts
@@ -157,7 +165,7 @@ showdir:        jsr     FAT_READDIRENT
                 bcc     @noerror
 
                 PRINT   ERRMSG;
-                bra     @donedir
+                jmp     @donedir
 
 @noerror:       cmp     #$ff
                 beq     @donedir
@@ -166,7 +174,7 @@ showdir:        jsr     FAT_READDIRENT
                 bne     showdir
 
                 pha
-                jsr     outbyte
+                jsr     PRHEX_U8
                 pla
 
                 bit     #$08
@@ -183,35 +191,35 @@ showdir:        jsr     FAT_READDIRENT
         .if 0    ; hex size
                 ldy     #$1c+3
                 lda     (FW_ZP_IOPTR),y
-                jsr     outbyte
+                jsr     PRHEX_U8
                 ldy     #$1c+2
                 lda     (FW_ZP_IOPTR),y
-                jsr     outbyte
+                jsr     PRHEX_U8
                 ldy     #$1c+1
                 lda     (FW_ZP_IOPTR),y
-                jsr     outbyte
+                jsr     PRHEX_U8
                 ldy     #$1c+0
                 lda     (FW_ZP_IOPTR),y
-                jsr     outbyte
+                jsr     PRHEX_U8
         .else    ; decimal size
                 ldy     #$1c+3
                 lda     (FW_ZP_IOPTR),y
-                sta     print_dec_value+3
+                sta     DWORD_VAL+3
                 dey
                 lda     (FW_ZP_IOPTR),y
-                sta     print_dec_value+2
+                sta     DWORD_VAL+2
                 dey
                 lda     (FW_ZP_IOPTR),y
-                sta     print_dec_value+1
+                sta     DWORD_VAL+1
                 dey
                 lda     (FW_ZP_IOPTR),y
-                sta     print_dec_value+0
+                sta     DWORD_VAL+0
 
                 lda     #10
-                sta     print_dec_width
+                sta     PR_WIDTH
                 lda     #' '
-                sta     print_dec_pad
-                jsr     print_dec
+                sta     PR_PAD
+                jsr     PRDEC_U32
         .endif
 @prname:
                 lda     #' '
@@ -255,9 +263,9 @@ showdir:        jsr     FAT_READDIRENT
                 lda     #$0A
                 jsr     COUT
 
-                bra     showdir
+                jmp     showdir
 
-@donedir:        rts
+@donedir:       rts
 
 ; hex dump with ASCII
 ; ptr = FW_ZP_TMPPTR, bytes ZP_COUNT
@@ -265,16 +273,16 @@ showdir:        jsr     FAT_READDIRENT
 EXAMWIDTH       =       16
 examine:
                 lda     FW_ZP_TMPPTR+1
-                jsr     outbyte
+                jsr     PRHEX_U8
                 lda     FW_ZP_TMPPTR
-                jsr     outbyte
+                jsr     PRHEX_U8
                 lda     #':'
                 jsr     COUT
                 lda     #' '
                 jsr     COUT
                 ldy     #0
 @examhex:       lda     (FW_ZP_TMPPTR),y
-                jsr     outbyte
+                jsr     PRHEX_U8
                 lda     #' '
                 jsr     COUT
                 iny

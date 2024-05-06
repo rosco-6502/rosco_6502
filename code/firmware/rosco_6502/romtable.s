@@ -51,10 +51,10 @@ _ROMTABLE:
                         romvec  SD_CTRL
                         romvec  SD_READ
                         romvec  SD_WRITE
-                        romvec  FAT_CTRL,_STUB
-                        romvec  FAT_OPEN,_STUB
-                        romvec  FAT_READDIRENT,_STUB
-                        romvec  FAT_READ,_STUB
+                        romvec  FAT_CTRL
+                        romvec  FAT_OPEN
+                        romvec  FAT_READDIRENT
+                        romvec  FAT_READ
                         romvec  FAT_SEEK,_STUB
                         romvec  FAT_WRITE,_STUB
                         romvec  FAT_CLOSE,_STUB

@@ -98,24 +98,20 @@ zp_sd_currentsector     =       FW_ZP_BLOCKNUM
 zp_sd_address           =       FW_ZP_IOPTR
 sd_readsector           =       BD_READ
 
-                        .pushseg
-                        .org    FS_ZP_PRIVATE
-fat32_nextcluster:      .res    4
-fat32_filenamepointer:  .res    2
-fat32_userfilename:     .res    2
-                        .assert (*-FS_ZP_START<FS_ZP_SIZE),warning,"FS_ZP overflow"
-                        .popseg
+fat32_nextcluster       =       FS_ZP_PRIVATE           ; 4 bytes
+fat32_filenamepointer   =       fat32_nextcluster+4     ; 2 bytes
+fat32_userfilename      =       fat32_filenamepointer+2 ; 2 bytes
+fat32_zp_end            =       fat32_userfilename+2
+                        .assert (fat32_zp_end-FS_ZP_START<FS_ZP_SIZE),warning,"FS_ZP overflow"
 
-                        .pushseg
-                        .org    FS_RAM_START
-fat32_rootcluster:      .res    4
-fat32_fatstart:         .res    4
-fat32_datastart:        .res    4
-fat32_sectorspercluster:.res    1
-fat32_pendingsectors:   .res    1
-fat32_filename_lfn_idx: .res    1
-                        .assert (*-FS_RAM_START<FS_RAM_SIZE),warning,"FS_RAM overflow"
-                        .popseg
+fat32_rootcluster       =       FS_RAM_START            ; 4 bytes
+fat32_fatstart          =       fat32_rootcluster+4     ; 4 bytes
+fat32_datastart         =       fat32_fatstart+4        ; 4 bytes
+fat32_sectorspercluster =       fat32_datastart+4       ; 1 byte
+fat32_pendingsectors    =       fat32_sectorspercluster+1; 1 byte
+fat32_filename_lfn_idx  =       fat32_pendingsectors+1  ; 1 byte
+fat32_ram_end           =       fat32_filename_lfn_idx+1
+                        .assert (fat32_ram_end-FS_RAM_START<FS_RAM_SIZE),warning,"FS_RAM overflow"
 
 ; Initialize the module - read the MBR etc, find the partition,
 ; and set up the variables ready for navigating the filesystem

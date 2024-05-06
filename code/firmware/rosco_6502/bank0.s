@@ -299,13 +299,13 @@ bank_check:
 ; *******************************************************
 ; * SD card routines
 ; *******************************************************
-                 .include "duart_spi.s"
-                 .include "sd_card.s"
+                .include "duart_spi.s"
+                .include "sd_card.s"
 
 ; *******************************************************
 ; * filesystem routines
 ; *******************************************************
-;                .include "fat32_readonly.s"
+                .include "fat32_readonly.s"
 
 ; *******************************************************
 ; * Include wozmon
