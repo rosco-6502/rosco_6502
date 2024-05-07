@@ -16,15 +16,12 @@
 ; _<routine>    = default destination address (if dest not specified)
 ;
 ; ramvec <routine>[,<destaddr>]
-.macro          ramvec vector, code
+.macro          ramvec vector, asmcode
                 .assert (vector-RAMTABLE)=(*-_RAMTABLE), warning, .sprintf("%s not #%d", .string(vector), (vector-RAMTABLE)/3)
-                .if CUR_ROMBANK=0
-;                        .export  vector
-                .endif
                 .local  vecbeg
                 vecbeg  =       *
-                       	code
-                .res    3-(*-vecbeg),$60
+                       	asmcode
+                .res    3-(*-vecbeg),$00
                 .endmacro
 
                 .segment "VECINIT"
@@ -48,8 +45,10 @@ _RAMTABLE:
 			ramvec  BD_WRITE,       { jmp   SD_WRITE        }
 			ramvec  FS_CTRL,        { jmp   FAT_CTRL        }
 			ramvec  FS_OPEN,        { jmp   FAT_OPEN        }
-			ramvec  FS_READ,        { jmp   FAT_READ        }
 			ramvec  FS_READDIRENT,  { jmp   FAT_READDIRENT  }
+			ramvec  FS_READBYTE,    { jmp   FAT_READBYTE    }
+			ramvec  FS_READFILE,    { jmp   FAT_READFILE    }
+			ramvec  FS_READ,        { jmp   FAT_READ        }
 			ramvec  FS_SEEK,        { jmp   FAT_SEEK        }
 			ramvec  FS_WRITE,       { jmp   FAT_WRITE       }
 			ramvec  FS_CLOSE,       { jmp   FAT_CLOSE       }

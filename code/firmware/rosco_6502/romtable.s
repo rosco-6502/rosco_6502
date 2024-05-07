@@ -54,7 +54,9 @@ _ROMTABLE:
                         romvec  FAT_CTRL
                         romvec  FAT_OPEN
                         romvec  FAT_READDIRENT
-                        romvec  FAT_READ
+                        romvec  FAT_READBYTE
+                        romvec  FAT_READFILE
+                        romvec  FAT_READ,_STUB          ; TODO
                         romvec  FAT_SEEK,_STUB          ; TODO
                         romvec  FAT_WRITE,_STUB         ; TODO
                         romvec  FAT_CLOSE,_STUB         ; TODO

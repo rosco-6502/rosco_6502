@@ -144,6 +144,8 @@ _PRCRLF:                lda     #$0D
                 r0call  FAT_CTRL
                 r0call  FAT_OPEN
                 r0call  FAT_READDIRENT
+                r0call  FAT_READBYTE
+                r0call  FAT_READFILE
                 r0call  FAT_READ
         .else
 

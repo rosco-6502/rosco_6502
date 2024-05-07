@@ -30,15 +30,15 @@ DEFINES_INC             =       1
 ; | $0100-$01FF |  256  | 65C02S CPU stack
 ; +-------------+-------+------------------------------------------------
 ; | $0200-$021F |   32  | Firmware variables
-; | $0220-$027F |   96  | RAM firmware vectors (see rtable.inc)
-; | $0280-$02FF |  128  | Firmware "thunk" routines
+; | $0240-$02BF |   96  | RAM firmware vectors
+; | $02A0-$02FF |  128  | Firmware "thunk" routines
 ; +-------------+-------+------------------------------------------------
 ; | $0300-$03FF |  256  | Line input buffer (otherwise available)
 ; +-------------+-------+------------------------------------------------
-; | $0400-$04FF |  256  | Scratch bank copy buffer (otherwise available)
+; | $0400-$05FF |  512  | Filesystem sector buffer (during use)
+; | $0600-$06FF |  256  | Filesystem LFN storage buffer (during use)
 ; +-------------+-------+------------------------------------------------
-; | $0500-$06FF |  512  | Filesystem sector buffer (during use)
-; | $0700-$07FF |  256  | Filesystem LFN storage buffer (during use)
+; | $0700-$07FF |  256  | Scratch/bank copy buffer (otherwise available)
 ; +-------------+-------+------------------------------------------------
 ; | $0800-$3FFF |  14KB | User low-RAM (application program start)
 ; +-------------+-------+------------------------------------------------
@@ -132,13 +132,66 @@ IP_CTSB                 =       $02                     ; IP input UART B CTS
 IP_SPI_CIPO             =       $04                     ; IP input SPI CIPO
 
 ; *******************************************************
+; * BIOS firmware memory usage
+; *******************************************************
+
+; BIOS zero-page
+FW_ZP_START             =       $0002                   ; ZP start after HW bank registes
+FW_ZP_SIZE              =       $0E                     ; firmware ZP size
+FS_ZP_START             =       FW_ZP_START+FW_ZP_SIZE  ; 16 bytes filesystem zero-page (when used)
+FS_ZP_SIZE              =       $10
+MON_ZP_START            =       FS_ZP_START+FS_ZP_SIZE  ; 16 bytes monitor zero-page (only while in use)
+MON_ZP_SIZE             =       $10
+
+USER_ZP_START           =       MON_ZP_START+MON_ZP_SIZE ; unreserved by firmware, general use
+USER_ZP_SIZE            =       $0100-USER_ZP_START
+; BIOS firmware low-RAM addresses
+FW_RAM_START            =       $0200                   ; 256 bytes reserved for firmware
+FS_RAM_START            =       FW_RAM_START+32
+FS_RAM_SIZE             =       16
+; reserved $0230-$23F
+RAMTABLE                =       $0240                   ; BIOS RAM vectors, 3 bytes per routine
+THUNK_ROM0              =       $02A0                   ; call ROM0 routine (Y=bank, FW_ZP_BANKTEMP=Y)
+;THUNK_BANK             =       $02XX                   ; TODO: call RAM/ROM routine with BANK_SET
+; BIOS firmware low-RAM buffers
+INPUTBUF                =       $0300                   ; 256 byte line input buffer (or scratch use)
+INPUTBUF_SIZE           =       $0100
+FILESYSBUF              =       $0400                   ; 512 byte sector buffer (filesystem)
+FILESYSBUF_SIZE         =       $0200
+FILENAMEBUF             =       $0600                   ; 256 byte file name buffer (filesystem)
+FILENAMEBUF_SIZE        =       $0100
+SCRATCHBUF              =       $0700                   ; 256 byte scratch buffer (also used copying between banks)
+SCRATCHBUF_SIZE         =       $0100
+
+; BIOS firmware ROM jump-table
+ROMTABLE                =       BANK_ROM_ADDR           ; BIOS ROM functions, 3 bytes per routine
+
+; *******************************************************
+; * Misc BIOS constants
+; *******************************************************
+; File-system error values (for FS_ZP_ERRORCODE)
+
+FSERR_NONE              =       0
+FSERR_MBR               =       1       ; $55AA boot signature check
+FSERR_PARTITION         =       2       ; FAT32 LBA partition not found
+FSERR_BADBPB            =       3       ; FAT32 BPB signature check
+FSERR_BADROOT           =       4       ; FAT32 RootEntCnt check
+FSERR_BADTOTALSEC       =       5       ; FAT32 TotalSec16 check
+FSERR_BADSECSIZE        =       6       ; FAT32 sector size != 512
+FSERR_MEDIAERR          =       16      ; media read/write error
+FSERR_BADPATH           =       17      ; path > 255 char
+FSERR_NOTFOUND          =       18      ; path not found
+FSERR_EOF               =       19      ; read past EOF
+FSERR_TRUNCATED         =       20      ; readfile past last RAM bank
+
+; attribute returned in A from FS_READDIRENT at EOD
+FS_DIRENT_END_ATTR      =       $FF     ; end of directory attribute
+
+; *******************************************************
 ; * BIOS firmware memory definitions (API)
 ; *******************************************************
 
 ; BIOS firmware zero-page addresses
-FW_ZP_START             =       $0002                   ; ZP start after HW bank registes
-FW_ZP_SIZE              =       $0E                     ; firmware ZP size
-
 FW_ZP_TMPPTR            =       FW_ZP_START             ; 2 bytes firmware ZP temp ptr/word
 FW_ZP_TMPPTR_L          =       FW_ZP_TMPPTR
 FW_ZP_TMPPTR_H          =       FW_ZP_TMPPTR+1
@@ -158,13 +211,13 @@ FW_ZP_BLOCKNUM1         =       FW_ZP_BLOCKNUM+1        ;     [15: 8]
 FW_ZP_BLOCKNUM2         =       FW_ZP_BLOCKNUM+2        ;     [23:16]
 FW_ZP_BLOCKNUM3         =       FW_ZP_BLOCKNUM+3        ; MSB [31:24]
 
-FS_ZP_START             =       FW_ZP_START+FW_ZP_SIZE  ; 16 bytes filesystem zero-page (when used)
-FS_ZP_SIZE              =       $10
-
 FS_ZP_ADDRPTR           =       FS_ZP_START             ; 2 bytes
 FS_ZP_ADDRPTR_L         =       FS_ZP_ADDRPTR
 FS_ZP_ADDRPTR_H         =       FS_ZP_ADDRPTR+1
-FS_ZP_BYTESLEFT         =       FS_ZP_ADDRPTR+2         ; 4 bytes
+FS_ZP_BYTECOUNT         =       FS_ZP_ADDRPTR+2         ; 2 bytes
+FS_ZP_BYTECOUNT_L       =       FS_ZP_BYTECOUNT
+FS_ZP_BYTECOUNT_H       =       FS_ZP_BYTECOUNT+1
+FS_ZP_BYTESLEFT         =       FS_ZP_BYTECOUNT+2       ; 4 bytes
 FS_ZP_BYTESLEFT0        =       FS_ZP_BYTESLEFT         ; 4 bytes
 FS_ZP_BYTESLEFT1        =       FS_ZP_BYTESLEFT+1
 FS_ZP_BYTESLEFT2        =       FS_ZP_BYTESLEFT+2
@@ -172,15 +225,7 @@ FS_ZP_BYTESLEFT3        =       FS_ZP_BYTESLEFT+3
 FS_ZP_ERRORCODE         =       FS_ZP_BYTESLEFT+4       ; 1 byte
 FS_ZP_PRIVATE           =       FS_ZP_ERRORCODE+1
 
-
-MON_ZP_START            =       FS_ZP_START+FS_ZP_SIZE  ; 16 bytes monitor zero-page (only used while in use)
-MON_ZP_SIZE             =       $10
-USER_ZP_START           =       MON_ZP_START+MON_ZP_SIZE ; remainder unused by firmware
-USER_ZP_SIZE            =       $0100-USER_ZP_START
-
 ; BIOS firmware low-RAM addresses
-FW_RAM_START            =       $0200                   ; 256 bytes reserved for firmware
-
 TICK100HZ               =       FW_RAM_START            ; 3 bytes $0200-$0202 free incrementing 24-bit 100Hz counter (L/M/H)
 TICK100HZ_L             =       TICK100HZ
 TICK100HZ_M             =       TICK100HZ+1
@@ -201,11 +246,6 @@ FW_RSVD_E               =       FW_RSVD_D+1
 FW_RSVD_F               =       FW_RSVD_E+1
 TEMPBUF16               =       FW_RSVD_F+1             ; 16 byte temp buffer (PRDEC_U32)
 
-FS_RAM_START            =       TEMPBUF16+16
-FS_RAM_SIZE             =       16
-; BIOS firmware RAM jump-table
-RAMTABLE                =       $0240                   ; BIOS RAM vectors, 3 bytes per routine
-
 ; BIOS low-RAM vector index numbers with JMP at RAMVECTBL+(3*index) per routine (up to 32)
 PRINTCHAR               =        0*3+RAMTABLE           ; console output
 INPUTCHAR               =        1*3+RAMTABLE           ; console input, waits for character, returns A=char
@@ -225,37 +265,23 @@ BD_READ                 =       14*3+RAMTABLE           ; block device read bloc
 BD_WRITE                =       15*3+RAMTABLE           ; block device write block (default SD card)
 FS_CTRL                 =       16*3+RAMTABLE           ; filesystem control/init
 FS_OPEN                 =       17*3+RAMTABLE           ; filesystem open file or directory
-FS_READ                 =       18*3+RAMTABLE           ; filesystem read from file (or directory)
-FS_READDIRENT           =       19*3+RAMTABLE           ; filesystem read next directory entry from directory
-FS_SEEK                 =       20*3+RAMTABLE           ; TODO: filesystem seek in file (or directory)
-FS_WRITE                =       21*3+RAMTABLE           ; TODO: filesystem write to file (or directory)
-FS_CLOSE                =       22*3+RAMTABLE           ; TODO: filesystem close file or directory
+FS_READDIRENT           =       18*3+RAMTABLE           ; filesystem read next directory entry from directory
+FS_READBYTE             =       19*3+RAMTABLE           ; filesystem read from file (or directory)
+FS_READFILE             =       20*3+RAMTABLE           ; filesystem read from file (or directory)
+FS_READ                 =       21*3+RAMTABLE           ; filesystem read from file (or directory)
+FS_SEEK                 =       22*3+RAMTABLE           ; TODO: filesystem seek in file (or directory)
+FS_WRITE                =       23*3+RAMTABLE           ; TODO: filesystem write to file (or directory)
+FS_CLOSE                =       24*3+RAMTABLE           ; TODO: filesystem close file or directory
 
-; BIOS low-RAM bank switching "thunks" (code copied at boot)
-THUNK_ROM0              =       $02A0                   ; call ROM0 routine (Y=bank, FW_ZP_BANKTEMP=Y)
-;THUNK_BANK              =       $XXXX                   ; TODO: call RAM/ROM routine with BANK_SET
-
-; common 6502 aliases
+; common 6502 routine aliases
 COUT                    =       PRINTCHAR
 RDKEY                   =       INPUTCHAR
 GETKEY                  =       INPUTCHAR
 PRBYTE                  =       PRHEX_U8
 
-; BIOS firmware low-RAM buffers
-INPUTBUF                =       $0300                   ; 256 byte line input buffer (or scratch use)
-INPUTBUF_SIZE           =       $0100
-FILESYSBUF              =       $0400                   ; 512 byte sector buffer (filesystem)
-FILESYSBUF_SIZE         =       $0200
-FILENAMEBUF             =       $0600                   ; 256 byte file name buffer (filesystem)
-FILENAMEBUF_SIZE        =       $0100
-SCRATCHBUF              =       $0700                   ; 256 byte scratch buffer (also used copying between banks)
-SCRATCHBUF_SIZE         =       $0100
-
 ; *******************************************************
 ; * firmware BIOS routine and vector numbers
 ; *******************************************************
-; BIOS firmware ROM jump-table
-ROMTABLE                =       BANK_ROM_ADDR           ; BIOS ROM functions, 3 bytes per routine
 
 ; BIOS ROM routine index numbers with JMP at ROMVECTBL+(3*index) per routine
 ROMINITFUNC             =        0*3+ROMTABLE           ; ROM bank specific init
@@ -276,12 +302,14 @@ VT_CLRSCR               =       14*3+ROMTABLE           ; print to PRINTCHAR VT1
 VT_MOVEXY               =       15*3+ROMTABLE           ; print to PRINTCHAR VT100 move cursor to X, Y position (1 based, 0=unchanged)
 VT_SETCURSOR            =       16*3+ROMTABLE           ; print to PRINTCHAR VT100 cursor to 0=hidden, non-zero visible
 SD_CTRL                 =       17*3+ROMTABLE           ; FIXME: block device control/init/status (default SD card)
-SD_READ                 =       18*3+ROMTABLE           ; FIXME: block device read block (default SD card)
-SD_WRITE                =       19*3+ROMTABLE           ; FIXME: block device write block (default SD card)
+SD_READ                 =       18*3+ROMTABLE           ; block device read block (default SD card)
+SD_WRITE                =       19*3+ROMTABLE           ; block device write block (default SD card)
 FAT_CTRL                =       20*3+ROMTABLE           ; FIXME: filesystem control/init
-FAT_OPEN                =       21*3+ROMTABLE           ; FIXME: filesystem open file or directory
-FAT_READDIRENT          =       22*3+ROMTABLE           ; FIXME: filesystem read next directory entry from directory
-FAT_READ                =       23*3+ROMTABLE           ; FIXME: filesystem read from file (or directory)
-FAT_SEEK                =       24*3+ROMTABLE           ; TODO: filesystem seek in file (or directory)
-FAT_WRITE               =       25*3+ROMTABLE           ; TODO: filesystem write to file (or directory)
-FAT_CLOSE               =       26*3+ROMTABLE           ; TODO: filesystem close file or directory
+FAT_OPEN                =       21*3+ROMTABLE           ; filesystem open file or directory
+FAT_READDIRENT          =       22*3+ROMTABLE           ; filesystem read next directory entry from directory
+FAT_READBYTE            =       23*3+ROMTABLE           ; filesystem read byte from file
+FAT_READFILE            =       24*3+ROMTABLE           ; filesystem read entire file
+FAT_READ                =       25*3+ROMTABLE           ; TODO: filesystem read from file
+FAT_SEEK                =       26*3+ROMTABLE           ; TODO: filesystem seek in file (or directory)
+FAT_WRITE               =       27*3+ROMTABLE           ; TODO: filesystem write to file
+FAT_CLOSE               =       28*3+ROMTABLE           ; TODO: filesystem close file or directory

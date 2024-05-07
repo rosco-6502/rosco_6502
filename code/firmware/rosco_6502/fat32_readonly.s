@@ -20,6 +20,7 @@
 ; Modified and enhanced for rosco_6502 by Xark
 
 FAT_TRACE               =       0       ; 1 for invasive debug trace prints
+FAT_DEBUG               =       1       ; 1 for debug asserts
 
                 .if FAT_TRACE
 .macro                  tprint  str
@@ -73,34 +74,12 @@ FAT_TRACE               =       0       ; 1 for invasive debug trace prints
 .endmacro
                 .endif
 
-; FAT32/SD interface library
-;
-; This module requires some RAM workspace to be defined elsewhere:
-;
-; fat32_workspace    - a large page-aligned 512-byte workspace
-; zp_fat32_variables - 24 bytes of zero-page storage for variables etc
-
-FSERR_NONE              =       0
-FSERR_MBR               =       1       ; $55AA boot signature check
-FSERR_PARTITION         =       2       ; FAT32 LBA partition not found
-FSERR_BADBPB            =       3       ; FAT32 BPB signature check
-FSERR_BADROOT           =       4       ; FAT32 RootEntCnt check
-FSERR_BADTOTALSEC       =       5       ; FAT32 TotalSec16 check
-FSERR_BADSECSIZE        =       6       ; FAT32 sector size == 512 check
-FSERR_MEDIAERR          =       16      ; read error on media
-FSERR_BADPATH           =       17      ; path > 255 char
-FSERR_NOTFOUND          =       18      ; path > 255 char
-
-fat32_readbuffer        =       FILESYSBUF      ; 512 bytes (sector buffer)
-fat32_lfnbuffer         =       FILENAMEBUF     ; 256 bytes (used with LFN)
-fat32_lfnbuffer2        =       SCRATCHBUF      ; 256 bytes (only used with openpath)
-zp_sd_currentsector     =       FW_ZP_BLOCKNUM
-zp_sd_address           =       FW_ZP_IOPTR
-sd_readsector           =       BD_READ
+; FAT32 file-system
 
 fat32_nextcluster       =       FS_ZP_PRIVATE           ; 4 bytes
 fat32_filenamepointer   =       fat32_nextcluster+4     ; 2 bytes
-fat32_userfilename      =       fat32_filenamepointer+2 ; 2 bytes
+fat32_sector_bytes      =       fat32_filenamepointer+2 ; 2 bytes
+fat32_userfilename      =       fat32_sector_bytes+2    ; 2 bytes
 fat32_zp_end            =       fat32_userfilename+2
                         .assert (fat32_zp_end-FS_ZP_START<FS_ZP_SIZE),warning,"FS_ZP overflow"
 
@@ -130,19 +109,19 @@ _FAT_CTRL:
                         bpl     @clrvars
 
                         ; Sector 0
-                        stz     zp_sd_currentsector
-                        stz     zp_sd_currentsector+1
-                        stz     zp_sd_currentsector+2
-                        stz     zp_sd_currentsector+3
+                        stz     FW_ZP_BLOCKNUM
+                        stz     FW_ZP_BLOCKNUM+1
+                        stz     FW_ZP_BLOCKNUM+2
+                        stz     FW_ZP_BLOCKNUM+3
 
                         ; Target buffer
-                        lda     #<fat32_readbuffer
-                        sta     zp_sd_address
-                        lda     #>fat32_readbuffer
-                        sta     zp_sd_address+1
+                        lda     #<FILESYSBUF
+                        sta     FW_ZP_IOPTR
+                        lda     #>FILESYSBUF
+                        sta     FW_ZP_IOPTR+1
 
                         ; Do the read
-                        jsr     sd_readsector
+                        jsr     BD_READ
                         bcc     @readokay
 @mediaerr:              lda     #FSERR_MEDIAERR
                         sta     FS_ZP_ERRORCODE
@@ -151,10 +130,10 @@ _FAT_CTRL:
 @readokay:              inc     FS_ZP_ERRORCODE ; stage 1 = FSERR_MBR boot sector signature check
 
                         ; Check some things
-                        lda     fat32_readbuffer+510 ; Boot sector signature 55
+                        lda     FILESYSBUF+510 ; Boot sector signature 55
                         cmp     #$55
                         bne     @fail
-                        lda     fat32_readbuffer+511 ; Boot sector signature aa
+                        lda     FILESYSBUF+511 ; Boot sector signature aa
                         cmp     #$aa
                         bne     @fail
 
@@ -164,25 +143,25 @@ _FAT_CTRL:
 @FSTYPE_FAT32_1 = $0B
 @FSTYPE_FAT32_2 = $0C
                         ldx     #0
-                        lda     fat32_readbuffer+$1c2,x
+                        lda     FILESYSBUF+$1c2,x
                         cmp     #@FSTYPE_FAT32_1
                         beq     @foundpart
                         cmp     #@FSTYPE_FAT32_2
                         beq     @foundpart
                         ldx     #16
-                        lda     fat32_readbuffer+$1c2,x
+                        lda     FILESYSBUF+$1c2,x
                         cmp     #@FSTYPE_FAT32_1
                         beq     @foundpart
                         cmp     #@FSTYPE_FAT32_2
                         beq     @foundpart
                         ldx     #32
-                        lda     fat32_readbuffer+$1c2,x
+                        lda     FILESYSBUF+$1c2,x
                         cmp     #@FSTYPE_FAT32_1
                         beq     @foundpart
                         cmp     #@FSTYPE_FAT32_2
                         beq     @foundpart
                         ldx     #48
-                        lda     fat32_readbuffer+$1c2,x
+                        lda     FILESYSBUF+$1c2,x
                         cmp     #@FSTYPE_FAT32_1
                         beq     @foundpart
                         cmp     #@FSTYPE_FAT32_2
@@ -195,99 +174,99 @@ _FAT_CTRL:
                         rts
 @foundpart:
                         ; Read the FAT32 BPB
-                        lda     fat32_readbuffer+$1c6,x
-                        sta     zp_sd_currentsector
-                        lda     fat32_readbuffer+$1c7,x
-                        sta     zp_sd_currentsector+1
-                        lda     fat32_readbuffer+$1c8,x
-                        sta     zp_sd_currentsector+2
-                        lda     fat32_readbuffer+$1c9,x
-                        sta     zp_sd_currentsector+3
+                        lda     FILESYSBUF+$1c6,x
+                        sta     FW_ZP_BLOCKNUM
+                        lda     FILESYSBUF+$1c7,x
+                        sta     FW_ZP_BLOCKNUM+1
+                        lda     FILESYSBUF+$1c8,x
+                        sta     FW_ZP_BLOCKNUM+2
+                        lda     FILESYSBUF+$1c9,x
+                        sta     FW_ZP_BLOCKNUM+3
 
-                        jsr     sd_readsector
+                        jsr     BD_READ
                         bcs     @mediaerr
 
                         inc     FS_ZP_ERRORCODE ; stage 3 = FAT32_FILESYS_ERR BPB signature check
 
                         ; Check some things
-                        lda     fat32_readbuffer+510 ; BPB sector signature 55
+                        lda     FILESYSBUF+510 ; BPB sector signature 55
                         cmp     #$55
                         bne     @fail
-                        lda     fat32_readbuffer+511 ; BPB sector signature aa
+                        lda     FILESYSBUF+511 ; BPB sector signature aa
                         cmp     #$aa
                         bne     @fail
 
                         inc     FS_ZP_ERRORCODE ; stage 4 = FSERR_BADROOT RootEntCnt check
 
-                        lda     fat32_readbuffer+17 ; RootEntCnt should be 0 for FAT32
-                        ora     fat32_readbuffer+18
+                        lda     FILESYSBUF+17 ; RootEntCnt should be 0 for FAT32
+                        ora     FILESYSBUF+18
                         bne     @fail
 
                         inc     FS_ZP_ERRORCODE ; stage 5 = FSERR_BADTOTSEC TotSec16 check
 
-                        lda     fat32_readbuffer+19 ; TotSec16 should be 0 for FAT32
-                        ora     fat32_readbuffer+20
+                        lda     FILESYSBUF+19 ; TotSec16 should be 0 for FAT32
+                        ora     FILESYSBUF+20
                         bne     @fail
 
                         inc     FS_ZP_ERRORCODE ; stage 6 = FSERR_BADSECSIZE SectorsPerCluster check
 
                         ; Check bytes per filesystem sector, it should be 512 for any SD card that supports FAT32
-                        lda     fat32_readbuffer+11 ; low byte should be zero
+                        lda     FILESYSBUF+11 ; low byte should be zero
                         bne     @fail
-                        lda     fat32_readbuffer+12 ; high byte is 2 (512), 4, 8, or 16
+                        lda     FILESYSBUF+12 ; high byte is 2 (512), 4, 8, or 16
                         cmp     #2
                         bne     @fail
 
                         ; Calculate the starting sector of the FAT
                         clc
-                        lda     zp_sd_currentsector
-                        adc     fat32_readbuffer+14             ; reserved sectors lo
+                        lda     FW_ZP_BLOCKNUM
+                        adc     FILESYSBUF+14             ; reserved sectors lo
                         sta     fat32_fatstart
                         sta     fat32_datastart
-                        lda     zp_sd_currentsector+1
-                        adc     fat32_readbuffer+15             ; reserved sectors hi
+                        lda     FW_ZP_BLOCKNUM+1
+                        adc     FILESYSBUF+15             ; reserved sectors hi
                         sta     fat32_fatstart+1
                         sta     fat32_datastart+1
-                        lda     zp_sd_currentsector+2
+                        lda     FW_ZP_BLOCKNUM+2
                         adc     #0
                         sta     fat32_fatstart+2
                         sta     fat32_datastart+2
-                        lda     zp_sd_currentsector+3
+                        lda     FW_ZP_BLOCKNUM+3
                         adc     #0
                         sta     fat32_fatstart+3
                         sta     fat32_datastart+3
 
                         ; Calculate the starting sector of the data area
-                        ldx     fat32_readbuffer+16                         ; number of FATs
+                        ldx     FILESYSBUF+16                         ; number of FATs
 @skipfatsloop:
                         clc
                         lda     fat32_datastart
-                        adc     fat32_readbuffer+36 ; fatsize 0
+                        adc     FILESYSBUF+36 ; fatsize 0
                         sta     fat32_datastart
                         lda     fat32_datastart+1
-                        adc     fat32_readbuffer+37 ; fatsize 1
+                        adc     FILESYSBUF+37 ; fatsize 1
                         sta     fat32_datastart+1
                         lda     fat32_datastart+2
-                        adc     fat32_readbuffer+38 ; fatsize 2
+                        adc     FILESYSBUF+38 ; fatsize 2
                         sta     fat32_datastart+2
                         lda     fat32_datastart+3
-                        adc     fat32_readbuffer+39 ; fatsize 3
+                        adc     FILESYSBUF+39 ; fatsize 3
                         sta     fat32_datastart+3
                         dex
                         bne     @skipfatsloop
 
                         ; Sectors-per-cluster is a power of two from 1 to 128
-                        lda     fat32_readbuffer+13
+                        lda     FILESYSBUF+13
                         sta     fat32_sectorspercluster
 
                         ; Remember the root cluster
-                        lda     fat32_readbuffer+44
+                        lda     FILESYSBUF+44
                         sta     fat32_rootcluster
-                        lda     fat32_readbuffer+45
+                        lda     FILESYSBUF+45
                         sta     fat32_rootcluster+1
-                        lda     fat32_readbuffer+46
+                        lda     FILESYSBUF+46
                         sta     fat32_rootcluster+2
-                        lda     fat32_readbuffer+47
+                        lda     FILESYSBUF+47
                         sta     fat32_rootcluster+3
 
                 tprint  "OK}"
@@ -307,37 +286,37 @@ fat32_seekcluster:
                         asl
                         lda     fat32_nextcluster+1
                         rol
-                        sta     zp_sd_currentsector
+                        sta     FW_ZP_BLOCKNUM
                         lda     fat32_nextcluster+2
                         rol
-                        sta     zp_sd_currentsector+1
+                        sta     FW_ZP_BLOCKNUM+1
                         lda     fat32_nextcluster+3
                         rol
-                        sta     zp_sd_currentsector+2
+                        sta     FW_ZP_BLOCKNUM+2
                         ; note: cluster numbers never have the top bit set, so no carry can occur
 
                         ; Add FAT starting sector
-                        lda     zp_sd_currentsector
+                        lda     FW_ZP_BLOCKNUM
                         adc     fat32_fatstart
-                        sta     zp_sd_currentsector
-                        lda     zp_sd_currentsector+1
+                        sta     FW_ZP_BLOCKNUM
+                        lda     FW_ZP_BLOCKNUM+1
                         adc     fat32_fatstart+1
-                        sta     zp_sd_currentsector+1
-                        lda     zp_sd_currentsector+2
+                        sta     FW_ZP_BLOCKNUM+1
+                        lda     FW_ZP_BLOCKNUM+2
                         adc     fat32_fatstart+2
-                        sta     zp_sd_currentsector+2
+                        sta     FW_ZP_BLOCKNUM+2
                         lda     #0
                         adc     fat32_fatstart+3
-                        sta     zp_sd_currentsector+3
+                        sta     FW_ZP_BLOCKNUM+3
 
                         ; Target buffer
-                        lda     #<fat32_readbuffer
-                        sta     zp_sd_address
-                        lda     #>fat32_readbuffer
-                        sta     zp_sd_address+1
+                        lda     #<FILESYSBUF
+                        sta     FW_ZP_IOPTR
+                        lda     #>FILESYSBUF
+                        sta     FW_ZP_IOPTR+1
 
                         ; Read the sector from the FAT
-                        jsr     sd_readsector
+                        jsr     BD_READ
                         bcc     @readok
                         ; sec
                         lda     #FSERR_MEDIAERR
@@ -354,43 +333,43 @@ fat32_seekcluster:
                         sec
                         lda     fat32_nextcluster
                         sbc     #2
-                        sta     zp_sd_currentsector
+                        sta     FW_ZP_BLOCKNUM
                         lda     fat32_nextcluster+1
                         sbc     #0
-                        sta     zp_sd_currentsector+1
+                        sta     FW_ZP_BLOCKNUM+1
                         lda     fat32_nextcluster+2
                         sbc     #0
-                        sta     zp_sd_currentsector+2
+                        sta     FW_ZP_BLOCKNUM+2
                         lda     fat32_nextcluster+3
                         sbc     #0
-                        sta     zp_sd_currentsector+3
+                        sta     FW_ZP_BLOCKNUM+3
 
                         ; Multiply by sectors-per-cluster which is a power of two between 1 and 128
                         lda     fat32_sectorspercluster
 @spcshiftloop:
                         lsr
                         bcs     @spcshiftloopdone
-                        asl     zp_sd_currentsector
-                        rol     zp_sd_currentsector+1
-                        rol     zp_sd_currentsector+2
-                        rol     zp_sd_currentsector+3
+                        asl     FW_ZP_BLOCKNUM
+                        rol     FW_ZP_BLOCKNUM+1
+                        rol     FW_ZP_BLOCKNUM+2
+                        rol     FW_ZP_BLOCKNUM+3
                         jmp     @spcshiftloop
 @spcshiftloopdone:
 
                         ; Add the data region start sector
                         clc
-                        lda     zp_sd_currentsector
+                        lda     FW_ZP_BLOCKNUM
                         adc     fat32_datastart
-                        sta     zp_sd_currentsector
-                        lda     zp_sd_currentsector+1
+                        sta     FW_ZP_BLOCKNUM
+                        lda     FW_ZP_BLOCKNUM+1
                         adc     fat32_datastart+1
-                        sta     zp_sd_currentsector+1
-                        lda     zp_sd_currentsector+2
+                        sta     FW_ZP_BLOCKNUM+1
+                        lda     FW_ZP_BLOCKNUM+2
                         adc     fat32_datastart+2
-                        sta     zp_sd_currentsector+2
-                        lda     zp_sd_currentsector+3
+                        sta     FW_ZP_BLOCKNUM+2
+                        lda     FW_ZP_BLOCKNUM+3
                         adc     fat32_datastart+3
-                        sta     zp_sd_currentsector+3
+                        sta     FW_ZP_BLOCKNUM+3
 
                         ; That's now ready for later code to read this sector in - tell it how many consecutive
                         ; sectors it can now read
@@ -408,21 +387,21 @@ fat32_seekcluster:
                         tay ; Y = low byte of offset
 
                         ; Add the potentially carried bit to the high byte of the address
-                        lda     zp_sd_address+1
+                        lda     FW_ZP_IOPTR+1
                         adc     #0
-                        sta     zp_sd_address+1
+                        sta     FW_ZP_IOPTR+1
 
                         ; Copy out the next cluster in the chain for later use
-                        lda     (zp_sd_address),y
+                        lda     (FW_ZP_IOPTR),y
                         sta     fat32_nextcluster
                         iny
-                        lda     (zp_sd_address),y
+                        lda     (FW_ZP_IOPTR),y
                         sta     fat32_nextcluster+1
                         iny
-                        lda     (zp_sd_address),y
+                        lda     (FW_ZP_IOPTR),y
                         sta     fat32_nextcluster+2
                         iny
-                        lda     (zp_sd_address),y
+                        lda     (FW_ZP_IOPTR),y
                         and     #$0f
                         sta     fat32_nextcluster+3
 
@@ -449,7 +428,7 @@ fat32_seekcluster:
 ; in the chain when necessary.
 ;
 ; OLD: On return, carry is clear if data was read, or set if the cluster chain has ended.
-; NEW: On return, C set on error.  Z is clear if data was read (BNE), or Z set if the cluster chain has ended (BEQ).
+; NEW: On return, C set on error.  A is non-zero if data was read, or 0 set if the cluster chain has ended.
 fat32_readnextsector:
                 tprint  "{fat32_readnextsector:"
                         stz     FS_ZP_ERRORCODE
@@ -469,14 +448,14 @@ fat32_readnextsector:
 
                         ; Set up target address
                         lda     FS_ZP_ADDRPTR
-                        sta     zp_sd_address
+                        sta     FW_ZP_IOPTR
                         lda     FS_ZP_ADDRPTR+1
-                        sta     zp_sd_address+1
+                        sta     FW_ZP_IOPTR+1
 
-                tprintv32 zp_sd_currentsector
+                tprintv32 FW_ZP_BLOCKNUM
 
                         ; Read the sector
-                        jsr     sd_readsector
+                        jsr     BD_READ
                         bcc     @readokay
 
                         lda     #FSERR_MEDIAERR
@@ -485,13 +464,13 @@ fat32_readnextsector:
 
                         ; Advance to next sector
 @readokay:
-                        inc     zp_sd_currentsector
+                        inc     FW_ZP_BLOCKNUM
                         bne     @sectorincrementdone
-                        inc     zp_sd_currentsector+1
+                        inc     FW_ZP_BLOCKNUM+1
                         bne     @sectorincrementdone
-                        inc     zp_sd_currentsector+2
+                        inc     FW_ZP_BLOCKNUM+2
                         bne     @sectorincrementdone
-                        inc     zp_sd_currentsector+3
+                        inc     FW_ZP_BLOCKNUM+3
 @sectorincrementdone:
                         ; OLD: Success - clear carry and return
                         ; NEW: Success - clear Z and return NE
@@ -521,7 +500,7 @@ fat32_readnextsector:
 
 ; Prepare to read from root directory
 ;
-; Point zp_sd_address at the dirent
+; Point FW_ZP_IOPTR at the dirent
 fat32_openroot:
                 tprint  "{fat32_openroot:"
                         ; Prepare to read the root directory
@@ -537,9 +516,12 @@ fat32_openroot:
                         jsr     fat32_seekcluster
                         bcs     @fail
 
-                        ; Set the pointer to a large value so we always read a sector the first time through
+                        ; clear sector bytes, so we always read a sector the first time through
+                        stz     fat32_sector_bytes
+                        stz     fat32_sector_bytes+1
                         lda     #$ff
-                        sta     zp_sd_address+1
+                        sta     FW_ZP_IOPTR+1
+
 
                 tprint  "OK}"
 
@@ -565,22 +547,22 @@ tolower:
 
 ; Prepare to read from a file or directory based on a dirent
 ;
-; Point zp_sd_address at the dirent
+; Point FW_ZP_IOPTR at the dirent
 fat32_opendirent:
                         stz     FS_ZP_ERRORCODE
 
                         ; Remember file size in bytes remaining
                         ldy     #28
-                        lda     (zp_sd_address),y
+                        lda     (FW_ZP_IOPTR),y
                         sta     FS_ZP_BYTESLEFT
                         iny
-                        lda     (zp_sd_address),y
+                        lda     (FW_ZP_IOPTR),y
                         sta     FS_ZP_BYTESLEFT+1
                         iny
-                        lda     (zp_sd_address),y
+                        lda     (FW_ZP_IOPTR),y
                         sta     FS_ZP_BYTESLEFT+2
                         iny
-                        lda     (zp_sd_address),y
+                        lda     (FW_ZP_IOPTR),y
                         sta     FS_ZP_BYTESLEFT+3
 
                 tprint  "{fat32_opendirent:"
@@ -588,22 +570,21 @@ fat32_opendirent:
 
                         ; Seek to first cluster
                         ldy     #26
-                        lda     (zp_sd_address),y
+                        lda     (FW_ZP_IOPTR),y
                         sta     fat32_nextcluster
                         iny
-                        lda     (zp_sd_address),y
+                        lda     (FW_ZP_IOPTR),y
                         sta     fat32_nextcluster+1
                         ldy     #20
-                        lda     (zp_sd_address),y
+                        lda     (FW_ZP_IOPTR),y
                         sta     fat32_nextcluster+2
                         iny
-                        lda     (zp_sd_address),y
+                        lda     (FW_ZP_IOPTR),y
                         sta     fat32_nextcluster+3
 
                         jsr     fat32_seekcluster
-                        ; Set the pointer to a large value so we always read a sector the first time through
-                        lda     #$ff
-                        sta     zp_sd_address+1
+                        stz     fat32_sector_bytes
+                        stz     fat32_sector_bytes+1
 
                         bcs     @fail
 
@@ -621,45 +602,46 @@ fat32_opendirent:
 ;
 ; OLD: On exit the carry is set if there were no more directory entries.
 ;
-; A is set to the file's attribute byte or $FF if no more entries, C set if error
-; zp_sd_address points at the returned directory entry.
+; A is set to the file's attribute byte or $FF (FS_DIRENT_END_ATTR) if no more entries, C set if error
+; FW_ZP_IOPTR points at the returned directory entry.
 ; LFNs and empty entries are ignored automatically.
 _FAT_READDIRENT:
                 tprint  "{fat32_readdirent:"
 @fat32_readdirent:                
-                        stz     fat32_lfnbuffer ; clear LFN
+                        stz     FILENAMEBUF ; clear LFN
 @readnext:
                         ; Increment pointer by 32 to point to next entry
                         clc
-                        lda     zp_sd_address
+                        lda     FW_ZP_IOPTR
                         adc     #32
-                        sta     zp_sd_address
-                        lda     zp_sd_address+1
+                        sta     FW_ZP_IOPTR
+                        lda     FW_ZP_IOPTR+1
                         adc     #0
-                        sta     zp_sd_address+1
+                        sta     FW_ZP_IOPTR+1
 
                         ; If it's not past the end of the buffer, we have data already
-                        cmp     #>(fat32_readbuffer+$200)
+                        cmp     #>(FILESYSBUF+$200)
                         bcc     @gotdata
 
                         ; Read another sector
-                        lda     #<fat32_readbuffer
+                        lda     #<FILESYSBUF
                         sta     FS_ZP_ADDRPTR
-                        lda     #>fat32_readbuffer
+                        lda     #>FILESYSBUF
                         sta     FS_ZP_ADDRPTR+1
 
                         jsr     fat32_readnextsector
-                        jcs     @fail
-                        bne     @gotdata
+                        jcs     @fail                   ; error
+                        cmp     #0                      ; was EOF?
+                        bne     @gotdata                ; branch if not
                         ; return end of dir (but C may be set if error)
 @endofdirectory:
                 tprint  "EOD-"
 
-                        lda     #$FF
+                        lda     #FS_DIRENT_END_ATTR
                         jra     @done
 @gotdata:
                         ; Check first character
-                        lda     (zp_sd_address)
+                        lda     (FW_ZP_IOPTR)
 
                         ; End of directory => abort
                         beq     @endofdirectory
@@ -677,27 +659,27 @@ _FAT_READDIRENT:
                         sta     ZP_COUNT
                         lda     #>$0020
                         sta     ZP_COUNT+1
-                        lda     zp_sd_address
+                        lda     FW_ZP_IOPTR
                         sta     FW_ZP_TMPPTR
-                        lda     zp_sd_address+1
+                        lda     FW_ZP_IOPTR+1
                         sta     FW_ZP_TMPPTR+1
                         jsr     examine
 
                 .endif
                         ; Check attributes
                         ldy     #11
-                        lda     (zp_sd_address),y
+                        lda     (FW_ZP_IOPTR),y
                         and     #$3f
                         cmp     #$0f ; LFN => start again
                         bne     @returnent
 
-                        lda     (zp_sd_address)         ; get LFN index/flag
+                        lda     (FW_ZP_IOPTR)         ; get LFN index/flag
                         bit     #$40                    ; new entry?
                         beq     @copylfn                ; branch if not
 
                         ldx     #0
 @clrlfn:
-                        stz     fat32_lfnbuffer,x       ; fresh lfn
+                        stz     FILENAMEBUF,x       ; fresh lfn
                         dex
                         bne     @clrlfn
 
@@ -725,11 +707,11 @@ _FAT_READDIRENT:
                         beq     @skip1byte
                         cpy     #$1a
                         beq     @skip2byte
-                        lda     (zp_sd_address),y
+                        lda     (FW_ZP_IOPTR),y
                         cmp     #$FF                    ; convert 0xFF to 0x00
                         bne     @notpad
                         lda     #$00
-@notpad:                sta     fat32_lfnbuffer,x
+@notpad:                sta     FILENAMEBUF,x
                         inx
 @skip2byte:             iny
 @skip1byte:             iny
@@ -741,25 +723,25 @@ _FAT_READDIRENT:
 
 @returnent:
                 .if 1    ; create LFN from SFN
-                        ldy     fat32_lfnbuffer         ; already have LFN for this entry?
+                        ldy     FILENAMEBUF         ; already have LFN for this entry?
                         bne     @done                   ; branch if yes
                         pha                             ; save attributes
                         ldy     #$0c                    ; see https://en.wikipedia.org/wiki/Design_of_the_FAT_file_system#VFAT_long_file_names
-                        lda     (zp_sd_address),y       ; dirent[$0C] has SFN case flags [5]=ext lowercase, [4]=base lowercase
+                        lda     (FW_ZP_IOPTR),y       ; dirent[$0C] has SFN case flags [5]=ext lowercase, [4]=base lowercase
                         asl                             ; shift so N=lower ext flag, V=lower ext flag for BIT test
                         asl
                         asl
                         sta     FW_ZP_TEMP_3
                         ldx     #0
                         ldy     #0
-@makelfnbase:           lda     (zp_sd_address),y
+@makelfnbase:           lda     (FW_ZP_IOPTR),y
                         iny
                         cmp     #' '
                         beq     @donebase
                         bit     FW_ZP_TEMP_3
                         bvc     @nobaselower
                         jsr     tolower
-@nobaselower:           sta     fat32_lfnbuffer,x
+@nobaselower:           sta     FILENAMEBUF,x
                         inx
                         cpy     #8
                         bne     @makelfnbase
@@ -768,24 +750,24 @@ _FAT_READDIRENT:
                         pha
                         beq     @makelfnext
                         ldy     #8
-                        lda     (zp_sd_address),y
+                        lda     (FW_ZP_IOPTR),y
                         cmp     #' '
                         beq     @donelfn
                         lda     #'.'
-                        sta     fat32_lfnbuffer,x
+                        sta     FILENAMEBUF,x
                         inx
-@makelfnext:            lda     (zp_sd_address),y
+@makelfnext:            lda     (FW_ZP_IOPTR),y
                         iny
                         cmp     #' '
                         beq     @donelfn
                         bit     FW_ZP_TEMP_3
                         bpl     @noextlower
                         jsr     tolower
-@noextlower:            sta     fat32_lfnbuffer,x
+@noextlower:            sta     FILENAMEBUF,x
                         inx
                         cpy     #8+3
                         bne     @makelfnext
-@donelfn:               stz     fat32_lfnbuffer,x
+@donelfn:               stz     FILENAMEBUF,x
                         pla                             ; reload attribute for return
                 .endif
 @done:
@@ -834,11 +816,11 @@ fat32_finddirent:
                         rts     ; with carry set
 
 @comparename:           ;bra     @compareshort
-                        lda     fat32_lfnbuffer
+                        lda     FILENAMEBUF
                         beq     @compareshort
 ; case insensitive LFN compare
                         ldy     #0
-@comparelong:           lda     fat32_lfnbuffer,y
+@comparelong:           lda     FILENAMEBUF,y
                         jsr     tolower
                         sta     FW_ZP_TEMP_3
                         lda     (fat32_filenamepointer),y
@@ -853,7 +835,7 @@ fat32_finddirent:
 
 ; case insensitive SFN compare (base padded to 8 and ext to 3 with ' ', e.g, "README  MD ")
 @compareshort:          ldy     #11-1
-@comparenameloop:       lda     (zp_sd_address),y
+@comparenameloop:       lda     (FW_ZP_IOPTR),y
                         jsr     tolower
                         sta     FW_ZP_TEMP_3
                         lda     (fat32_filenamepointer),y
@@ -884,7 +866,7 @@ _FAT_OPEN:
                         iny                             ; inc source index
                         cmp     #'/'                    ; is path separator?
                         beq     @openpath               ; branch if yes
-                        sta     fat32_lfnbuffer2,x      ; store path char into component
+                        sta     SCRATCHBUF,x      ; store path char into component
                         inx                             ; increment component index
                         tya                             ; test source index
                         bne     @pathcharloop           ; if not wrapped, loop
@@ -892,7 +874,7 @@ _FAT_OPEN:
                         sta     FS_ZP_ERRORCODE         ; set error code
                         bra     @fail                   ; fail return
 
-@openpath:              stz     fat32_lfnbuffer2,x      ; NUL terminal path component
+@openpath:              stz     SCRATCHBUF,x      ; NUL terminal path component
                         phy                             ; save source index on stack
                         cpy     #1                      ; initial slash?
                         bne     @notroot                ; branch if not
@@ -902,16 +884,16 @@ _FAT_OPEN:
 @notroot:
                 tprint  "/"
                         clc                             ; clear error
-                        lda     fat32_lfnbuffer2        ; is this empty component?
+                        lda     SCRATCHBUF        ; is this empty component?
                         beq     @popcheckfail           ; branch if yes (ignore)
                 .if FAT_TRACE
-                        lda     #<fat32_lfnbuffer2
-                        ldx     #>fat32_lfnbuffer2
+                        lda     #<SCRATCHBUF
+                        ldx     #>SCRATCHBUF
                         jsr     PRINT
                 tprint  "\r\n"
                 .endif
-                        lda     #<fat32_lfnbuffer2      ; find path component in current dirent
-                        ldx     #>fat32_lfnbuffer2
+                        lda     #<SCRATCHBUF      ; find path component in current dirent
+                        ldx     #>SCRATCHBUF
                         jsr     fat32_finddirent
                         bcs     @popcheckfail
                         jsr     fat32_opendirent
@@ -929,13 +911,16 @@ _FAT_OPEN:
 ;
 ; The byte is returned in A with C clear; or if end-of-file was reached, C is set instead
 ; TODO: more than A
-_FAT_READ:
+
+_FAT_READBYTE:
+                        stz     FS_ZP_ERRORCODE
+
                         ; Is there any data to read at all?
                         lda     FS_ZP_BYTESLEFT
                         ora     FS_ZP_BYTESLEFT+1
                         ora     FS_ZP_BYTESLEFT+2
                         ora     FS_ZP_BYTESLEFT+3
-                        beq     @fail
+                        beq     @eof
 
                         ; Decrement the remaining byte count
                         lda     FS_ZP_BYTESLEFT
@@ -953,37 +938,37 @@ _FAT_READ:
                         sta     FS_ZP_BYTESLEFT+3
 
                         ; Need to read a new sector?
-                        lda     zp_sd_address+1
-                        cmp     #>(fat32_readbuffer+$200)
-                        bcc     @gotdata
+                        lda     FW_ZP_IOPTR+1
+                        cmp     #>(FILESYSBUF+$200)
+                        blt     @gotdata
 
                         ; Read another sector
-                        lda     #<fat32_readbuffer
+                        lda     #<FILESYSBUF
                         sta     FS_ZP_ADDRPTR
-                        lda     #>fat32_readbuffer
+                        lda     #>FILESYSBUF
                         sta     FS_ZP_ADDRPTR+1
 
                         jsr     fat32_readnextsector
                         bcs     @fail
-                        beq     @done
+                        cmp     #0
+                        beq     @eof
 @gotdata:
-                        lda     (zp_sd_address)
+                        lda     (FW_ZP_IOPTR)
 
-                        inc     zp_sd_address
+                        inc     FW_ZP_IOPTR
                         bne     @done
-                        inc     zp_sd_address+1
-                        bne     @done
-                        inc     zp_sd_address+2
-                        bne     @done
-                        inc     zp_sd_address+3
+                        inc     FW_ZP_IOPTR+1
 @done:
                         clc
                         rts
+
+@eof:                   lda     #FSERR_EOF
+                        sta     FS_ZP_ERRORCODE
 @fail:
+                        lda     #$FF
                         sec
                         rts
 
-        .if 0
 ; Read a whole file into memory. It's assumed the file has just been opened
 ; and no data has been read yet.
 ;
@@ -992,9 +977,11 @@ _FAT_READ:
 ;
 ; supports incrementing rosco_6502 RAM bank at $C000, but must load at address divisible by $0200
 ;
-fat32_file_read:
+_FAT_READFILE:
                         lda     BANK_SET
                         pha
+
+                        stz     FS_ZP_ERRORCODE
 
                         ; add $01ff to round up number of sectors
                         lda     FS_ZP_BYTESLEFT
@@ -1019,6 +1006,7 @@ fat32_file_read:
                         ; Read a sector to FS_ZP_ADDRPTR
                         jsr     fat32_readnextsector
                         bcs     @fail
+                        cmp     #0
                         beq     @done
 
                         ; Advance FS_ZP_ADDRPTR by 512 bytes
@@ -1030,7 +1018,7 @@ fat32_file_read:
                         lda     BANK_SET
                         and     #BANK_RAM_M
                         cmp     #BANK_RAM_M
-                        beq     @fail                   ; already in last RAM bank, so quit with error
+                        beq     @eom                    ; already in last RAM bank, so quit with error
                         inc     BANK_SET
                         lda     #>BANK_RAM_ADDR
                         sta     FS_ZP_ADDRPTR+1
@@ -1048,8 +1036,9 @@ fat32_file_read:
                         pla
                         sta     BANK_SET
                         rts
+@eom:                   lda     #FSERR_TRUNCATED
+                        sta     FS_ZP_ERRORCODE
 @fail:                  sec
                         pla
                         sta     BANK_SET
                         rts
-        .endif

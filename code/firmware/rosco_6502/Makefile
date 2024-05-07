@@ -24,7 +24,7 @@ AS := ca65
 LN := ld65
 DA := da65
 
-AS_FLAGS := -D__ROSCO__=1 --cpu 65SC02 --feature string_escapes --list-bytes 0 -I inc
+AS_FLAGS := -g -D__ROSCO__=1 --cpu 65SC02 --feature string_escapes --list-bytes 0 -I inc
 LD_FLAGS := -v
 
 all: boot8k.bin boot32k.bin

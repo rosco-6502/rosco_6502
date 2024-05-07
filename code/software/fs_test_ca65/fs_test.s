@@ -58,7 +58,7 @@ _start:
                 PRINT   FAT32INIT
                 jsr     FS_CTRL                 ; init FAT32
                 jsr     res_msg
-                bcs     @byebye
+                jcs     @byebye
 @fatinitgood:
                 lda     #<testpath
                 ldx     #>testpath
@@ -110,7 +110,7 @@ _start:
                 lda     #$A
                 jsr     COUT
 
-        .if 0
+        .if 1
                 PRINT   BENCHMSG
 
                 lda     #<$4000
@@ -118,7 +118,7 @@ _start:
                 lda     #>$4000
                 sta     FS_ZP_ADDRPTR+1
 
-                jsr     fat32_file_read         ; at $C000 ptr back to $4000 and inc bank (stops after bank 15)
+                jsr     FS_READFILE             ; at $C000 ptr back to $4000 and inc bank (stops after bank 15)
                 jsr     res_msg
 
         .endif
