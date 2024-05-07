@@ -226,20 +226,108 @@ system_reset:
                         lda     #<PBANK
                         ldx     #>PBANK
                         jsr     _PRINT
+ 
+                .if     1
+                        lda     #<SDCHECKMSG
+                        ldx     #>SDCHECKMSG
+                        jsr     _PRINT
+                        jsr     BD_CTRL                 ; init SD card
+                        bcc     @sdcardok
+@sdfail:                lda     #<NOTFOUNDMSG
+                        ldx     #>NOTFOUNDMSG
+                        jsr     _PRINT
+                        bra     @monitor
+@sdcardok:
+                        lda     #<OKMSG
+                        ldx     #>OKMSG
+                        jsr     _PRINT
+                        lda     #<SDBOOTMSG
+                        ldx     #>SDBOOTMSG
+                        jsr     _PRINT
+                        jsr     FS_CTRL                 ; init FAT32
+                        bcs     @sdfail
 
-                        lda     DUA_SRA                 ; clear any pending RX garbage
-                        lda     DUA_RBA
-                        lda     DUA_SRA
-                        lda     DUA_RBA
-                        lda     DUA_SRB
-                        lda     DUA_RBB
-                        lda     DUA_SRB
-                        lda     DUA_RBB
+                        lda     #<BOOTFILENAME
+                        ldx     #>BOOTFILENAME
+                        jsr     FS_OPEN                 ; open filepath in A/X
+                        bcs     @sdfail
 
-                        ; start in EWozMon
+                        lda     #<OKMSG
+                        ldx     #>OKMSG
+                        jsr     _PRINT
+
+                        lda     #<LOADINGMSG
+                        ldx     #>LOADINGMSG
+                        jsr     _PRINT
+
+                        lda     FS_ZP_BYTESLEFT+3
+                        sta     DWORD_VAL+3
+                        lda     FS_ZP_BYTESLEFT+2
+                        sta     DWORD_VAL+2
+                        lda     FS_ZP_BYTESLEFT+1
+                        sta     DWORD_VAL+1
+                        lda     FS_ZP_BYTESLEFT+0
+                        sta     DWORD_VAL+0
+
+                        lda     #0
+                        sta     PR_WIDTH
+                        sta     PR_PAD
+                        jsr     _PRDEC_U32
+
+                        lda     #<BYTESMSG
+                        ldx     #>BYTESMSG
+                        jsr     _PRINT
+
+                        lda     #<$0800
+                        sta     FS_ZP_ADDRPTR
+                        lda     #>$0800
+                        sta     FS_ZP_ADDRPTR+1
+
+                        jsr     FS_READFILE             ; at $C000 ptr back to $4000 and inc bank (stops after bank 15)
+                        bcc     @bootok
+
+                        lda     #<FAILEDMSG
+                        ldx     #>FAILEDMSG
+                        jsr     _PRINT
+                        bra     @monitor
+@bootok:
+                        lda     #<OKMSG
+                        ldx     #>OKMSG
+                        jsr     _PRINT
+
+                        lda     #<STARTINGMSG
+                        ldx     #>STARTINGMSG
+                        jsr     _PRINT
+
+                        jsr     @clearuart
+                        jsr     $0800
+
+                .endif
+
+@monitor:               ; start in EWozMon
+                        jsr     @clearuart
                         jmp     WOZMON
 
                         ; rts
+
+
+                        ; clear junk chars
+@clearuart:
+                        ldx     #0
+@uartloop:
+                        lda     DUA_SRA
+                        nop
+                        nop
+                        lda     DUA_RBA
+                        nop
+                        nop
+                        lda     DUA_SRA
+                        nop
+                        nop
+                        lda     DUA_RBA
+                        dex
+                        bne     @uartloop
+                        rts
 
 
 ; *******************************************************
@@ -320,7 +408,6 @@ bank_check:
 ; *******************************************************
 ; * RAM data to be copied to low-RAM
 ; *******************************************************
-
                 .include "ramtable.s"
 
 ; *******************************************************
@@ -341,3 +428,12 @@ BCFAILED:               .byte   $1B, "[0;37mRAM Banks 0-15 ", $1B, "[1;31mfailed
 BCPASSED:               .byte   $1B, "[0;37mRAM Banks 0-15 ", $1B, "[1;32mpassed", $1B, "[0m", $D, $A, 0
 EBANK:                  .byte   $1B, "[0;37mROM 8K Bank #0 ", $1B, "[1;32mpassed", $1B, "[0m (BIOS+Monitor)", $D, $A, 0
 PBANK:                  .byte   $1B, "[0;37mMemory checks: ", $1B, "[1;32mpassed", $1B, "[0m", $D, $A, 0
+SDCHECKMSG:             .byte   "Checking for SDHC media...", 0
+SDBOOTMSG:              .byte   "Checking for \"/ROSC0DE_6502.BIN\"...", 0
+LOADINGMSG:             .byte   "Loading ", 0
+BYTESMSG:               .byte   " bytes to $0800...", 0
+OKMSG:                  .byte   "OK", $D, $A, 0
+FAILEDMSG:              .byte   "Failed", $D, $A, 0
+NOTFOUNDMSG:            .byte   "Not found", $D, $A, 0
+STARTINGMSG:            .byte   "Starting...", $D, $A, $D, $A, 0
+BOOTFILENAME:           .byte   "/ROSC0DE_6502.BIN", 0          ; up to ~512KB starting at $0800 (will increment RAM bank)
