@@ -68,7 +68,7 @@ _start:
                         jsr     PRINT
                         jsr     crlf
 
-                        LDAX    #testpath
+                        LDAX    #INPUTBUF
                         jsr     showdir
 
                 .if 0

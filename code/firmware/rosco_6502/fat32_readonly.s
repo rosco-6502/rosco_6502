@@ -24,17 +24,18 @@ FAT_DEBUG               =       1       ; 1 for debug asserts
 
                 .if FAT_TRACE
 .macro                  tprint  str
-                        .pushseg
-                        .segment "RODATA0"
                         .local  @trstr
-@trstr:                 .byte   str,0
-                        .popseg
+                        .local  @tend
                         php
                         pha
                         phx
+                        phy
                         lda     #<@trstr
                         ldx     #>@trstr
-                        jsr     PRINT
+                        jsr     _PRINT
+                        bra     @tend
+@trstr:                 .byte   str,0
+@tend:                  ply
                         plx
                         pla
                         plp
@@ -42,26 +43,34 @@ FAT_DEBUG               =       1       ; 1 for debug asserts
 .macro                  tprintv value
                         php
                         pha
+                        phx
+                        phy
                         lda     value
-                        jsr     outbyte
+                        jsr     _PRHEX_U8
                         lda     #'}'
                         jsr     COUT
+                        ply
+                        plx
                         pla
                         plp
 .endmacro
 .macro                  tprintv32 value
                         php
                         pha
+                        phx
+                        phy
                         lda     value+3
-                        jsr     outbyte
+                        jsr     _PRHEX_U8
                         lda     value+2
-                        jsr     outbyte
+                        jsr     _PRHEX_U8
                         lda     value+1
-                        jsr     outbyte
+                        jsr     _PRHEX_U8
                         lda     value+0
-                        jsr     outbyte
+                        jsr     _PRHEX_U8
                         lda     #' '
                         jsr     COUT
+                        ply
+                        plx
                         pla
                         plp
 .endmacro
@@ -184,7 +193,7 @@ _FAT_CTRL:
                         sta     FW_ZP_BLOCKNUM+3
 
                         jsr     BD_READ
-                        bcs     @mediaerr
+                        jcs     @mediaerr
 
                         inc     FS_ZP_ERRORCODE ; stage 3 = FAT32_FILESYS_ERR BPB signature check
 
@@ -439,7 +448,7 @@ fat32_readnextsector:
 
                         ; No pending sectors, check for end of cluster chain
                         lda     fat32_nextcluster+3
-                        bmi     @endofchain
+                        jmi     @endofchain
 
                         ; Prepare to read the next cluster
                         jsr     fat32_seekcluster
