@@ -178,11 +178,12 @@ FSERR_BADBPB            =       3       ; FAT32 BPB signature check
 FSERR_BADROOT           =       4       ; FAT32 RootEntCnt check
 FSERR_BADTOTALSEC       =       5       ; FAT32 TotalSec16 check
 FSERR_BADSECSIZE        =       6       ; FAT32 sector size != 512
-FSERR_MEDIAERR          =       16      ; media read/write error
-FSERR_BADPATH           =       17      ; path > 255 char
-FSERR_NOTFOUND          =       18      ; path not found
-FSERR_EOF               =       19      ; read past EOF
-FSERR_TRUNCATED         =       20      ; readfile past last RAM bank
+FSERR_MEDIAERR          =       7       ; media read/write error
+FSERR_BADPATH           =       8       ; path > 255 char
+FSERR_NOTFOUND          =       9       ; path not found
+FSERR_EOF               =       10      ; read past EOF
+FSERR_TRUNCATED         =       11      ; readfile past last RAM bank
+FSERR_NUM_ERRORS        =       12
 
 ; attribute returned in A from FS_READDIRENT at EOD
 FS_DIRENT_END_ATTR      =       $FF     ; end of directory attribute

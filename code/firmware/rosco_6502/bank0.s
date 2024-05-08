@@ -299,20 +299,19 @@ system_reset:
                         ldx     #>STARTINGMSG
                         jsr     _PRINT
 
-                        jsr     @clearuart
+                        jsr     clearuart
                         jsr     $0800
 
                 .endif
 
 @monitor:               ; start in EWozMon
-                        jsr     @clearuart
                         jmp     WOZMON
 
                         ; rts
 
 
                         ; clear junk chars
-@clearuart:
+clearuart:
                         ldx     #0
 @uartloop:
                         lda     DUA_SRA

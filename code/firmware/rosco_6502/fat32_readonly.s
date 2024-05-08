@@ -81,7 +81,7 @@ fat32_filenamepointer   =       fat32_nextcluster+4     ; 2 bytes
 fat32_sector_bytes      =       fat32_filenamepointer+2 ; 2 bytes
 fat32_userfilename      =       fat32_sector_bytes+2    ; 2 bytes
 fat32_zp_end            =       fat32_userfilename+2
-                        .assert (fat32_zp_end-FS_ZP_START<FS_ZP_SIZE),warning,"FS_ZP overflow"
+                        .assert (fat32_zp_end-FS_ZP_PRIVATE<FS_ZP_SIZE),error,"FS_ZP overflow"
 
 fat32_rootcluster       =       FS_RAM_START            ; 4 bytes
 fat32_fatstart          =       fat32_rootcluster+4     ; 4 bytes
@@ -90,7 +90,7 @@ fat32_sectorspercluster =       fat32_datastart+4       ; 1 byte
 fat32_pendingsectors    =       fat32_sectorspercluster+1; 1 byte
 fat32_filename_lfn_idx  =       fat32_pendingsectors+1  ; 1 byte
 fat32_ram_end           =       fat32_filename_lfn_idx+1
-                        .assert (fat32_ram_end-FS_RAM_START<FS_RAM_SIZE),warning,"FS_RAM overflow"
+                        .assert (fat32_ram_end-FS_RAM_START<FS_RAM_SIZE),error,"FS_RAM overflow"
 
 ; Initialize the module - read the MBR etc, find the partition,
 ; and set up the variables ready for navigating the filesystem
@@ -884,7 +884,7 @@ _FAT_OPEN:
 @notroot:
                 tprint  "/"
                         clc                             ; clear error
-                        lda     SCRATCHBUF        ; is this empty component?
+                        lda     SCRATCHBUF              ; is this empty component?
                         beq     @popcheckfail           ; branch if yes (ignore)
                 .if FAT_TRACE
                         lda     #<SCRATCHBUF

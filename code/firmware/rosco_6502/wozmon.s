@@ -46,6 +46,7 @@ LF                      =       $0A                     ; Line Feed
 ESC                     =       $1B                     ; ESC key
 
 WOZMON:
+                        jsr     clearuart
                         LDA     #<MONMSG
                         LDY     #>MONMSG
                         JSR     SHWMSG                  ; Show Welcome

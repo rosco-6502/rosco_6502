@@ -207,7 +207,8 @@ _READLINE:
 
 ; PRHEX_U8 - Print A as two digit hex
 ; nothing trashed
-_PRHEX_U8:                php
+_PRHEX_U8:
+                        php
                         pha
                         jsr     @prhex2
                         pla
